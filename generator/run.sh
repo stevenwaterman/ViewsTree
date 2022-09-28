@@ -1,0 +1,1 @@
+flask --app server run -h localhost -p 5001
