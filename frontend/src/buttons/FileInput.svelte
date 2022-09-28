@@ -1,10 +1,6 @@
 <script lang="ts">
-  import colorLookup from "../colors"
-  import toCss from "react-style-object-to-css";
-
   export let disabled: true | undefined = undefined;
   export let emphasise: true | undefined = undefined;
-  export let style: JSX.CSSProperties | undefined = undefined;
   export let fileTypes: string = "";
   export let handleFile: (file: File) => void = () => {};
 
@@ -18,11 +14,7 @@
     input.files = null;
   }
 
-  function dropEvent(
-    event: DragEvent & {
-      target: EventTarget & HTMLDivElement;
-    }
-  ) {
+  function dropEvent(event: DragEvent) {
     const dataTransfer = event.dataTransfer;
     if (dataTransfer !== null) {
       const files = dataTransfer.files;
@@ -35,17 +27,17 @@
 
   let textColor: string;
   $: textColor = disabled
-    ? colorLookup.buttonBg
+    ? "var(--buttonBg)"
     : emphasise
-    ? colorLookup.textEmphasis
-    : colorLookup.textDark;
+    ? "var(--textEmphasis)"
+    : "var(--textDark)";
 
   let bgColor: string;
   $: bgColor = disabled
-    ? colorLookup.buttonBgDisabled
+    ? "var(--buttonBgDisabled)"
     : emphasise
-    ? colorLookup.text
-    : colorLookup.buttonBg;
+    ? "var(--text)"
+    : "var(--buttonBg)";
 </script>
 
 <style>
@@ -89,7 +81,8 @@
     <label
       for="upload"
       class="button enabled"
-      style={toCss({ color: textColor, backgroundColor: bgColor, ...(style || {})})}>
+      style={`color: ${textColor}; backgroundColor: ${bgColor};`}
+    >
       <slot />
       <input
         id="upload"

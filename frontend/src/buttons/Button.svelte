@@ -1,27 +1,23 @@
 <script lang="ts">
-  import colorLookup from "../colors";
-  import toCss from "react-style-object-to-css"
-
   export let disabled: boolean | undefined = undefined;
   export let emphasise: boolean | undefined = undefined;
-  export let style: JSX.CSSProperties | undefined = undefined; 
 
   let textColor: string;
   $: textColor = disabled
-    ? colorLookup.buttonBg
+    ? "var(--buttonBg)"
     : emphasise
-    ? colorLookup.textEmphasis
-    : colorLookup.textDark;
+    ? "var(--textEmphasis)"
+    : "var(--textDark)";
 
   let bgColor: string;
   $: bgColor = disabled
-    ? colorLookup.buttonBgDisabled
+    ? "var(--buttonBgDisabled)"
     : emphasise
-    ? colorLookup.text
-    : colorLookup.buttonBg;
+    ? "var(--text)"
+    : "var(--buttonBg)";
 
-  let actualStyle: JSX.CSSProperties;
-  $: actualStyle = { color: textColor, backgroundColor: bgColor, ...(style || {})};
+  let actualStyle: string;
+  $: actualStyle = `color: ${textColor}; backgroundColor: ${bgColor};`;
 </script>
 
 <style>
@@ -51,11 +47,11 @@
 </style>
 
 {#if disabled}
-  <div class="button disabled" style={toCss(actualStyle)}>
+  <div class="button disabled" style={actualStyle}>
     <slot />
   </div>
 {:else}
-  <div class="button enabled" on:click style={toCss(actualStyle)}>
+  <div class="button enabled" on:click style={actualStyle}>
     <slot />
   </div>
 {/if}

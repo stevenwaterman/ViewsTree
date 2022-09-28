@@ -1,14 +1,3 @@
-<script lang="ts">
-  import colorLookup from "../colors";
-  import toCss from "react-style-object-to-css"
-  const textStyle = {
-    border: "1px solid",
-    borderColor: colorLookup.border,
-    backgroundColor: colorLookup.bgLight,
-    color: colorLookup.textDark
-  };
-</script>
-
 <style>
   .TT_text {
     visibility: hidden;
@@ -20,6 +9,11 @@
 
     position: absolute;
     z-index: 1;
+
+    border: 1px solid;
+    border-color: var(--border);
+    background-color: var(--bgLight);
+    color: var(--textDark);
   }
 
   .TT_trigger:hover .TT_text {
@@ -30,7 +24,7 @@
 <div>
   <div class="TT_trigger">
     <slot name="trigger" />
-    <div class="TT_text" style={toCss(textStyle)}>
+    <div class="TT_text">
       <slot />
     </div>
   </div>

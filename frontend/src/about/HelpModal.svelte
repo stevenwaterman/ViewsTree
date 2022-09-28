@@ -1,12 +1,11 @@
-<script lang="ts">
-  import colorLookup from "../colors";
-  import toCss from "react-style-object-to-css"
-  const textColorStyle = { color: colorLookup.text };
-</script>
-
 <style>
   h1 {
     margin-top: 0;
+    color: var(--text);
+  }
+
+  h2 {
+    color: var(--text);
   }
 
   .subheading {
@@ -15,7 +14,7 @@
   }
 </style>
 
-<h1 style={toCss(textColorStyle)}>MuseTree Help</h1>
+<h1>MuseTree Help</h1>
 
 <p class="subheading">
   <i>
@@ -26,14 +25,14 @@
   </i>
 </p>
 
-<h2 style={toCss(textColorStyle)}>What is MuseTree?</h2>
+<h2>What is MuseTree?</h2>
 <p>
   MuseTree lets you work with an AI to generate music in range of styles. It is
   designed for non-musicians interested in creating music, and small content
   creators e.g. YouTubers.
 </p>
 
-<h2 style={toCss(textColorStyle)}>Getting Started</h2>
+<h2>Getting Started</h2>
 <p>
   In the
   <b>Tree View</b>
@@ -64,7 +63,7 @@
   .
 </p>
 
-<h2 style={toCss(textColorStyle)}>Advanced Tips</h2>
+<h2>Advanced Tips</h2>
 <p>
   After right-clicking a node, each option in the context menu has one letter
   underlined. Rather than clicking the button, you can just press the underline

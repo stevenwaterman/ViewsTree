@@ -2,10 +2,8 @@
   import { afterUpdate } from "svelte";
   import panzoom from "panzoom";
   import type { PanZoom } from "panzoom";
-  import colorLookup from "../colors";
   import ContextModal from "./ContextModal.svelte";
   import { contextModalStore } from "./ContextModalStore"
-  import toCss from "react-style-object-to-css";
   import VisOrigin from "./VisOrigin.svelte";
 
   let container: HTMLDivElement;
@@ -32,6 +30,11 @@
     flex-shrink: 0;
     overflow: hidden;
     outline: none;
+
+    color: var(--textEmphasis);
+    background-color: var(--bgLight);
+    border-left: 1px solid;
+    border-color: var(--border);
   }
 
   .pan-container {
@@ -54,7 +57,6 @@
 
 <div
   class="tree-container"
-  style={toCss({color: colorLookup.textEmphasis, backgroundColor: colorLookup.bgLight, borderLeft: "1px solid", borderColor: colorLookup.border})}
   bind:this={treeContainer}
   on:mouseenter={() => treeContainer.focus()}>
   <ContextModal />

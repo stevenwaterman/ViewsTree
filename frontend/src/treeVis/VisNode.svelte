@@ -1,6 +1,4 @@
 <script lang="ts">
-  import toCss from "react-style-object-to-css";
-  import colorLookup from "../colors";
   import { generateBranch, thumbnailUrl } from "../lib/generator";
   import { saveNameStore } from "../state/settings";
   import { selectedPathStore, selectedStore, type NodeState } from "../state/tree";
@@ -27,14 +25,11 @@
   let selected: boolean;
   $: selected = $selectedStore?.id === state.id;
 
-  let nodeColor: string;
-  $: nodeColor = selected ? colorLookup.nodePlaying : colorLookup.nodeInactive;
-
   let onSelectedPath: boolean;
   $: onSelectedPath = $selectedPathStore.includes(state.id);
 
   let edgeColor: string;
-  $: edgeColor = onSelectedPath ? colorLookup.edgePlaying : colorLookup.edgeInactive;
+  $: edgeColor = onSelectedPath ? "var(--edgePlaying)" : "var(--edgeInactive)";
 
   let edgeZ: number;
   $: edgeZ = onSelectedPath ? 1 : 0;
@@ -70,12 +65,6 @@
     if (event.key === "r") return loadMore();
     if (event.key === "d") return state.remove();
   }
-
-  let pathStyle;
-  $: pathStyle = toCss({ cursor: onSelectedPath ? 'pointer' : 'initial' }) as any;
-
-  let lineStyle;
-  $: lineStyle = toCss({ left: lineLeft, top: (depth - 1) * ch * 2 + 24, transform: `scaleX(${offset < parentOffset ? -1 : 1})`, zIndex: edgeZ }) as any;
 </script>
 
 <style>
@@ -127,7 +116,7 @@
 
 <div
   class="placement"
-  style={toCss({top: 150 * depth, left: 60 * offset - 25})}>
+  style={`top: ${150 * depth}px; left: ${60 * offset - 25}px`}>
   <!-- svelte-ignore a11y-missing-attribute -->
   <img
     on:mousedown={leftClick}
@@ -138,7 +127,6 @@
     bind:this={node}
     src={thumbnailUrl($saveNameStore, state)}
     class="node"
-    style={toCss({backgroundColor: nodeColor})}
     tabindex={0}/>
   <!-- {#if pendingLoad > 0} -->
     <!-- <p -->
@@ -161,12 +149,12 @@
   class="line"
   width={lineWidth}
   height={ch * 2 + 2}
-  style={lineStyle}>
+  style={`left: ${lineLeft}px; top: ${(depth - 1) * ch * 2 + 24}px; transform: scaleX(${offset < parentOffset ? -1 : 1}); z-index: ${edgeZ};`}
+>
   <path
     d={`m 5 0 c 0 ${ch + 0.5} ${cw * 2} ${ch + 0.5} ${cw * 2} ${ch * 2 + 1}`}
-    stroke={`url(#linear${depth},${offset})`}
+    stroke={edgeColor}
     stroke-width="6px"
     fill="none"
-    style={pathStyle}
   />
 </svg>

@@ -1,10 +1,8 @@
 <script lang="ts">
-  import colorLookup from "../colors";
   import { generateRoot } from "../lib/generator";
   import { saveNameStore } from "../state/settings";
   import { treeStore, type RootState } from "../state/tree";
   import VisNode from "./VisNode.svelte";
-  import toCss from "react-style-object-to-css";
 
   export let treeContainer: HTMLDivElement;
 
@@ -22,9 +20,6 @@
   function keyPressed(event: KeyboardEvent) {
     if (event.key === "r") return loadMore();
   }
-
-  let nodeColor: string;
-  $: nodeColor = colorLookup.nodeActive;
 </script>
 
 <style>
@@ -40,6 +35,7 @@
 
     cursor: pointer;
     transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    background-color: var(--nodeActive);
   }
 
   .node:hover {
@@ -76,7 +72,6 @@
     on:mousedown={leftClick}
     on:keypress={keyPressed}
     class="node"
-    style={toCss({backgroundColor: nodeColor})}
     tabindex={0}>
     <span class="label">Root</span>
   </div>

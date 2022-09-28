@@ -1,12 +1,10 @@
 <script lang="ts">
   import { contextModalStore } from "./ContextModalStore";
   import type { ContextModalState } from "./ContextModalStore";
-  import { getContext, afterUpdate } from "svelte";
+  import { afterUpdate } from "svelte";
   import Button from "../buttons/Button.svelte";
-  import colorLookup, { modalOptions } from "../colors";
   import { generateRoot, generateBranch } from "../lib/generator";
   import type { NodeState, BranchState } from "../state/tree";
-  import toCss from "react-style-object-to-css";
   import { saveNameStore } from "../state/settings";
 
   let contextModalState: ContextModalState;
@@ -24,19 +22,13 @@
   let nodeState: NodeState | undefined;
   $: nodeState = contextModalState?.state;
 
-  const { open } = getContext<any>("simple-modal");
-
   function hide() {
     contextModalStore.set(null);
   }
 
   function loadMore() {
     hide();
-    if (nodeState?.type === "root") {
-      generateRoot($saveNameStore, { prompt: "hi" })
-    } else if (nodeState?.type === "branch") {
-      generateBranch($saveNameStore, (nodeState as BranchState).parent, { prompt: "hi" })
-    }
+    if (nodeState) generateBranch($saveNameStore, nodeState, { prompt: "hi" })
   }
 
   function deleteNode() {
@@ -80,6 +72,11 @@
     pointer-events: all;
     padding: 4px;
     outline: none;
+
+    background-color: var(--bgDark);
+    border: 1px solid;
+    border-color: var(--border);
+    color: var(--textDark);
   }
 </style>
 
@@ -88,10 +85,10 @@
     <div
       class="contextModalContainer"
       on:mouseleave={hide}
-      style={toCss({left, top})}>
+      style={`left: ${left}px; top: ${top}px;`}>
       <div
         class="contextModal"
-        style={toCss({backgroundColor: colorLookup.bgDark, border: "1px solid", borderColor: colorLookup.border, color: colorLookup.textDark, left, top})}
+        style={`left: ${left}px; top: ${top}px;`}
         bind:this={branchContainer}
         on:mousedown|preventDefault|stopPropagation
         on:contextmenu|preventDefault|stopPropagation

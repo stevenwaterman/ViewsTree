@@ -1,9 +1,7 @@
 <script lang="ts">
   import TreeVis from "./treeVis/TreeVis.svelte";
   import Modal from "svelte-simple-modal";
-  import colorLookup from "./colors";
   import { splitStore, showSidebarStore } from "./state/settings";
-  import toCss from "react-style-object-to-css";
 
   function keyPressed(event: KeyboardEvent) {
     if (event.key === " ") {
@@ -28,6 +26,7 @@
     grid-template-rows: 1fr 46px;
     height: 100vh;
     width: 100vw;
+    color: var(--text);
   }
 
   :global(body) {
@@ -50,6 +49,67 @@
   :global(a:visited) {
     color: #c3e88d;
   }
+
+  .openSidebarArrow {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 600;
+    opacity: 50%;
+    cursor: pointer;
+    z-index: 999;
+  }
+
+  .closeSidebarArrow {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    color: var(--text);
+    font-size: 20px;
+    font-Weight: 600;
+    opacity: 50%;
+    cursor: pointer;
+  }
+
+  .trackContainer {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .treeContainer {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .controlsContainer {
+    grid-column: 1 / span 3;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .sidebarContainer {
+    position: relative;
+    grid-column: 3;
+    grid-row: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bgDark);
+    border-left: 1px solid var(--border);
+    padding: 12px;
+  }
+
+  .optionsHeader {
+    text-align: center;
+    color: var(--text);
+    margin: 0;
+  }
 </style>
 
 <svelte:body on:keypress={keyPressed} />
@@ -57,86 +117,30 @@
 <Modal>
   <div
     class="grid"
-    style={toCss({
-      color: colorLookup.text,
-      gridTemplateColumns: `${$splitStore}fr ${100 - $splitStore}fr ${
-        $showSidebarStore ? '300px' : ''
-      }`,
-    })}>
+    style={`grid-template-columns: ${$splitStore}fr ${100 - $splitStore}fr ${$showSidebarStore ? '300px' : ''};`}
+  >
     {#if !$showSidebarStore}
       <div
-        style={toCss({
-          position: 'fixed',
-          top: 8,
-          right: 8,
-          color: colorLookup.text,
-          fontSize: 20,
-          fontWeight: 600,
-          opacity: 50,
-          cursor: 'pointer',
-          zIndex: 999,
-        })}
+        class="openSidebarArrow"
         on:click|capture={() => showSidebarStore.set(true)}>
         &lt;
       </div>
     {/if}
-    <div
-      style={toCss({
-        gridColumn: '1',
-        gridRow: '1',
-        minHeight: 0,
-        display: $splitStore === 0 ? 'none' : 'initial',
-      })}>
+    <div class="trackContainer" style={`display: ${$splitStore === 0 ? 'none' : 'initial'};`}>
       <!-- <Track /> -->
     </div>
-    <div
-      style={toCss({
-        position: 'relative',
-        gridColumn: '2',
-        gridRow: '1',
-        minHeight: 0,
-        display: $splitStore === 100 ? 'none' : 'initial',
-      })}>
+    <div class="treeContainer" style={`display: ${$splitStore === 100 ? 'none' : 'initial'};`}>
       <TreeVis />
     </div>
-    <div
-      style={toCss({ gridColumn: '1 / span 3', gridRow: '2', minHeight: 0 })}>
+    <div class="controlsContainer">
       <!-- <TrackControls /> -->
     </div>
     {#if $showSidebarStore}
-      <div
-        style={toCss({
-          position: 'relative',
-          gridColumn: '3',
-          gridRow: '1',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: colorLookup.bgDark,
-          borderLeft: `1px solid ${colorLookup.border}`,
-          padding: 12,
-        })}>
-        <div
-          style={toCss({
-            position: 'absolute',
-            top: 8,
-            left: 8,
-            color: colorLookup.text,
-            fontSize: 20,
-            fontWeight: 600,
-            opacity: 50,
-            cursor: 'pointer',
-          })}
-          on:click={() => showSidebarStore.set(false)}>
+      <div class="sidebarContainer">
+        <div class="closeSidebarArrow" on:click={() => showSidebarStore.set(false)}>
           &gt;
         </div>
-        <h1
-          style={toCss({
-            textAlign: 'center',
-            color: colorLookup.text,
-            margin: 0,
-          })}>
+        <h1 class="optionsHeader">
           Options
         </h1>
         <!-- <GenerationOptions /> -->

@@ -3,9 +3,8 @@
   import { getContext } from "svelte";
   import ChangeLogModal from "./ChangeLogModal.svelte";
   import Changelog from "./Changelog";
-  import colorLookup, { modalOptions } from "../colors";
+  import { modalOptions } from "../colors";
   import HelpModal from "./HelpModal.svelte"
-  import toCss from "react-style-object-to-css";
 
   const { open } = getContext<any>("simple-modal");
 
@@ -21,6 +20,7 @@
 <style>
   h1 {
     margin-top: 0;
+    color: var(--text);
   }
 
   .buttonRow {
@@ -30,7 +30,7 @@
   }
 </style>
 
-<h1 style={toCss({ color: colorLookup.text })}>About</h1>
+<h1>About</h1>
 <p>
   MuseTree is a custom front-end for
   <a href="https://openai.com/blog/musenet/" target="_blank">

@@ -44,7 +44,7 @@ def branch(save_name, init_run_id):
   if prompt is None:
     raise "Prompt is required"
 
-  config = pipe.run_txt(
+  config = pipe.run_img(
     save_name = save_name,
     init_run_id = init_run_id,
     prompt = prompt,

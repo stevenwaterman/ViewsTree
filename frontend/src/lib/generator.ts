@@ -24,7 +24,6 @@ export type RootConfig = {
 }
 
 type BranchRequest = {
-  init_run_id: string;
   prompt: string;
   steps?: number;
   scale?: number;
@@ -73,8 +72,8 @@ export async function generateRoot(saveName: string, request: RootRequest): Prom
   .then(config => createRootState(config));
 }
 
-export async function generateBranch(saveName: string, parent: NodeState, request: Omit<BranchRequest, "init_run_id">): Promise<BranchState> {
-  return await fetch(`http://localhost:5001/${saveName}/branch`, {
+export async function generateBranch(saveName: string, parent: NodeState, request: BranchRequest): Promise<BranchState> {
+  return await fetch(`http://localhost:5001/${saveName}/branch/${parent.id}`, {
     method: "POST",
     body: JSON.stringify({
       ...request,

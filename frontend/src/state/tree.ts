@@ -42,6 +42,7 @@ export function createBranchState(config: BranchConfig, parent: NodeState): Bran
   }
 
   parent.children[config.id] = state;
+  treeStore.update(tree => tree);
 
   return state;
 }
@@ -52,7 +53,6 @@ export type NodeConfig = RootConfig | BranchConfig;
 export type NodeState = RootState | BranchState;
 
 export const treeStore: Writable<RootState[]> = writable([]);
-treeStore.subscribe(console.log)
 
 export const selectedStore: Writable<NodeState | undefined> = writable(undefined);
 export const selectedPathStore: Readable<string[]> = derived(selectedStore, selected => {
