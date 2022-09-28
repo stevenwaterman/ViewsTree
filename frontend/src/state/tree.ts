@@ -11,11 +11,15 @@ export function createRootState(config: RootConfig): RootState {
     treeStore.update(tree => tree.filter(root => root.id !== config.id));
   }
 
-  return {
+  const state = {
     ...config,
     children: {},
     remove
   }
+
+  treeStore.update(tree => [...tree, state]);
+
+  return state;
 }
 
 
@@ -48,11 +52,13 @@ export type NodeConfig = RootConfig | BranchConfig;
 export type NodeState = RootState | BranchState;
 
 export const treeStore: Writable<RootState[]> = writable([]);
+treeStore.subscribe(console.log)
+
 export const selectedStore: Writable<NodeState | undefined> = writable(undefined);
 export const selectedPathStore: Readable<string[]> = derived(selectedStore, selected => {
   const path: string[] = [];
-  let node = selected;
-  while (node.type === "branch") {
+  let node: NodeState | undefined = selected;
+  while (node?.type === "branch") {
     path.unshift(node.id);
     node = node.parent;
   }

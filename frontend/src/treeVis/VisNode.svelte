@@ -1,17 +1,17 @@
 <script lang="ts">
   import toCss from "react-style-object-to-css";
   import colorLookup from "../colors";
-  import { generateBranch } from "../lib/generator";
+  import { generateBranch, thumbnailUrl } from "../lib/generator";
   import { saveNameStore } from "../state/settings";
   import { selectedPathStore, selectedStore, type NodeState } from "../state/tree";
-  import { getContext } from "svelte";
   import { contextModalStore } from "./ContextModalStore";
 
   export let state: NodeState;
   export let treeContainer: HTMLDivElement;
 
-  // let pendingLoad: number;
-  // $: pendingLoad = branchState.pendingLoad;
+  export let depth: number;
+  export let offset: number;
+  export let parentOffset: number;
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(state);
@@ -39,24 +39,6 @@
   let edgeZ: number;
   $: edgeZ = onSelectedPath ? 1 : 0;
 
-  // let numberOfLeavesStore: Readable<number>;
-  // $: numberOfLeavesStore = branchStore.numberOfLeavesStore;
-
-  let depth: number = 0;
-  let offset: number = 0;
-  let parentOffset: number = 0;
-  let numberOfLeaves: number = 0;
-  // $: numberOfLeaves = $numberOfLeavesStore;
-
-  let placementOffset: number;
-  $: placementOffset = offset + -numberOfLeaves / 2;
-
-  // let placementStore: Readable<Array<[number, number]>>;
-  // $: placementStore = branchStore.placementStore;
-
-  // let childPlacements: Array<[number, number]>;
-  // $: childPlacements = $placementStore;
-
   let offsetWidth: number;
   $: offsetWidth = Math.abs(parentOffset - offset);
 
@@ -80,8 +62,6 @@
     if ($contextModalStore === null) treeContainer.focus();
   }
 
-  const { open } = getContext<any>("simple-modal");
-
   function loadMore() {
     return generateBranch($saveNameStore, state, { prompt: "hi" });
   }
@@ -91,10 +71,10 @@
     if (event.key === "d") return state.remove();
   }
 
-  let pathStyle: JSX.CSSProperties;
+  let pathStyle;
   $: pathStyle = toCss({ cursor: onSelectedPath ? 'pointer' : 'initial' }) as any;
 
-  let lineStyle: JSX.CSSProperties;
+  let lineStyle;
   $: lineStyle = toCss({ left: lineLeft, top: (depth - 1) * ch * 2 + 24, transform: `scaleX(${offset < parentOffset ? -1 : 1})`, zIndex: edgeZ }) as any;
 </script>
 
@@ -148,18 +128,18 @@
 <div
   class="placement"
   style={toCss({top: 150 * depth, left: 60 * offset - 25})}>
-  <div
+  <!-- svelte-ignore a11y-missing-attribute -->
+  <img
     on:mousedown={leftClick}
     on:contextmenu|preventDefault={rightClick}
     on:mouseenter={focusNode}
     on:mouseleave={unfocusNode}
     on:keypress={keyPressed}
     bind:this={node}
+    src={thumbnailUrl($saveNameStore, state)}
     class="node"
     style={toCss({backgroundColor: nodeColor})}
-    tabindex={0}>
-    <!-- <span class="label">{childIndex}</span> -->
-  </div>
+    tabindex={0}/>
   <!-- {#if pendingLoad > 0} -->
     <!-- <p -->
       <!-- class="pendingLoad" -->
@@ -168,17 +148,15 @@
     <!-- </p> -->
   <!-- {/if} -->
 </div>
-<!-- {#if childPlacements.length > 0} -->
-<!-- {#each childPlacements as [idx, placement] (idx)}
+{#each Object.values(state.children) as child, idx (child.id)}
   <svelte:self
-    parentStore={branchStore}
-    branchStore={childStores[idx]}
+    state={child}
     depth={depth + 1}
-    offset={placementOffset + placement}
+    offset={idx}
     parentOffset={offset}
-    {treeContainer} />
-{/each} -->
-<!-- {/if} -->
+    {treeContainer}
+  />
+{/each}
 <svg
   class="line"
   width={lineWidth}

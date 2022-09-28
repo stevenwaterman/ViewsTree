@@ -6,8 +6,7 @@
   import ContextModal from "./ContextModal.svelte";
   import { contextModalStore } from "./ContextModalStore"
   import toCss from "react-style-object-to-css";
-  import { treeStore } from "../state/tree";
-  import VisNode from "./VisNode.svelte";
+  import VisOrigin from "./VisOrigin.svelte";
 
   let container: HTMLDivElement;
 
@@ -61,9 +60,7 @@
   <ContextModal />
   <div class="pan-container" bind:this={container}>
     <div class="tree-position">
-      {#each $treeStore as rootState (rootState.id)}
-        <VisNode {treeContainer} state={rootState} />
-      {/each}
+      <VisOrigin {treeContainer} />
     </div>
   </div>
 </div>

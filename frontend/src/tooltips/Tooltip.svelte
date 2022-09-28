@@ -1,7 +1,7 @@
 <script lang="ts">
   import colorLookup from "../colors";
   import toCss from "react-style-object-to-css"
-  const textStyle: JSX.CSSProperties = {
+  const textStyle = {
     border: "1px solid",
     borderColor: colorLookup.border,
     backgroundColor: colorLookup.bgLight,
