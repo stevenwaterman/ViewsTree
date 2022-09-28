@@ -1,21 +1,10 @@
+import type { BranchState, RootState } from "../state/tree";
 import type { Writable } from "svelte/store";
 import { writable } from "svelte/store";
-import type { BranchStore, NodeStore, TreeStore } from "../state/trackTree";
-
-type StoreConfig_Root = {
-  type: "root";
-  nodeStore: TreeStore;
-}
-
-type StoreConfig_Branch = {
-  type: "branch",
-  parentStore: NodeStore;
-  nodeStore: BranchStore;
-}
 
 export type ContextModalState = {
   coordinates: [number, number];
-  stores: StoreConfig_Root | StoreConfig_Branch
+  state: RootState | BranchState
 } | null;
 
 export const contextModalStore: Writable<ContextModalState> = writable(null);

@@ -1,5 +1,3 @@
-import { minNoteLengths } from "../bridge/postProcessSettings";
-
 type ChangelogEntry = {
   version: [number, number, number],
   date: Date;

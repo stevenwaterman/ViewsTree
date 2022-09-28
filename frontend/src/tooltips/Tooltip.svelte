@@ -7,7 +7,6 @@
     backgroundColor: colorLookup.bgLight,
     color: colorLookup.textDark
   };
-
 </script>
 
 <style>

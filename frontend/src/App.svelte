@@ -1,17 +1,8 @@
 <script lang="ts">
-  import Track from "./track/Track.svelte";
-  import GenerationOptions from "./options/generationOptions/GenerationOptions.svelte";
-  import TrackControls from "./track/TrackControls.svelte";
   import TreeVis from "./treeVis/TreeVis.svelte";
   import Modal from "svelte-simple-modal";
-  import ModalController from "./modals/ModalController.svelte";
   import colorLookup from "./colors";
   import { splitStore, showSidebarStore } from "./state/settings";
-  import { togglePlayback } from "./audio/audioPlayer";
-  import { undoStore } from "./state/undo";
-  import AutoSaveController from "./persistence/AutoSaveController.svelte";
-  import DisplayOptions from "./options/displayOptions/DisplayOptions.svelte";
-  import TrackInfo from "./trackInfo/TrackInfo.svelte";
   import toCss from "react-style-object-to-css";
 
   function keyPressed(event: KeyboardEvent) {
@@ -21,12 +12,12 @@
         const tagName: string = event.target["tagName"];
         if (tagName !== "INPUT" && tagName !== "TEXTAREA") {
           event.preventDefault();
-          togglePlayback();
+          // togglePlayback();
         }
       }
     } else if (event.key === "z" && event.ctrlKey) {
       event.preventDefault();
-      undoStore.undo();
+      // undoStore.undo();
     }
   }
 </script>
@@ -64,8 +55,6 @@
 <svelte:body on:keypress={keyPressed} />
 
 <Modal>
-  <AutoSaveController />
-  <ModalController />
   <div
     class="grid"
     style={toCss({
@@ -98,7 +87,7 @@
         minHeight: 0,
         display: $splitStore === 0 ? 'none' : 'initial',
       })}>
-      <Track />
+      <!-- <Track /> -->
     </div>
     <div
       style={toCss({
@@ -112,7 +101,7 @@
     </div>
     <div
       style={toCss({ gridColumn: '1 / span 3', gridRow: '2', minHeight: 0 })}>
-      <TrackControls />
+      <!-- <TrackControls /> -->
     </div>
     {#if $showSidebarStore}
       <div
@@ -150,9 +139,9 @@
           })}>
           Options
         </h1>
-        <GenerationOptions />
-        <DisplayOptions />
-        <TrackInfo />
+        <!-- <GenerationOptions /> -->
+        <!-- <DisplayOptions /> -->
+        <!-- <TrackInfo /> -->
       </div>
     {/if}
   </div>

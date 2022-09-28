@@ -1,16 +1,17 @@
 <script lang="ts">
   import { afterUpdate } from "svelte";
-  import { root } from "../state/trackTree";
-  import panzoom, { PanZoom } from "panzoom";
-  import TreeVisRoot from "./TreeVisRoot.svelte";
+  import panzoom from "panzoom";
+  import type { PanZoom } from "panzoom";
   import colorLookup from "../colors";
   import ContextModal from "./ContextModal.svelte";
   import { contextModalStore } from "./ContextModalStore"
   import toCss from "react-style-object-to-css";
+  import { treeStore } from "../state/tree";
+  import VisNode from "./VisNode.svelte";
 
   let container: HTMLDivElement;
 
-afterUpdate(() => {
+  afterUpdate(() => {
     const pan: PanZoom = panzoom(container, {
       minZoom: 0.1,
       maxZoom: 2,
@@ -44,20 +45,25 @@ afterUpdate(() => {
     right: 50%;
     top: 50%;
     bottom: 50%;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
   }
 </style>
 
-{#if root != null}
-  <div
-    class="tree-container"
-    style={toCss({color: colorLookup.textEmphasis, backgroundColor: colorLookup.bgLight, borderLeft: "1px solid", borderColor: colorLookup.border})}
-    bind:this={treeContainer}
-    on:mouseenter={() => treeContainer.focus()}>
-    <ContextModal />
-    <div class="pan-container" bind:this={container}>
-      <div class="tree-position">
-        <TreeVisRoot {treeContainer} />
-      </div>
+<div
+  class="tree-container"
+  style={toCss({color: colorLookup.textEmphasis, backgroundColor: colorLookup.bgLight, borderLeft: "1px solid", borderColor: colorLookup.border})}
+  bind:this={treeContainer}
+  on:mouseenter={() => treeContainer.focus()}>
+  <ContextModal />
+  <div class="pan-container" bind:this={container}>
+    <div class="tree-position">
+      {#each $treeStore as rootState (rootState.id)}
+        <VisNode {treeContainer} state={rootState} />
+      {/each}
     </div>
   </div>
-{/if}
+</div>

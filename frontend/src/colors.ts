@@ -1,12 +1,4 @@
-import type { Instrument } from "./constants";
-import type { Readable, Writable } from "svelte/store";
-import { derived, writable } from "svelte/store";
-import { derivePlacementStore } from "./state/placement";
-
 type ColorKeys =
-  Instrument
-  | "strings"
-  | "winds"
   | "bgLight"
   | "bgDark"
   | "text"
@@ -28,18 +20,6 @@ type ColorKeys =
   | "loadingBarFG"
   | "loadingBarText";
 const colorLookup: Record<ColorKeys, string> = {
-  bass: "#f07178",
-  drums: "#c3e88d",
-  guitar: "#89ddff",
-  harp: "#f78c6c",
-  piano: "#ffcb6b",
-  strings: "#c792ea",
-  violin: "#c792ea",
-  cello: "#c792ea",
-  flute: "#c3cee3",
-  trumpet: "#c3cee3",
-  clarinet: "#c3cee3",
-  winds: "#c3cee3",
   bgLight: "#263238",
   bgDark: "#1f292e",
   text: "#c3cee3",
@@ -69,44 +49,5 @@ export const modalOptions = {
     color: colorLookup.textDark
   }
 };
-
-const bassVisible = writable(true);
-const drumsVisible = writable(true);
-const guitarVisible = writable(true);
-const harpVisible = writable(true);
-const pianoVisible = writable(true);
-const violinVisible = writable(true);
-const celloVisible = writable(true);
-const fluteVisible = writable(true);
-const trumpetVisible = writable(true);
-const clarinetVisible = writable(true);
-
-export const instrumentVisibility: Record<Instrument, Writable<boolean>> = {
-  bass: bassVisible,
-  drums: drumsVisible,
-  guitar: guitarVisible,
-  harp: harpVisible,
-  piano: pianoVisible,
-  violin: violinVisible,
-  cello: celloVisible,
-  flute: fluteVisible,
-  trumpet: trumpetVisible,
-  clarinet: clarinetVisible
-}
-
-export const allInstrumentsVisibility: Readable<Record<Instrument, boolean>> = derived(
-  [bassVisible, drumsVisible, guitarVisible, harpVisible, pianoVisible, violinVisible, celloVisible, fluteVisible, trumpetVisible, clarinetVisible],
-  ([$bass, $drums, $guitar, $harp, $piano, $violin, $cello, $flute, $trumpet, $clarinet]) => ({
-    bass: $bass,
-    drums: $drums,
-    guitar: $guitar,
-    harp: $harp,
-    piano: $piano,
-    violin: $violin,
-    cello: $cello,
-    flute: $flute,
-    trumpet: $trumpet,
-    clarinet: $clarinet
-  }));
 
 export default colorLookup;

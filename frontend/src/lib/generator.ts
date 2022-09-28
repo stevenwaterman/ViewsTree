@@ -1,3 +1,5 @@
+import { createBranchState, createRootState, type BranchState, type NodeConfig, type NodeState, type RootState } from "../state/tree";
+
 type RootRequest = {
   prompt: string;
   width?: number;
@@ -34,7 +36,6 @@ type BranchRequest = {
 export type BranchConfig = {
   type: "branch";
   id: string;
-  parentId: string;
   prompt: string;
   steps: number;
   scale: number;
@@ -46,10 +47,8 @@ export type BranchConfig = {
   strength: number;
 }
 
-export type NodeConfig = RootConfig | BranchConfig;
-
-export async function generateRoot(saveName: string, request: RootRequest): Promise<RootConfig> {
-  return fetch(`http://localhost:5001/${saveName}/root`, {
+export async function generateRoot(saveName: string, request: RootRequest): Promise<RootState> {
+  return await fetch(`http://localhost:5001/${saveName}/root`, {
     method: "POST",
     body: JSON.stringify(request)
   })
@@ -70,11 +69,12 @@ export async function generateRoot(saveName: string, request: RootRequest): Prom
       random: data["seed"] === undefined,
       actual: data["actual_seed"]
     }
-  }));
+  } as RootConfig))
+  .then(config => createRootState(config));
 }
 
-export async function generateBranch(saveName: string, parent: NodeConfig, request: Omit<BranchRequest, "init_run_id">): Promise<BranchConfig> {
-  return fetch(`http://localhost:5001/${saveName}/branch`, {
+export async function generateBranch(saveName: string, parent: NodeState, request: Omit<BranchRequest, "init_run_id">): Promise<BranchState> {
+  return await fetch(`http://localhost:5001/${saveName}/branch`, {
     method: "POST",
     body: JSON.stringify({
       ...request,
@@ -89,7 +89,6 @@ export async function generateBranch(saveName: string, parent: NodeConfig, reque
   .then(data => ({
     type: "branch",
     id: data["run_id"],
-    parentId: data["init_run_id"],
     prompt: data["prompt"],
     steps: data["steps"],
     scale: data["scale"],
@@ -99,7 +98,8 @@ export async function generateBranch(saveName: string, parent: NodeConfig, reque
       actual: data["actual_seed"]
     },
     strength: data["strength"]
-  }));
+  }) as BranchConfig)
+  .then(config => createBranchState(config, parent));
 }
 
 export function imageUrl(saveName: string, node: NodeConfig): string {

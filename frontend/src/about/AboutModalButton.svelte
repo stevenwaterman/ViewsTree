@@ -4,7 +4,7 @@
     import AboutModal from "./AboutModal.svelte";
     import {modalOptions} from "../colors";
 
-    const {open} = getContext<{ open: any }>("simple-modal");
+    const {open} = getContext<any>("simple-modal");
     function openAboutModal(){
         open(AboutModal, {}, modalOptions)
     }

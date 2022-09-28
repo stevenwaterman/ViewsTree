@@ -7,7 +7,7 @@
   import HelpModal from "./HelpModal.svelte"
   import toCss from "react-style-object-to-css";
 
-  const { open } = getContext("simple-modal");
+  const { open } = getContext<any>("simple-modal");
 
   function openChangelog() {
     open(ChangeLogModal, {}, modalOptions);
