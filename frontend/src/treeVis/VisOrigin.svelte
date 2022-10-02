@@ -9,10 +9,11 @@
   let roots: RootState[];
   $: roots = $treeStore;
 
+  // TODO handle children being deleted here
   let childrenLeafCounts: number[] = [];
 
   let childrenOffsets: number[];
-  $: childrenOffsets = getPlacements(0, childrenLeafCounts);
+  $: childrenOffsets = getPlacements(childrenLeafCounts);
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) generationConfigStore.defaultRoot();
@@ -64,7 +65,6 @@
     {treeContainer}
     depth={1}
     offset={childrenOffsets[idx]}
-    parentOffset={0}
     bind:leafCount={childrenLeafCounts[idx]}
   />
 {/each}

@@ -4,7 +4,6 @@
   import { afterUpdate } from "svelte";
   import Button from "../buttons/Button.svelte";
   import type { NodeState, BranchState } from "../state/tree";
-  import { saveNameStore } from "../state/settings";
 
   let contextModalState: ContextModalState;
   $: contextModalState = $contextModalStore;
@@ -26,6 +25,7 @@
   }
 
   function deleteNode() {
+    // TODO this doesn't seem to work
     hide();
     nodeState?.remove();
   }
@@ -84,8 +84,6 @@
         class="contextModal"
         style={`left: ${left}px; top: ${top}px;`}
         bind:this={branchContainer}
-        on:mousedown|preventDefault|stopPropagation
-        on:contextmenu|preventDefault|stopPropagation
         on:keydown={keyPressed}
         tabindex={0}>
         <!-- <Button on:click={loadMore}> -->

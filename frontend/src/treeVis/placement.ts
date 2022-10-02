@@ -1,9 +1,9 @@
-export function getPlacements(parentOffset: number, childLeafCounts: number[]): number[] {
+export function getPlacements(childLeafCounts: number[]): number[] {
   const startingPoints: number[] = childLeafCounts.reduce((acc, elem) => {
     const last = acc[acc.length - 1];
     const next = last + elem;
     return [...acc, next];
-  }, [parentOffset]);
+  }, [0]);
 
   const midPoints: number[] = [];
   for (let i = 0; i < startingPoints.length - 1; i++) {
@@ -14,7 +14,7 @@ export function getPlacements(parentOffset: number, childLeafCounts: number[]): 
   }
 
   const size = startingPoints[startingPoints.length - 1];
-  const adjustmentAmount = (size - parentOffset) / 2;
+  const adjustmentAmount = (size - 0) / 2;
   const adjusted = midPoints.map(offset => offset - adjustmentAmount);
 
   return adjusted;

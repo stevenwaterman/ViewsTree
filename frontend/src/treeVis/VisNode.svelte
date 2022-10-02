@@ -7,14 +7,13 @@
   import { getPlacements, nodeWidth, placementHeight, placementTransitionMs, placementWidth } from "./placement";
   import { blur, draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
-  import { cubicInOut, sineInOut } from "svelte/easing";
+  import { sineInOut } from "svelte/easing";
 
   export let state: NodeState;
   export let treeContainer: HTMLDivElement;
 
   export let depth: number;
   export let offset: number;
-  export let parentOffset: number;
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) {
@@ -45,7 +44,7 @@
   $: leafCount = childrenLeafCounts.length === 0 ? 1 : childrenLeafCounts.reduce((a,b) => a+b, 0);
 
   let childrenOffsets: number[];
-  $: childrenOffsets = getPlacements(offset, childrenLeafCounts);
+  $: childrenOffsets = getPlacements(childrenLeafCounts);
 
   let selected: boolean;
   $: selected = $selectedStore?.id === state.id;
@@ -59,11 +58,8 @@
   let edgeZ: number;
   $: edgeZ = onSelectedPath ? 1 : 0;
 
-  let offsetWidth: number;
-  $: offsetWidth = Math.abs(parentOffset - offset);
-
   let cw: number;
-  $: cw = offsetWidth * (placementWidth / 2);
+  $: cw = Math.abs(offset) * (placementWidth / 2);
 
   let cwTweened: Writable<number>;
   $: if (cw !== undefined && !isNaN(cw)) {
@@ -78,10 +74,10 @@
   $: ch = placementHeight / 2;
 
   let lineWidth: number;
-  $: lineWidth = offsetWidth * placementWidth + 10;
+  $: lineWidth = Math.abs(offset) * placementWidth + 10;
 
   let lineLeft: number;
-  $: lineLeft = Math.min(offset, parentOffset) * placementWidth - 5;
+  $: lineLeft = Math.min(offset, 0) * placementWidth - 5;
 
   let node: HTMLDivElement | undefined;
   function focusNode() {
@@ -98,6 +94,16 @@
 
   let pendingLoad: Readable<number>;
   $: pendingLoad = state.pendingChildren;
+
+  let updated: boolean = false;
+
+  function markUpdated(...props: any[]) {
+    updated = true;
+    setTimeout(() => {
+      updated = false;
+    }, 500);
+  }
+  $: markUpdated(cw);
 </script>
 
 <style>
@@ -156,6 +162,7 @@
     justify-content: center;
     align-items: center;
 
+    margin-left: -32px;
     width: 64px;
     height: 64px;
 
@@ -164,53 +171,68 @@
 
     transition-timing-function: ease-in-out;
     transition-property: transform, background-color, opacity, left;
+
   }
 
   .placement:hover {
     transform: scale(1.1, 1.1);
     transform-origin: center;
   }
+
+  .anchor {
+    position: absolute;
+  }
+
+  .updated {
+    filter: invert();
+  }
 </style>
 
 <div
-  class="placement"
-  style={`top: ${placementHeight * depth}px; left: ${placementWidth * offset - (nodeWidth / 2)}px; transition-duration: ${placementTransitionMs}ms;`}
-  bind:this={node}
-  on:mousedown={leftClick}
-  on:contextmenu|preventDefault={rightClick}
-  on:mouseenter={focusNode}
-  on:mouseleave={unfocusNode}
-  on:keypress={keyPressed}
-  tabindex={0}
+  class="anchor"
+  style={`top: ${placementHeight}px; left: ${placementWidth * offset}px; transition-duration: ${placementTransitionMs}ms;`}
 >
-  <!-- svelte-ignore a11y-missing-attribute -->
-  <img
-    src={thumbnailUrl($saveNameStore, state)}
-    class="thumbnail"
-    transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
+  <div
+    class="placement"
+    style={`transition-duration: ${placementTransitionMs}ms;`}
+    bind:this={node}
+    on:mousedown={leftClick}
+    on:contextmenu|preventDefault={rightClick}
+    on:mouseenter={focusNode}
+    on:mouseleave={unfocusNode}
+    on:keypress={keyPressed}
+    tabindex={0}
   >
-  <!-- <span class="label">{leafCount}</span> -->
-  {#if $pendingLoad > 0}
-    <p class="pendingLoad">
-      +{$pendingLoad}
-    </p>
-  {/if}
+    <!-- svelte-ignore a11y-missing-attribute -->
+    <img
+      src={thumbnailUrl($saveNameStore, state)}
+      class="thumbnail"
+      class:updated
+      transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
+    >
+    <!-- <span class="label">{leafCount}</span> -->
+    {#if $pendingLoad > 0}
+      <p class="pendingLoad">
+        +{$pendingLoad}
+      </p>
+    {/if}
+  </div>
+  {#each children as child, idx (child.id)}
+    <svelte:self
+      state={child}
+      depth={depth + 1}
+      offset={childrenOffsets[idx]}
+      parentOffset={offset}
+      bind:leafCount={childrenLeafCounts[idx]}
+      {treeContainer}
+    />
+  {/each}
 </div>
-{#each children as child, idx (child.id)}
-  <svelte:self
-    state={child}
-    depth={depth + 1}
-    offset={childrenOffsets[idx]}
-    parentOffset={offset}
-    bind:leafCount={childrenLeafCounts[idx]}
-    {treeContainer}
-  />
-{/each}
 <svg
   class="line"
   width={lineWidth}
   height={ch * 2 + 2}
-  style={`left: ${lineLeft}px; top: ${(depth - 1) * ch * 2 + 24}px; transform: scaleX(${offset < parentOffset ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
+  style={`left: ${lineLeft}px; top: ${24}px; transform: scaleX(${offset < 0 ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
 >
   {#if cwTweened !== undefined}
     <path
