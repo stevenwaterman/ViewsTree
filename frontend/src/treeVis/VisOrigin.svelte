@@ -2,12 +2,20 @@
   import { generateRoot } from "../lib/generator";
   import { saveNameStore } from "../state/settings";
   import { treeStore, type RootState } from "../state/tree";
+    import { getPlacements } from "./placement";
   import VisNode from "./VisNode.svelte";
 
   export let treeContainer: HTMLDivElement;
 
   let roots: RootState[];
   $: roots = $treeStore;
+
+  let childrenLeafCounts: number[] = [];
+  export let leafCount: number;
+  $: leafCount = childrenLeafCounts.length === 0 ? 1 : childrenLeafCounts.reduce((a,b) => a+b, 0);
+
+  let childrenOffsets: number[];
+  $: childrenOffsets = getPlacements(0, childrenLeafCounts);
 
   function leftClick(event: MouseEvent) {
     loadMore();
@@ -63,8 +71,9 @@
     state={root}
     {treeContainer}
     depth={1}
-    offset={idx}
+    offset={childrenOffsets[idx]}
     parentOffset={0}
+    bind:leafCount={childrenLeafCounts[idx]}
   />
 {/each}
 <div class="placement">

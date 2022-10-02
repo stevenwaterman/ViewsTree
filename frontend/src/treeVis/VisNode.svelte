@@ -1,8 +1,10 @@
 <script lang="ts">
+  import type { Readable } from "svelte/store";
   import { generateBranch, thumbnailUrl } from "../lib/generator";
   import { saveNameStore } from "../state/settings";
-  import { selectedPathStore, selectedStore, type NodeState } from "../state/tree";
+  import { selectedPathStore, selectedStore, type BranchState, type NodeState } from "../state/tree";
   import { contextModalStore } from "./ContextModalStore";
+    import { getPlacements } from "./placement";
 
   export let state: NodeState;
   export let treeContainer: HTMLDivElement;
@@ -10,6 +12,7 @@
   export let depth: number;
   export let offset: number;
   export let parentOffset: number;
+
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(state);
@@ -21,6 +24,19 @@
       state
     });
   }
+
+  let childrenStore: Readable<Record<string, BranchState>>;
+  $: childrenStore = state.children;
+
+  let children: Record<string, BranchState>;
+  $: children = $childrenStore;
+
+  let childrenLeafCounts: number[] = [];
+  export let leafCount: number;
+  $: leafCount = childrenLeafCounts.length === 0 ? 1 : childrenLeafCounts.reduce((a,b) => a+b, 0);
+
+  let childrenOffsets: number[];
+  $: childrenOffsets = getPlacements(offset, childrenLeafCounts);
 
   let selected: boolean;
   $: selected = $selectedStore?.id === state.id;
@@ -68,28 +84,20 @@
 </script>
 
 <style>
-  .node {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .thumbnail {
+    grid-column: 1;
+    grid-row: 1;
 
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-
-    cursor: pointer;
-    outline: none;
-    transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out,
-      opacity 0.2s ease-in-out;
-  }
-
-  .node:hover {
-    transform: scale(1.1, 1.1);
-    transform-origin: center;
+    max-height: 100%;
+    max-width: 100%;
   }
 
   .label {
     font-size: 30px;
+    grid-column: 1;
+    grid-row: 1;
+    text-align: center;
+    color: var(--text)
   }
 
   .pendingLoad {
@@ -107,6 +115,28 @@
   .placement {
     position: absolute;
     z-index: 2;
+
+    display: grid;
+    grid-template-columns: auto;
+    grid-template-rows: auto;
+    justify-content: center;
+    align-items: center;
+
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out,
+      opacity 0.2s ease-in-out;
+
+    overflow: hidden;
+  }
+
+  .placement:hover {
+    transform: scale(1.1, 1.1);
+    transform-origin: center;
   }
 
   path {
@@ -116,18 +146,20 @@
 
 <div
   class="placement"
-  style={`top: ${150 * depth}px; left: ${60 * offset - 25}px`}>
+  style={`top: ${150 * depth}px; left: ${60 * offset - 25}px`}
+  bind:this={node}
+  on:mousedown={leftClick}
+  on:contextmenu|preventDefault={rightClick}
+  on:mouseenter={focusNode}
+  on:mouseleave={unfocusNode}
+  on:keypress={keyPressed}
+  tabindex={0}
+>
   <!-- svelte-ignore a11y-missing-attribute -->
   <img
-    on:mousedown={leftClick}
-    on:contextmenu|preventDefault={rightClick}
-    on:mouseenter={focusNode}
-    on:mouseleave={unfocusNode}
-    on:keypress={keyPressed}
-    bind:this={node}
     src={thumbnailUrl($saveNameStore, state)}
-    class="node"
-    tabindex={0}/>
+    class="thumbnail"/>
+  <span class="label">{leafCount}</span>
   <!-- {#if pendingLoad > 0} -->
     <!-- <p -->
       <!-- class="pendingLoad" -->
@@ -136,12 +168,13 @@
     <!-- </p> -->
   <!-- {/if} -->
 </div>
-{#each Object.values(state.children) as child, idx (child.id)}
+{#each Object.values(children) as child, idx (child.id)}
   <svelte:self
     state={child}
     depth={depth + 1}
-    offset={idx}
+    offset={childrenOffsets[idx]}
     parentOffset={offset}
+    bind:leafCount={childrenLeafCounts[idx]}
     {treeContainer}
   />
 {/each}

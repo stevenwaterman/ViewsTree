@@ -2,7 +2,7 @@ import type { BranchConfig, RootConfig } from "../lib/generator";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
 
 export type RootState = RootConfig & {
-  children: Record<string, BranchState>;
+  children: Writable<Record<string, BranchState>>;
   remove: () => void;
 }
 
@@ -13,7 +13,7 @@ export function createRootState(config: RootConfig): RootState {
 
   const state = {
     ...config,
-    children: {},
+    children: writable({}),
     remove
   }
 
@@ -25,24 +25,29 @@ export function createRootState(config: RootConfig): RootState {
 
 export type BranchState = BranchConfig & {
   parent: NodeState;
-  children: Record<string, BranchState>;
+  children: Writable<Record<string, BranchState>>;
   remove: () => void;
 }
 
 export function createBranchState(config: BranchConfig, parent: NodeState): BranchState {
   const remove = () => {
-    delete parent.children[config.id];
+    parent.children.update(children => {
+      delete children[config.id];
+      return children;
+    })
   }
 
   const state = {
     ...config,
     parent,
-    children: {},
+    children: writable({}),
     remove
   }
 
-  parent.children[config.id] = state;
-  treeStore.update(tree => tree);
+  parent.children.update(children => ({
+    ...children,
+    [config.id]: state
+  }));
 
   return state;
 }
@@ -56,11 +61,13 @@ export const treeStore: Writable<RootState[]> = writable([]);
 
 export const selectedStore: Writable<NodeState | undefined> = writable(undefined);
 export const selectedPathStore: Readable<string[]> = derived(selectedStore, selected => {
+  if (selected === undefined) return [];
   const path: string[] = [];
-  let node: NodeState | undefined = selected;
-  while (node?.type === "branch") {
+  let node: NodeState = selected;
+  while (node.type === "branch") {
     path.unshift(node.id);
     node = node.parent;
   }
+  path.unshift(node.id);
   return path;
 })

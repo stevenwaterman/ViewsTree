@@ -23,7 +23,7 @@
 <style>
   .grid {
     display: grid;
-    grid-template-rows: 1fr 46px;
+    grid-template-rows: 1fr;
     height: 100vh;
     width: 100vw;
     color: var(--text);
