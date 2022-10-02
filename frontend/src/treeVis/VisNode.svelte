@@ -142,6 +142,10 @@
     transition-property: width, left;
   }
 
+  .path {
+    transition: 0.2s ease-in-out stroke;
+  }
+
   .placement {
     position: absolute;
     z-index: 2;
@@ -210,6 +214,7 @@
 >
   {#if cwTweened !== undefined}
     <path
+      class="path"
       d={`m 5 0 c 0 ${ch + 0.5} ${$cwTweened * 2} ${ch + 0.5} ${$cwTweened * 2} ${ch * 2 + 1}`}
       stroke={edgeColor}
       stroke-width="4px"
