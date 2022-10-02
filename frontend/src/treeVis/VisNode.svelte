@@ -94,16 +94,6 @@
 
   let pendingLoad: Readable<number>;
   $: pendingLoad = state.pendingChildren;
-
-  let updated: boolean = false;
-
-  function markUpdated(...props: any[]) {
-    updated = true;
-    setTimeout(() => {
-      updated = false;
-    }, 500);
-  }
-  $: markUpdated(cw);
 </script>
 
 <style>
@@ -182,10 +172,6 @@
   .anchor {
     position: absolute;
   }
-
-  .updated {
-    filter: invert();
-  }
 </style>
 
 <div
@@ -207,7 +193,6 @@
     <img
       src={thumbnailUrl($saveNameStore, state)}
       class="thumbnail"
-      class:updated
       transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
     >
     <!-- <span class="label">{leafCount}</span> -->
