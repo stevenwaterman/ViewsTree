@@ -1,8 +1,10 @@
-import type { BranchConfig, RootConfig } from "../lib/generator";
+import type { BranchConfig, RootConfig } from "../generator/generator";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
+import { generationConfigStore } from "./settings";
 
 export type RootState = RootConfig & {
-  children: Writable<Record<string, BranchState>>;
+  children: Writable<BranchState[]>;
+  pendingChildren: Writable<number>;
   remove: () => void;
 }
 
@@ -11,13 +13,15 @@ export function createRootState(config: RootConfig): RootState {
     treeStore.update(tree => tree.filter(root => root.id !== config.id));
   }
 
-  const state = {
+  const state: RootState = {
     ...config,
-    children: writable({}),
+    children: writable([]),
+    pendingChildren: writable(0),
     remove
   }
 
   treeStore.update(tree => [...tree, state]);
+  pendingRootsStore.update(count => count - 1);
 
   return state;
 }
@@ -25,7 +29,8 @@ export function createRootState(config: RootConfig): RootState {
 
 export type BranchState = BranchConfig & {
   parent: NodeState;
-  children: Writable<Record<string, BranchState>>;
+  children: Writable<BranchState[]>;
+  pendingChildren: Writable<number>;
   remove: () => void;
 }
 
@@ -37,29 +42,32 @@ export function createBranchState(config: BranchConfig, parent: NodeState): Bran
     })
   }
 
-  const state = {
+  const state: BranchState = {
     ...config,
     parent,
-    children: writable({}),
+    children: writable([]),
+    pendingChildren: writable(0),
     remove
   }
 
-  parent.children.update(children => ({
-    ...children,
-    [config.id]: state
-  }));
+  parent.children.update(children => [...children, state]);
+  parent.pendingChildren.update(count => count - 1);
 
   return state;
 }
-
 
 
 export type NodeConfig = RootConfig | BranchConfig;
 export type NodeState = RootState | BranchState;
 
 export const treeStore: Writable<RootState[]> = writable([]);
+export const pendingRootsStore: Writable<number> = writable(0);
 
-export const selectedStore: Writable<NodeState | undefined> = writable(undefined);
+export const selectedStore: Readable<NodeState | undefined> = derived(generationConfigStore, generationConfig => {
+  if (generationConfig.type === "root") return undefined;
+  else return generationConfig.parent;
+});
+
 export const selectedPathStore: Readable<string[]> = derived(selectedStore, selected => {
   if (selected === undefined) return [];
   const path: string[] = [];

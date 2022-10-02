@@ -20,3 +20,25 @@ body {
   --loadingBarFG: #c3e88d;
   --loadingBarText: #1f292e;
 }
+
+
+body {
+  padding: 0;
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: fixed;
+}
+
+a {
+  color: #c3e88d;
+}
+
+a:active {
+  color: #c3e88d;
+}
+
+a:visited {
+  color: #c3e88d;
+}

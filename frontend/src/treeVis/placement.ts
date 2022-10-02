@@ -19,3 +19,11 @@ export function getPlacements(parentOffset: number, childLeafCounts: number[]): 
 
   return adjusted;
 }
+
+export const nodeHeight = 64;
+export const nodeWidth = 64;
+const nodeMarginHeight = 96;
+const nodeMarginWidth = 16;
+export const placementHeight = nodeHeight + nodeMarginHeight;
+export const placementWidth = nodeWidth + nodeMarginWidth;
+export const placementTransitionMs = 400;

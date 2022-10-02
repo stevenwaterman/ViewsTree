@@ -18,6 +18,14 @@
 
   let actualStyle: string;
   $: actualStyle = `color: ${textColor}; backgroundColor: ${bgColor};`;
+
+  export let hovered: boolean = false;
+
+  function onClick(event: MouseEvent) {
+    if (disabled) {
+      event.stopPropagation();
+    }
+  }
 </script>
 
 <style>
@@ -30,6 +38,7 @@
     text-align: center;
     transition: all 0.1s;
     cursor: pointer;
+    user-select: none;
   }
 
   .enabled:hover {
@@ -41,17 +50,18 @@
     cursor: pointer;
   }
 
-  .disabled {
+  .button:not(.enabled) {
     cursor: default;
   }
 </style>
 
-{#if disabled}
-  <div class="button disabled" style={actualStyle}>
-    <slot />
-  </div>
-{:else}
-  <div class="button enabled" on:click style={actualStyle}>
-    <slot />
-  </div>
-{/if}
+<div
+  class="button"
+  class:enabled={!disabled}
+  style={actualStyle}
+  on:click={onClick}
+  on:mouseenter={() => {hovered = true;}}
+  on:mouseleave={() => {hovered = false;}}
+>
+  <slot {hovered}/>
+</div>

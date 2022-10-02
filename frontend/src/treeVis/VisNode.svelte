@@ -1,10 +1,13 @@
 <script lang="ts">
-  import type { Readable } from "svelte/store";
-  import { generateBranch, thumbnailUrl } from "../lib/generator";
-  import { saveNameStore } from "../state/settings";
+  import type { Readable, Writable } from "svelte/store";
+  import { thumbnailUrl } from "../generator/generator";
+  import { generationConfigStore, saveNameStore } from "../state/settings";
   import { selectedPathStore, selectedStore, type BranchState, type NodeState } from "../state/tree";
   import { contextModalStore } from "./ContextModalStore";
-    import { getPlacements } from "./placement";
+  import { getPlacements, nodeWidth, placementHeight, placementTransitionMs, placementWidth } from "./placement";
+  import { blur, draw, scale } from "svelte/transition";
+  import { tweened } from "svelte/motion";
+  import { cubicInOut, sineInOut } from "svelte/easing";
 
   export let state: NodeState;
   export let treeContainer: HTMLDivElement;
@@ -13,9 +16,15 @@
   export let offset: number;
   export let parentOffset: number;
 
-
   function leftClick(event: MouseEvent) {
-    if (event.button === 0) selectedStore.set(state);
+    if (event.button === 0) {
+      if (event.shiftKey) generationConfigStore.siblingof(state);
+      else if (event.ctrlKey) generationConfigStore.update(generationConfig => ({
+        ...generationConfig,
+        seed: state.seed.actual
+      }))
+      else generationConfigStore.childOf(state);
+    }
   }
 
   function rightClick({ clientX, clientY }: MouseEvent) {
@@ -25,10 +34,10 @@
     });
   }
 
-  let childrenStore: Readable<Record<string, BranchState>>;
+  let childrenStore: Readable<BranchState[]>;
   $: childrenStore = state.children;
 
-  let children: Record<string, BranchState>;
+  let children: BranchState[];
   $: children = $childrenStore;
 
   let childrenLeafCounts: number[] = [];
@@ -54,16 +63,25 @@
   $: offsetWidth = Math.abs(parentOffset - offset);
 
   let cw: number;
-  $: cw = offsetWidth * 30;
+  $: cw = offsetWidth * (placementWidth / 2);
+
+  let cwTweened: Writable<number>;
+  $: if (cw !== undefined && !isNaN(cw)) {
+    if (cwTweened === undefined) {
+      cwTweened = tweened(cw, { duration: placementTransitionMs, easing: sineInOut });
+    } else {
+      cwTweened.set(cw);
+    }
+  }
 
   let ch: number;
-  $: ch = 150 / 2;
+  $: ch = placementHeight / 2;
 
   let lineWidth: number;
-  $: lineWidth = offsetWidth * 60 + 10;
+  $: lineWidth = offsetWidth * placementWidth + 10;
 
   let lineLeft: number;
-  $: lineLeft = Math.min(offset, parentOffset) * 60 - 5;
+  $: lineLeft = Math.min(offset, parentOffset) * placementWidth - 5;
 
   let node: HTMLDivElement | undefined;
   function focusNode() {
@@ -73,14 +91,13 @@
     if ($contextModalStore === null) treeContainer.focus();
   }
 
-  function loadMore() {
-    return generateBranch($saveNameStore, state, { prompt: "hi" });
-  }
-
   function keyPressed(event: KeyboardEvent) {
-    if (event.key === "r") return loadMore();
+    // if (event.key === "r") return loadMore();
     if (event.key === "d") return state.remove();
   }
+
+  let pendingLoad: Readable<number>;
+  $: pendingLoad = state.pendingChildren;
 </script>
 
 <style>
@@ -90,6 +107,7 @@
 
     max-height: 100%;
     max-width: 100%;
+    border-radius: 20%;
   }
 
   .label {
@@ -105,11 +123,23 @@
     text-align: center;
     margin: 8px 0 0 0;
     border-radius: 30%;
-    width: 100%;
+    width: fit-content;
+    color: var(--textDark);
+    background-color: var(--bgDark);
+    border: 2px solid var(--border);
+
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
   }
 
   .line {
     position: absolute;
+
+    transition-timing-function: ease-in-out;
+    transition-property: width, left;
   }
 
   .placement {
@@ -122,31 +152,25 @@
     justify-content: center;
     align-items: center;
 
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
+    width: 64px;
+    height: 64px;
 
     cursor: pointer;
     outline: none;
-    transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out,
-      opacity 0.2s ease-in-out;
 
-    overflow: hidden;
+    transition-timing-function: ease-in-out;
+    transition-property: transform, background-color, opacity, left;
   }
 
   .placement:hover {
     transform: scale(1.1, 1.1);
     transform-origin: center;
   }
-
-  path {
-    transition: stroke 0.2s ease-in-out;
-  }
 </style>
 
 <div
   class="placement"
-  style={`top: ${150 * depth}px; left: ${60 * offset - 25}px`}
+  style={`top: ${placementHeight * depth}px; left: ${placementWidth * offset - (nodeWidth / 2)}px; transition-duration: ${placementTransitionMs}ms;`}
   bind:this={node}
   on:mousedown={leftClick}
   on:contextmenu|preventDefault={rightClick}
@@ -158,17 +182,17 @@
   <!-- svelte-ignore a11y-missing-attribute -->
   <img
     src={thumbnailUrl($saveNameStore, state)}
-    class="thumbnail"/>
-  <span class="label">{leafCount}</span>
-  <!-- {#if pendingLoad > 0} -->
-    <!-- <p -->
-      <!-- class="pendingLoad" -->
-      <!-- style={toCss({color: colorLookup.textDark, backgroundColor: colorLookup.bgLight, border: "2px solid", borderColor: colorLookup.border})}> -->
-      <!-- +{pendingLoad} -->
-    <!-- </p> -->
-  <!-- {/if} -->
+    class="thumbnail"
+    transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
+  >
+  <!-- <span class="label">{leafCount}</span> -->
+  {#if $pendingLoad > 0}
+    <p class="pendingLoad">
+      +{$pendingLoad}
+    </p>
+  {/if}
 </div>
-{#each Object.values(children) as child, idx (child.id)}
+{#each children as child, idx (child.id)}
   <svelte:self
     state={child}
     depth={depth + 1}
@@ -182,12 +206,15 @@
   class="line"
   width={lineWidth}
   height={ch * 2 + 2}
-  style={`left: ${lineLeft}px; top: ${(depth - 1) * ch * 2 + 24}px; transform: scaleX(${offset < parentOffset ? -1 : 1}); z-index: ${edgeZ};`}
+  style={`left: ${lineLeft}px; top: ${(depth - 1) * ch * 2 + 24}px; transform: scaleX(${offset < parentOffset ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
 >
-  <path
-    d={`m 5 0 c 0 ${ch + 0.5} ${cw * 2} ${ch + 0.5} ${cw * 2} ${ch * 2 + 1}`}
-    stroke={edgeColor}
-    stroke-width="6px"
-    fill="none"
-  />
+  {#if cwTweened !== undefined}
+    <path
+      d={`m 5 0 c 0 ${ch + 0.5} ${$cwTweened * 2} ${ch + 0.5} ${$cwTweened * 2} ${ch * 2 + 1}`}
+      stroke={edgeColor}
+      stroke-width="4px"
+      fill="none"
+      transition:draw={{duration: placementTransitionMs}}
+    />
+  {/if}
 </svg>

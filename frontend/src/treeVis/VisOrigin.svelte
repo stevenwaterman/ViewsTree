@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { generateRoot } from "../lib/generator";
-  import { saveNameStore } from "../state/settings";
-  import { treeStore, type RootState } from "../state/tree";
-    import { getPlacements } from "./placement";
+  import { generationConfigStore } from "../state/settings";
+  import { pendingRootsStore, treeStore, type RootState } from "../state/tree";
+  import { getPlacements } from "./placement";
   import VisNode from "./VisNode.svelte";
 
   export let treeContainer: HTMLDivElement;
@@ -11,22 +10,12 @@
   $: roots = $treeStore;
 
   let childrenLeafCounts: number[] = [];
-  export let leafCount: number;
-  $: leafCount = childrenLeafCounts.length === 0 ? 1 : childrenLeafCounts.reduce((a,b) => a+b, 0);
 
   let childrenOffsets: number[];
   $: childrenOffsets = getPlacements(0, childrenLeafCounts);
 
   function leftClick(event: MouseEvent) {
-    loadMore();
-  }
-
-  function loadMore() {
-    generateRoot($saveNameStore, { prompt: "hi" })
-  }
-
-  function keyPressed(event: KeyboardEvent) {
-    if (event.key === "r") return loadMore();
+    if (event.button === 0) generationConfigStore.defaultRoot();
   }
 </script>
 
@@ -57,6 +46,9 @@
     margin: 8px 0 0 0;
     border-radius: 30%;
     width: 100%;
+    color: var(--textDark);
+    background-color: var(--bgDark);
+    border: 2px solid var(--border);
   }
 
   .placement {
@@ -76,19 +68,15 @@
     bind:leafCount={childrenLeafCounts[idx]}
   />
 {/each}
-<div class="placement">
+<div class="placement" on:mousedown={leftClick}>
   <div
-    on:mousedown={leftClick}
-    on:keypress={keyPressed}
     class="node"
     tabindex={0}>
     <span class="label">Root</span>
   </div>
-  <!-- {#if pendingLoad > 0} -->
-    <!-- <p -->
-      <!-- class="pendingLoad" -->
-      <!-- style={toCss({color: colorLookup.textDark, backgroundColor: colorLookup.bgDark, border: "2px solid", borderColor: colorLookup.border})}> -->
-      <!-- +{pendingLoad} -->
-    <!-- </p> -->
-  <!-- {/if} -->
+  {#if $pendingRootsStore > 0}
+    <p class="pendingLoad">
+      +{$pendingRootsStore}
+    </p>
+  {/if}
 </div>

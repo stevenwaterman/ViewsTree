@@ -1,11 +1,12 @@
-import { createBranchState, createRootState, type BranchState, type NodeConfig, type NodeState, type RootState } from "../state/tree";
+import type { GenerationConfig } from "../state/settings";
+import { createBranchState, createRootState, pendingRootsStore, type BranchState, type NodeConfig, type NodeState, type RootState } from "../state/tree";
 
-type RootRequest = {
+export type RootRequest = {
   prompt: string;
-  width?: number;
-  height?: number;
-  steps?: number;
-  scale?: number;
+  width: number;
+  height: number;
+  steps: number;
+  scale: number;
   seed?: number;
 }
 
@@ -23,13 +24,13 @@ export type RootConfig = {
   }
 }
 
-type BranchRequest = {
+export type BranchRequest = {
   prompt: string;
-  steps?: number;
-  scale?: number;
-  eta?: number;
-  seed?: number
-  strength?: number;
+  steps: number;
+  scale: number;
+  eta: number;
+  strength: number;
+  seed?: number;
 }
 
 export type BranchConfig = {
@@ -46,7 +47,20 @@ export type BranchConfig = {
   strength: number;
 }
 
-export async function generateRoot(saveName: string, request: RootRequest): Promise<RootState> {
+let lastGeneration: Promise<any> = Promise.resolve();
+
+export async function generate(saveName: string, request: GenerationConfig): Promise<void> {
+  if (request.type === "root") {
+    pendingRootsStore.update(count => count + 1);
+    lastGeneration = lastGeneration.then(() => generateRoot(saveName, request));
+  } else {
+    request.parent.pendingChildren.update(count => count + 1);
+    lastGeneration = lastGeneration.then(() => generateBranch(saveName, request.parent, request));
+  }
+  await lastGeneration;
+}
+
+async function generateRoot(saveName: string, request: RootRequest): Promise<RootState> {
   return await fetch(`http://localhost:5001/${saveName}/root`, {
     method: "POST",
     body: JSON.stringify(request)
@@ -65,14 +79,14 @@ export async function generateRoot(saveName: string, request: RootRequest): Prom
     steps: data["steps"],
     scale: data["scale"],
     seed: {
-      random: data["seed"] === undefined,
+      random: data["seed"] === null,
       actual: data["actual_seed"]
     }
   } as RootConfig))
   .then(config => createRootState(config));
 }
 
-export async function generateBranch(saveName: string, parent: NodeState, request: BranchRequest): Promise<BranchState> {
+async function generateBranch(saveName: string, parent: NodeState, request: BranchRequest): Promise<BranchState> {
   return await fetch(`http://localhost:5001/${saveName}/branch/${parent.id}`, {
     method: "POST",
     body: JSON.stringify({
@@ -93,7 +107,7 @@ export async function generateBranch(saveName: string, parent: NodeState, reques
     scale: data["scale"],
     eta: data["eta"],
     seed: {
-      random: data["seed"] === undefined,
+      random: data["seed"] === null,
       actual: data["actual_seed"]
     },
     strength: data["strength"]

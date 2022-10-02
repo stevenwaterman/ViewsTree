@@ -3,7 +3,6 @@
   import type { ContextModalState } from "./ContextModalStore";
   import { afterUpdate } from "svelte";
   import Button from "../buttons/Button.svelte";
-  import { generateRoot, generateBranch } from "../lib/generator";
   import type { NodeState, BranchState } from "../state/tree";
   import { saveNameStore } from "../state/settings";
 
@@ -26,18 +25,13 @@
     contextModalStore.set(null);
   }
 
-  function loadMore() {
-    hide();
-    if (nodeState) generateBranch($saveNameStore, nodeState, { prompt: "hi" })
-  }
-
   function deleteNode() {
     hide();
     nodeState?.remove();
   }
 
   function keyPressed(event: KeyboardEvent) {
-    if (event.key === "r") return loadMore();
+    // if (event.key === "r") return loadMore();
     // if (event.key === "a") return openImportModal();
     // if (event.key === "s" && showBranch) return openExportModal();
     if (event.key === "d") return deleteNode();
@@ -94,9 +88,9 @@
         on:contextmenu|preventDefault|stopPropagation
         on:keydown={keyPressed}
         tabindex={0}>
-        <Button on:click={loadMore}>
-          <u>R</u>equest More
-        </Button>
+        <!-- <Button on:click={loadMore}> -->
+          <!-- <u>R</u>equest More -->
+        <!-- </Button> -->
         <!-- <Button on:click={openImportModal}> -->
           <!-- <u>A</u>dd Midi -->
         <!-- </Button> -->

@@ -32,7 +32,6 @@
     outline: none;
 
     color: var(--textEmphasis);
-    background-color: var(--bgLight);
     border-left: 1px solid;
     border-color: var(--border);
   }
