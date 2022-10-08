@@ -34,6 +34,9 @@ export function unwrapStore<T, INNER extends Readable<T | null>>(store_2: Readab
 export function unwrapStoreNonNull<T, INNER extends Readable<T>>(store_2: Readable<INNER>, initialValue: T, equality: (a: T, b: T) => boolean = (a, b) => a === b): Readable<T> {
   let value: T = initialValue;
   const output: Writable<T> = writable(initialValue);
+  output.subscribe(state => {
+    console.log("Output changed", state);
+  })
   let unsubscribe: () => void = () => { };
   store_2.subscribe((store: INNER) => {
     unsubscribe();
@@ -45,6 +48,21 @@ export function unwrapStoreNonNull<T, INNER extends Readable<T>>(store_2: Readab
     })
   });
   return output;
+}
+
+export function mapUnwrap<T, U>(stores: Readable<T[]>, mapper: (input: T) => Readable<U>): Readable<U[]> {
+  const wrappedStore: Readable<Readable<U[]>> = derived(stores, states => {
+    const mappedStores: Readable<U>[] = states.map(state => mapper(state));
+    mappedStores.forEach(store => {
+      store.subscribe(console.log);
+    })
+    return derived(mappedStores, values => values);
+  })
+
+  // This is a hack, for some reason `value` in unwrapStore seems to always be updated instantly via magic, meaning equality returns false when it just changed
+  const equality = (_a: any, _b: any) => false;
+  const unwrappedStore: Readable<U[]> = unwrapStoreNonNull(wrappedStore, [] as U[], equality);
+  return unwrappedStore;
 }
 
 type Stores = Readable<any> | [Readable<any>, ...Array<Readable<any>>];

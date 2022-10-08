@@ -37,14 +37,16 @@
   $: childrenStore = state.children;
 
   let children: BranchState[];
-  $: children = $childrenStore;
+  $: children = $childrenStore ?? [];
 
-  let childrenLeafCounts: number[] = [];
-  export let leafCount: number;
-  $: leafCount = childrenLeafCounts.length === 0 ? 1 : childrenLeafCounts.reduce((a,b) => a+b, 0);
+  let childLeafCountStore: Readable<number[]>;
+  $: childLeafCountStore = state.childLeafCountStore;
+
+  let leafCountStore: Readable<number>;
+  $: leafCountStore = state.leafCountStore;
 
   let childrenOffsets: number[];
-  $: childrenOffsets = getPlacements(childrenLeafCounts);
+  $: childrenOffsets = getPlacements($childLeafCountStore);
 
   let selected: boolean;
   $: selected = $selectedStore?.id === state.id;
@@ -194,7 +196,7 @@
       class="thumbnail"
       transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
     >
-    <!-- <span class="label">{leafCount}</span> -->
+    <span class="label">{JSON.stringify($leafCountStore)}</span>
     {#if $pendingLoad > 0}
       <p class="pendingLoad">
         +{$pendingLoad}
@@ -206,8 +208,6 @@
       state={child}
       depth={depth + 1}
       offset={childrenOffsets[idx]}
-      parentOffset={offset}
-      bind:leafCount={childrenLeafCounts[idx]}
       {treeContainer}
     />
   {/each}

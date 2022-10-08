@@ -1,6 +1,6 @@
 <script lang="ts">
   import { generationConfigStore } from "../state/settings";
-  import { pendingRootsStore, treeStore, type RootState } from "../state/tree";
+  import { pendingRootsStore, rootsLeafCountStore, treeStore, type RootState } from "../state/tree";
   import { getPlacements } from "./placement";
   import VisNode from "./VisNode.svelte";
 
@@ -9,11 +9,8 @@
   let roots: RootState[];
   $: roots = $treeStore;
 
-  // TODO handle children being deleted here
-  let childrenLeafCounts: number[] = [];
-
   let childrenOffsets: number[];
-  $: childrenOffsets = getPlacements(childrenLeafCounts);
+  $: childrenOffsets = getPlacements($rootsLeafCountStore);
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) generationConfigStore.defaultRoot();
@@ -65,7 +62,6 @@
     {treeContainer}
     depth={1}
     offset={childrenOffsets[idx]}
-    bind:leafCount={childrenLeafCounts[idx]}
   />
 {/each}
 <div class="placement" on:mousedown={leftClick}>

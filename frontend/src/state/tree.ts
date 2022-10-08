@@ -1,10 +1,14 @@
 import type { BranchConfig, RootConfig } from "../generator/generator";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
 import { generationConfigStore } from "./settings";
+import { arrayEqual, mapUnwrap, unwrapStore, unwrapStoreNonNull } from "../utils";
+import { map, reduce } from "@accuser/svelte-store-array";
 
 export type RootState = RootConfig & {
   children: Writable<BranchState[]>;
   pendingChildren: Writable<number>;
+  childLeafCountStore: Readable<number[]>;
+  leafCountStore: Readable<number>;
   remove: () => void;
 };
 
@@ -14,10 +18,15 @@ export function createRootState(config: RootConfig): RootState {
     generationConfigStore.onRemovedNode(state);
   }
 
+  const children: Writable<BranchState[]> = writable([]);
+  const { childLeafCountStore, leafCountStore } = getChildLeafCountStore(children);
+
   const state: RootState = {
     ...config,
-    children: writable([]),
+    children,
     pendingChildren: writable(0),
+    childLeafCountStore,
+    leafCountStore,
     remove
   }
 
@@ -32,6 +41,8 @@ export type BranchState = BranchConfig & {
   parent: NodeState;
   children: Writable<BranchState[]>;
   pendingChildren: Writable<number>;
+  childLeafCountStore: Readable<number[]>;
+  leafCountStore: Readable<number>;
   remove: () => void;
 };
 
@@ -41,11 +52,16 @@ export function createBranchState(config: BranchConfig, parent: NodeState): Bran
     generationConfigStore.onRemovedNode(state);
   }
 
+  const children: Writable<BranchState[]> = writable([]);
+  const { childLeafCountStore, leafCountStore } = getChildLeafCountStore(children);
+
   const state: BranchState = {
     ...config,
     parent,
-    children: writable([]),
+    children,
     pendingChildren: writable(0),
+    childLeafCountStore,
+    leafCountStore,
     remove
   }
 
@@ -61,6 +77,10 @@ export type NodeState = RootState | BranchState;
 
 export const treeStore: Writable<RootState[]> = writable([]);
 export const pendingRootsStore: Writable<number> = writable(0);
+const treeLeafCountStores = getChildLeafCountStore(treeStore);
+export const treeLeafCountStore: Readable<number> = treeLeafCountStores.leafCountStore;
+export const rootsLeafCountStore: Readable<number[]> = treeLeafCountStores.childLeafCountStore;
+treeLeafCountStore.subscribe(console.log);
 
 export const selectedStore: Readable<NodeState | undefined> = derived(generationConfigStore, generationConfig => {
   if (generationConfig.type === "root") return undefined;
@@ -78,3 +98,12 @@ export const selectedPathStore: Readable<string[]> = derived(selectedStore, sele
   path.unshift(node.id);
   return path;
 })
+
+function getChildLeafCountStore(childrenStore: Readable<NodeState[]>): { childLeafCountStore: Readable<number[]>; leafCountStore: Readable<number> } {
+  const unwrappedStore: Readable<number[]> = mapUnwrap<NodeState, number>(childrenStore, child => child.leafCountStore);
+  const leafCountStore: Readable<number> = derived(unwrappedStore, childLeafCounts => {
+    if (childLeafCounts.length === 0) return 1;
+    else return childLeafCounts.reduce((a,b) => a+b, 0);
+  });
+  return { childLeafCountStore: unwrappedStore, leafCountStore };
+}
