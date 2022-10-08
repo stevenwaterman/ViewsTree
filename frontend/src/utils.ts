@@ -1,4 +1,5 @@
-import type { Readable, Writable } from "svelte/store";
+import { get_store_value } from "svelte/internal";
+import type { Readable, Unsubscriber, Writable } from "svelte/store";
 import { derived, writable } from "svelte/store";
 
 export function firstLetterUC(str: string): string {
@@ -34,9 +35,6 @@ export function unwrapStore<T, INNER extends Readable<T | null>>(store_2: Readab
 export function unwrapStoreNonNull<T, INNER extends Readable<T>>(store_2: Readable<INNER>, initialValue: T, equality: (a: T, b: T) => boolean = (a, b) => a === b): Readable<T> {
   let value: T = initialValue;
   const output: Writable<T> = writable(initialValue);
-  output.subscribe(state => {
-    console.log("Output changed", state);
-  })
   let unsubscribe: () => void = () => { };
   store_2.subscribe((store: INNER) => {
     unsubscribe();
@@ -53,9 +51,6 @@ export function unwrapStoreNonNull<T, INNER extends Readable<T>>(store_2: Readab
 export function mapUnwrap<T, U>(stores: Readable<T[]>, mapper: (input: T) => Readable<U>): Readable<U[]> {
   const wrappedStore: Readable<Readable<U[]>> = derived(stores, states => {
     const mappedStores: Readable<U>[] = states.map(state => mapper(state));
-    mappedStores.forEach(store => {
-      store.subscribe(console.log);
-    })
     return derived(mappedStores, values => values);
   })
 
@@ -99,4 +94,15 @@ export function arrayEqual<T>(a: T[], b: T[], elementEquality: (a: T, b: T) => b
     if (!elementEquality(a[i], b[i])) return false;
   }
   return true;
+}
+
+type StoreValue<T extends Readable<any>> = T extends Readable<infer R> ? R : never;
+export type Stateful<T extends Readable<any>> = T & { state: StoreValue<T> };
+export function stateful<T extends Readable<any>>(store: T): Stateful<T> {
+  const output: Stateful<T> = {
+    ...store,
+    state: get_store_value(store)
+  };
+  output.subscribe(state => output.state = state);
+  return output;
 }

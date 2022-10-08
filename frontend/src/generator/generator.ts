@@ -1,4 +1,4 @@
-import type { GenerationConfig } from "../state/settings";
+import type { GenerationSettings } from "../state/settings";
 import { createBranchState, createRootState, pendingRootsStore, type BranchState, type NodeConfig, type NodeState, type RootState } from "../state/tree";
 
 export type RootRequest = {
@@ -49,13 +49,13 @@ export type BranchConfig = {
 
 let lastGeneration: Promise<any> = Promise.resolve();
 
-export async function generate(saveName: string, request: GenerationConfig): Promise<void> {
-  if (request.type === "root") {
-    pendingRootsStore.update(count => count + 1);
-    lastGeneration = lastGeneration.then(() => generateRoot(saveName, request));
+export async function generate(saveName: string, request: GenerationSettings, parent: NodeState | undefined): Promise<void> {
+  if (parent) {
+    parent.pendingChildren.update(count => count + 1);
+    lastGeneration = lastGeneration.finally(() => generateBranch(saveName, parent, request));
   } else {
-    request.parent.pendingChildren.update(count => count + 1);
-    lastGeneration = lastGeneration.then(() => generateBranch(saveName, request.parent, request));
+    pendingRootsStore.update(count => count + 1);
+    lastGeneration = lastGeneration.finally(() => generateRoot(saveName, request));
   }
   await lastGeneration;
 }

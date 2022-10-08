@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { generationConfigStore } from "../state/settings";
+  import { generationSettingsStore } from "../state/settings";
 </script>
 
 <style>
@@ -16,6 +16,6 @@
 
 <label for="seed">Seed</label>
 <div class="row">
-  <input id="seed" type="number" min={0} max={Number.MAX_SAFE_INTEGER} bind:value={$generationConfigStore.seed} />
-  <button disabled={$generationConfigStore.seed === undefined} on:click={() => {$generationConfigStore.seed = undefined}}>X</button>
+  <input id="seed" type="number" min={0} max={Number.MAX_SAFE_INTEGER} bind:value={$generationSettingsStore.seed} />
+  <button disabled={$generationSettingsStore.seed === undefined} on:click={() => {$generationSettingsStore.seed = undefined}}>X</button>
 </div>

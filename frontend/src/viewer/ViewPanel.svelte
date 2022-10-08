@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { selectedStore } from "../state/selected";
+  import type { NodeState } from "../state/tree";
   import { imageUrl } from "../generator/generator";
   import { saveNameStore } from "../state/settings";
-  import { selectedStore, type NodeState } from "../state/tree";
   import ViewButtons from "./ViewButtons.svelte";
 
   let selected: NodeState | undefined;

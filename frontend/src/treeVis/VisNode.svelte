@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { Readable, Writable } from "svelte/store";
-  import { thumbnailUrl } from "../generator/generator";
-  import { generationConfigStore, saveNameStore } from "../state/settings";
-  import { selectedPathStore, selectedStore, type BranchState, type NodeState } from "../state/tree";
+  import { generate, thumbnailUrl } from "../generator/generator";
   import { contextModalStore } from "./ContextModalStore";
   import { getPlacements, nodeWidth, placementHeight, placementTransitionMs, placementWidth } from "./placement";
-  import { blur, draw, scale } from "svelte/transition";
+  import { draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
   import { sineInOut } from "svelte/easing";
+  import type { BranchState, NodeState } from "../state/tree";
+    import { selectedPathStore, selectedStore } from "../state/selected";
+    import { generationSettingsStore, saveNameStore } from "../state/settings";
 
   export let state: NodeState;
   export let treeContainer: HTMLDivElement;
@@ -17,12 +18,9 @@
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) {
-      if (event.shiftKey) generationConfigStore.siblingof(state);
-      else if (event.ctrlKey) generationConfigStore.update(generationConfig => ({
-        ...generationConfig,
-        seed: state.seed.actual
-      }))
-      else generationConfigStore.childOf(state);
+      if (event.shiftKey) generationSettingsStore.copySettings(state);
+      else if (event.ctrlKey) generationSettingsStore.copySeed(state);
+      else selectedStore.set(state);
     }
   }
 
@@ -91,6 +89,7 @@
 
   function keyPressed(event: KeyboardEvent) {
     if (event.key === "d") return state.remove();
+    else if (event.key === "r") return generate($saveNameStore, $generationSettingsStore, state);
   }
 
   let pendingLoad: Readable<number>;
@@ -105,6 +104,14 @@
     max-height: 100%;
     max-width: 100%;
     border-radius: 20%;
+
+    transition-property: box-shadow, border;
+    transition-timing-function: ease-in-out;
+    transition-duration: 0.2s;
+  }
+
+  .selected {
+    box-shadow: 0 0 0 0.2em var(--nodePlaying);
   }
 
   .label {
@@ -160,14 +167,16 @@
     cursor: pointer;
     outline: none;
 
+    transform-origin: center;
+    transform: scale(1);
+
     transition-timing-function: ease-in-out;
     transition-property: transform, background-color, opacity, left;
 
   }
 
   .placement:hover {
-    transform: scale(1.1, 1.1);
-    transform-origin: center;
+    transform: scale(1.1);
   }
 
   .anchor {
@@ -194,9 +203,10 @@
     <img
       src={thumbnailUrl($saveNameStore, state)}
       class="thumbnail"
+      class:selected
       transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
     >
-    <span class="label">{JSON.stringify($leafCountStore)}</span>
+    <!-- <span class="label">{JSON.stringify($leafCountStore)}</span> -->
     {#if $pendingLoad > 0}
       <p class="pendingLoad">
         +{$pendingLoad}

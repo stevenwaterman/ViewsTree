@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { generationConfigStore } from "../state/settings";
+  import { selectedStore } from "../state/selected";
   import { pendingRootsStore, rootsLeafCountStore, treeStore, type RootState } from "../state/tree";
   import { getPlacements } from "./placement";
   import VisNode from "./VisNode.svelte";
@@ -13,7 +13,7 @@
   $: childrenOffsets = getPlacements($rootsLeafCountStore);
 
   function leftClick(event: MouseEvent) {
-    if (event.button === 0) generationConfigStore.defaultRoot();
+    if (event.button === 0) selectedStore.set(undefined);
   }
 </script>
 

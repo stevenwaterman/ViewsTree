@@ -22,7 +22,6 @@
   export let hovered: boolean = false;
 
   function onClick(event: MouseEvent) {
-    // console.log(event);
     if (disabled) {
       event.stopPropagation();
     }

@@ -1,118 +1,54 @@
 import type { BranchRequest, RootRequest } from "../generator/generator";
-import { writable, type Writable } from "svelte/store";
+import { derived, writable, type Readable, type Writable } from "svelte/store";
 import type { NodeState } from "./tree";
+import { selectedStore } from "./selected";
 
 export const saveNameStore: Writable<string> = writable("test");
 
-export type GenerationConfig = 
-  ({ type: "root" } & RootRequest) |
-  ({ type: "branch", parent: NodeState } & BranchRequest);
+export type GenerationSettings = RootRequest & BranchRequest;
 
 export function randomSeed() {
   return Math.random() * Number.MAX_SAFE_INTEGER;
 }
 
-const defaultPrompt = "";
-const defaultWidth = 512;
-const defaultHeight = 512;
-
-const defaultSteps = {
-  root: 50,
-  branch: 50
-};
-
-const defaultScale = {
-  root: 8,
-  branch: 10
-};
-
-const defaultStrength = 0.4;
-const defaultEta = 0;
-
-function getDefaultRootGenerationConfig(): GenerationConfig {
+function getDefaultGenerationSettings(): GenerationSettings {
   return {
-    type: "root",
-    prompt: defaultPrompt,
-    width: defaultWidth,
-    height: defaultHeight,
-    steps: defaultSteps.root,
-    scale: defaultScale.root
+    prompt: "",
+    width: 512,
+    height: 512,
+    steps: 50,
+    scale: 7.5,
+    eta: 0,
+    strength: 0.4
   }
 }
 
-function getChildGenerationConfig(node: NodeState): GenerationConfig {
-  const strength = node.type === "root" ? defaultStrength : node.strength;
-  const eta = node.type === "root" ? defaultEta : node.eta;
-
-  return {
-    type: "branch",
-    parent: node,
+function copySettings(current: GenerationSettings, node: NodeState): GenerationSettings {
+  const newSettings: GenerationSettings = {
+    ...current,
     prompt: node.prompt,
-    strength,
-    eta,
-    steps: defaultSteps[node.type],
-    scale: defaultScale[node.type],
+    steps: node.steps,
+    scale: node.scale,
     seed: node.seed.random ? undefined : node.seed.actual
-  }
-}
+  };
 
-function getSiblingGenerationConfig(sibling: NodeState): GenerationConfig {
-  if (sibling.type === "root") {
-    return {
-      type: "root",
-      prompt: sibling.prompt,
-      width: sibling.width,
-      height: sibling.height,
-      steps: sibling.steps,
-      scale: sibling.scale,
-      seed: sibling.seed.random ? undefined : sibling.seed.actual
-    }
+  if (node.type === "root") {
+    newSettings.width = node.width;
+    newSettings.height = node.height;
   } else {
-    return {
-      type: "branch",
-      parent: sibling.parent,
-      prompt: sibling.prompt,
-      strength: sibling.strength,
-      eta: sibling.eta,
-      steps: sibling.steps,
-      scale: sibling.scale,
-      seed: sibling.seed.random ? undefined : sibling.seed.actual
-    }
+    newSettings.eta = node.eta;
+    newSettings.strength = node.strength;
   }
+
+  return newSettings;
 }
 
-const generationConfigStoreInternal: Writable<GenerationConfig> = writable(getDefaultRootGenerationConfig());
-
-export const generationConfigStore = {
-  ...generationConfigStoreInternal,
-  childOf: (node: NodeState) => {
-    generationConfigStoreInternal.set(getChildGenerationConfig(node))
-  },
-  siblingof: (node: NodeState) => {
-    generationConfigStoreInternal.set(getSiblingGenerationConfig(node))
-  },
-  defaultRoot: () => {
-    generationConfigStoreInternal.set(getDefaultRootGenerationConfig())
-  },
-  onRemovedNode: (node: NodeState) => {
-    generationConfigStoreInternal.update(generationConfig => {
-      // Currently a root, therefore no ancestors
-      if (generationConfig.type === "root") return generationConfig;
-
-      const ancestors: NodeState[] = [];
-      let pointerNode: NodeState = generationConfig.parent;
-      while (pointerNode.type === "branch") {
-        ancestors.push(pointerNode);
-        pointerNode = pointerNode.parent;
-      }
-      ancestors.push(pointerNode);
-
-      // Deleted node was not an ancestor
-      if (!ancestors.includes(node)) return generationConfig;
-
-      // TODO this shouldn't clear the prompt / edited settings
-      if (node.type === "root") return getDefaultRootGenerationConfig();
-      else return getSiblingGenerationConfig(node);
-    })
-  }
+const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(getDefaultGenerationSettings());
+export const generationSettingsStore = {
+  ...generationSettingsStoreInternal,
+  copySettings: (node: NodeState) => generationSettingsStoreInternal.update(current => copySettings(current, node)),
+  copySeed: (node: NodeState) => generationSettingsStoreInternal.update(current => ({ ...current, seed: node.seed.actual }))
 }
+selectedStore.subscribe(selected => {
+  if (selected) generationSettingsStore.copySettings(selected);
+});

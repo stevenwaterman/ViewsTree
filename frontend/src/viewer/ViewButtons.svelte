@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { selectedStore, type NodeState } from "../state/tree";
+  import { selectedStore } from "../state/selected";
   import Button from "../buttons/Button.svelte";
+  import type { NodeState } from "../state/tree";
 
   let parent: NodeState | undefined;
-  $: parent = $selectedStore?.["parent"];
+  $: parent = selectedStore?.["parent"];
 
   let disabled: boolean;
   $: disabled = parent === undefined;
