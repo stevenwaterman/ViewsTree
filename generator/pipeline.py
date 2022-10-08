@@ -1,12 +1,6 @@
-import inspect
-from typing import List, Optional, Union
-
 import torch
 
 from diffusers import LMSDiscreteScheduler, StableDiffusionPipeline, DDIMScheduler, StableDiffusionImg2ImgPipeline
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from tqdm.auto import tqdm
-from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
 from PIL import Image
 import uuid
 import numpy as np

@@ -25,7 +25,6 @@
   }
 
   function deleteNode() {
-    // TODO this doesn't seem to work
     hide();
     nodeState?.remove();
   }

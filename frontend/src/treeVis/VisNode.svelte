@@ -88,7 +88,6 @@
   }
 
   function keyPressed(event: KeyboardEvent) {
-    // if (event.key === "r") return loadMore();
     if (event.key === "d") return state.remove();
   }
 

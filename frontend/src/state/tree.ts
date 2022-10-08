@@ -6,11 +6,12 @@ export type RootState = RootConfig & {
   children: Writable<BranchState[]>;
   pendingChildren: Writable<number>;
   remove: () => void;
-}
+};
 
 export function createRootState(config: RootConfig): RootState {
   const remove = () => {
     treeStore.update(tree => tree.filter(root => root.id !== config.id));
+    generationConfigStore.onRemovedNode(state);
   }
 
   const state: RootState = {
@@ -32,14 +33,12 @@ export type BranchState = BranchConfig & {
   children: Writable<BranchState[]>;
   pendingChildren: Writable<number>;
   remove: () => void;
-}
+};
 
 export function createBranchState(config: BranchConfig, parent: NodeState): BranchState {
   const remove = () => {
-    parent.children.update(children => {
-      delete children[config.id];
-      return children;
-    })
+    parent.children.update(children => children.filter(child => child.id !== config.id));
+    generationConfigStore.onRemovedNode(state);
   }
 
   const state: BranchState = {

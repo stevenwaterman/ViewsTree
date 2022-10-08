@@ -93,5 +93,26 @@ export const generationConfigStore = {
   },
   defaultRoot: () => {
     generationConfigStoreInternal.set(getDefaultRootGenerationConfig())
+  },
+  onRemovedNode: (node: NodeState) => {
+    generationConfigStoreInternal.update(generationConfig => {
+      // Currently a root, therefore no ancestors
+      if (generationConfig.type === "root") return generationConfig;
+
+      const ancestors: NodeState[] = [];
+      let pointerNode: NodeState = generationConfig.parent;
+      while (pointerNode.type === "branch") {
+        ancestors.push(pointerNode);
+        pointerNode = pointerNode.parent;
+      }
+      ancestors.push(pointerNode);
+
+      // Deleted node was not an ancestor
+      if (!ancestors.includes(node)) return generationConfig;
+
+      // TODO this shouldn't clear the prompt / edited settings
+      if (node.type === "root") return getDefaultRootGenerationConfig();
+      else return getSiblingGenerationConfig(node);
+    })
   }
 }

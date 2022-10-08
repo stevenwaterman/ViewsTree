@@ -22,6 +22,7 @@
   export let hovered: boolean = false;
 
   function onClick(event: MouseEvent) {
+    // console.log(event);
     if (disabled) {
       event.stopPropagation();
     }
@@ -59,6 +60,7 @@
   class="button"
   class:enabled={!disabled}
   style={actualStyle}
+  on:click
   on:click={onClick}
   on:mouseenter={() => {hovered = true;}}
   on:mouseleave={() => {hovered = false;}}
