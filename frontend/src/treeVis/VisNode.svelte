@@ -86,6 +86,7 @@
   function unfocusNode() {
     if ($contextModalStore === null) treeContainer.focus();
   }
+  $: if (selected) focusNode();
 
   function keyPressed(event: KeyboardEvent) {
     if (event.key === "d") return state.remove();

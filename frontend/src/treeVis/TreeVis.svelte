@@ -16,7 +16,7 @@
       maxZoom: 2,
       zoomDoubleClickSpeed: 1,
       smoothScroll: false,
-      disableKeyboardInteraction: true
+      filterKey: () => true
     });
     pan.on("pan", () => contextModalStore.set(null));
     pan.on("zoom", () => contextModalStore.set(null));
@@ -26,8 +26,6 @@
   let treeContainer: HTMLDivElement;
 
   function keyPressed(event: KeyboardEvent) {
-    // if (event.key === "d") return state.remove();
-    if (event.key === "r") return generate($saveNameStore, $generationSettingsStore, undefined);
   }
 </script>
 

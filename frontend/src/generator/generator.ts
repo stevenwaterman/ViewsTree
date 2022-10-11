@@ -52,10 +52,14 @@ let lastGeneration: Promise<any> = Promise.resolve();
 export async function generate(saveName: string, request: GenerationSettings, parent: NodeState | undefined): Promise<void> {
   if (parent) {
     parent.pendingChildren.update(count => count + 1);
-    lastGeneration = lastGeneration.finally(() => generateBranch(saveName, parent, request));
+    lastGeneration = lastGeneration
+      .finally(() => generateBranch(saveName, parent, request))
+      .catch(() => parent.pendingChildren.update(count => count - 1));
   } else {
     pendingRootsStore.update(count => count + 1);
-    lastGeneration = lastGeneration.finally(() => generateRoot(saveName, request));
+    lastGeneration = lastGeneration
+      .finally(() => generateRoot(saveName, request))
+      .catch(() => pendingRootsStore.update(count => count - 1));
   }
   await lastGeneration;
 }

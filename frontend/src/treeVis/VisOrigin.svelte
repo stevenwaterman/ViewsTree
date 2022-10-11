@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { generate } from "../generator/generator";
+  import { generationSettingsStore, saveNameStore } from "../state/settings";
   import { selectedStore } from "../state/selected";
   import { pendingRootsStore, rootsLeafCountStore, treeStore, type RootState } from "../state/tree";
   import { getPlacements } from "./placement";
@@ -15,6 +17,11 @@
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(undefined);
   }
+
+  function keyPressed(event: KeyboardEvent) {
+    // if (event.key === "d") return state.remove();
+    if (event.key === "r") return generate($saveNameStore, $generationSettingsStore, undefined);
+  }
 </script>
 
 <style>
@@ -28,14 +35,20 @@
     border-radius: 50%;
     outline: none;
 
+    transform: scale(1);
+    transform-origin: center;;
+
     cursor: pointer;
     transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
     background-color: var(--nodeActive);
   }
 
+  .selected {
+    box-shadow: 0 0 0 0.2em var(--nodePlaying);
+  }
+
   .node:hover {
     transform: scale(1.1, 1.1);
-    transform-origin: center;
   }
 
   .pendingLoad {
@@ -64,9 +77,10 @@
     offset={childrenOffsets[idx]}
   />
 {/each}
-<div class="placement" on:mousedown={leftClick}>
+<div class="placement" on:mousedown={leftClick} on:keypress={keyPressed}>
   <div
     class="node"
+    class:selected={$selectedStore === undefined}
     tabindex={0}>
     <span class="label">Root</span>
   </div>
