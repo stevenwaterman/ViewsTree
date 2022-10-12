@@ -5,7 +5,7 @@
   import { draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
   import { sineInOut } from "svelte/easing";
-  import type { BranchState, NodeState } from "../state/tree";
+  import { lastSelectedRootStore, treeStore, type BranchState, type NodeState } from "../state/tree";
   import { selectedPathStore, selectedStore } from "../state/selected";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
 
@@ -44,8 +44,20 @@
   let onSelectedPath: boolean;
   $: onSelectedPath = $selectedPathStore.includes(state.id);
 
+  let lastSelectedStore: Readable<number>;
+  $: lastSelectedStore = state.type === "root" ? lastSelectedRootStore : state.parent.lastSelectedChild;
+
+  let siblingStore: Readable<NodeState[]>;
+  $: siblingStore = state.type === "root" ? treeStore : state.parent.children;
+
+  let siblings: NodeState[];
+  $: siblings = $siblingStore;
+
+  let isLastSelected: boolean;
+  $: isLastSelected = $lastSelectedStore === siblings.indexOf(state);
+
   let edgeColor: string;
-  $: edgeColor = onSelectedPath ? "var(--edgePlaying)" : "var(--edgeInactive)";
+  $: edgeColor = onSelectedPath ? "var(--edgePlaying)" : isLastSelected ? "var(--edgeWarm)" : "var(--edgeInactive)";
 
   let edgeZ: number;
   $: edgeZ = onSelectedPath ? 1 : 0;

@@ -14,4 +14,5 @@ generation setting overrides
 transition out is a bit weird when deleting nodes
 keyboard shortcuts to compare parent / show difference
 auto focus sliders on hover so you can scroll them
-remember last selected child and select that one when getChild is called
+after delete, node should immediately have low z-index so it gets drawn under others during the transition
+line glitches during transition

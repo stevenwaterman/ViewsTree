@@ -8,13 +8,14 @@ export type RootState = RootConfig & {
   pendingChildren: Writable<number>;
   childLeafCountStore: Readable<number[]>;
   leafCountStore: Readable<number>;
+  lastSelectedChild: Stateful<Writable<number>>;
   remove: () => void;
 };
 
 export function createRootState(config: RootConfig): RootState {
   const remove = () => {
-    treeStore.update(tree => tree.filter(root => root.id !== config.id));
     selectedStore.onRemovedNode(state);
+    treeStore.update(tree => tree.filter(root => root.id !== config.id));
   }
 
   const children: Stateful<Writable<BranchState[]>> = stateful(writable([]));
@@ -26,6 +27,7 @@ export function createRootState(config: RootConfig): RootState {
     pendingChildren: writable(0),
     childLeafCountStore,
     leafCountStore,
+    lastSelectedChild: stateful(writable(0)),
     remove
   }
 
@@ -42,13 +44,14 @@ export type BranchState = BranchConfig & {
   pendingChildren: Writable<number>;
   childLeafCountStore: Readable<number[]>;
   leafCountStore: Readable<number>;
+  lastSelectedChild: Stateful<Writable<number>>;
   remove: () => void;
 };
 
 export function createBranchState(config: BranchConfig, parent: NodeState): BranchState {
   const remove = () => {
-    parent.children.update(children => children.filter(child => child.id !== config.id));
     selectedStore.onRemovedNode(state);
+    parent.children.update(children => children.filter(child => child.id !== config.id));
   }
 
   const children: Stateful<Writable<BranchState[]>> = stateful(writable([]));
@@ -61,6 +64,7 @@ export function createBranchState(config: BranchConfig, parent: NodeState): Bran
     pendingChildren: writable(0),
     childLeafCountStore,
     leafCountStore,
+    lastSelectedChild: stateful(writable(0)),
     remove
   }
 
@@ -79,6 +83,7 @@ export const pendingRootsStore: Writable<number> = writable(0);
 const treeLeafCountStores = getChildLeafCountStore(treeStore);
 export const treeLeafCountStore: Readable<number> = treeLeafCountStores.leafCountStore;
 export const rootsLeafCountStore: Readable<number[]> = treeLeafCountStores.childLeafCountStore;
+export const lastSelectedRootStore: Stateful<Writable<number>> = stateful(writable(0));
 
 function getChildLeafCountStore(childrenStore: Readable<NodeState[]>): { childLeafCountStore: Readable<number[]>; leafCountStore: Readable<number> } {
   const unwrappedStore: Readable<number[]> = mapUnwrap<NodeState, number>(childrenStore, child => child.leafCountStore);

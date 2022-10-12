@@ -1,8 +1,22 @@
 import { stateful } from "../utils";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
-import { treeStore, type NodeState } from "./tree";
+import { lastSelectedRootStore, treeStore, type NodeState } from "./tree";
 
 const internalSelectedStore: Writable<NodeState | undefined> = writable(undefined);
+internalSelectedStore.subscribe(selectedNode => {
+  if (selectedNode === undefined) return;
+
+  if (selectedNode.type === "root") {
+    const siblings: NodeState[] = treeStore.state;
+    const idx = siblings.indexOf(selectedNode);
+    lastSelectedRootStore.set(idx);
+  } else {
+    const siblings: NodeState[] = selectedNode.parent.children.state;
+    const idx = siblings.indexOf(selectedNode);
+    console.log(siblings, idx)
+    selectedNode.parent.lastSelectedChild.set(idx);
+  }
+})
 
 function getParent(node: NodeState): NodeState | undefined {
   if (node === undefined) return node;
@@ -10,12 +24,13 @@ function getParent(node: NodeState): NodeState | undefined {
   return node.parent;
 }
 
-function getChild(node: NodeState): NodeState | undefined {
-  if (node === undefined) return treeStore.state[0];
-  
-  const children = node.children.state;
+function getChild(node: NodeState | undefined): NodeState | undefined {
+  const children = node?.children?.state ?? treeStore.state;
   if (children.length === 0) return node;
-  return children[0];
+
+  const requestedIdx = node?.lastSelectedChild?.state ?? lastSelectedRootStore.state;
+  const clampedIdx = Math.min(children.length, requestedIdx);
+  return children[clampedIdx];
 }
 
 function getNext(node: NodeState): NodeState | undefined {
