@@ -1,7 +1,17 @@
-Keyboard navigation
 ability to cancel requests
+load images in
 GPU limiter
-fix fonts
-keep prompt settings when navigating
 screen split vertical etc
+preview settings by hovering
 magnifier
+max resolution
+inpainting
+persistence (including save names)
+delete files from data folder
+undo delete
+upscaling
+generation setting overrides
+transition out is a bit weird when deleting nodes
+keyboard shortcuts to compare parent / show difference
+auto focus sliders on hover so you can scroll them
+remember last selected child and select that one when getChild is called
