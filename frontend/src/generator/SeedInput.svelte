@@ -16,6 +16,6 @@
 
 <label for="seed">Seed</label>
 <div class="row">
-  <input id="seed" type="number" min={0} max={Number.MAX_SAFE_INTEGER} bind:value={$generationSettingsStore.seed} />
+  <input id="seed" type="number" min={0} max={Number.MAX_SAFE_INTEGER} bind:value={$generationSettingsStore.seed} on:keydown|stopPropagation />
   <button disabled={$generationSettingsStore.seed === undefined} on:click={() => {$generationSettingsStore.seed = undefined}}>X</button>
 </div>

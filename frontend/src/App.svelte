@@ -3,13 +3,21 @@
   import Modal from "svelte-simple-modal";
   import ViewPanel from "./viewer/ViewPanel.svelte";
   import GeneratorPanel from "./generator/GeneratorPanel.svelte";
-    import { selectedStore } from "./state/selected";
+  import { selectedStore } from "./state/selected";
+  import { generate } from "./generator/generator";
+  import { generationSettingsStore, saveNameStore } from "./state/settings";
 
-  function onKeypress(event: KeyboardEvent) {
+  function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
     else if (event.key === "ArrowRight") selectedStore.selectNext();
     else if (event.key === "ArrowLeft") selectedStore.selectPrev();
     else if (event.key === "ArrowDown") selectedStore.selectChild();
+    else if (event.key === "d") $selectedStore?.remove();
+    else if (event.key === "r") generate($saveNameStore, $generationSettingsStore, $selectedStore);
+  }
+
+  function captureKeydown(event: KeyboardEvent) {
+    console.log(event);
   }
 </script>
 
@@ -32,8 +40,10 @@
   }
 </style>
 
+<svelte:body on:keydown={onKeydown}/>
+
 <Modal>
-  <div class="topGrid" on:keydown={onKeypress}>
+  <div class="topGrid">
     <div class="leftGrid">
       <ViewPanel />
       <GeneratorPanel />

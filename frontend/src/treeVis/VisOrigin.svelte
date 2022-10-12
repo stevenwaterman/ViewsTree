@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { generate } from "../generator/generator";
-  import { generationSettingsStore, saveNameStore } from "../state/settings";
   import { selectedStore } from "../state/selected";
   import { pendingRootsStore, rootsLeafCountStore, treeStore, type RootState } from "../state/tree";
   import { getPlacements } from "./placement";
@@ -16,11 +14,6 @@
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(undefined);
-  }
-
-  function keyPressed(event: KeyboardEvent) {
-    // if (event.key === "d") return state.remove();
-    if (event.key === "r") return generate($saveNameStore, $generationSettingsStore, undefined);
   }
 </script>
 
@@ -77,7 +70,7 @@
     offset={childrenOffsets[idx]}
   />
 {/each}
-<div class="placement" on:mousedown={leftClick} on:keypress={keyPressed}>
+<div class="placement" on:mousedown={leftClick}>
   <div
     class="node"
     class:selected={$selectedStore === undefined}

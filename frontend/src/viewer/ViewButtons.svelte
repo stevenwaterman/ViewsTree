@@ -4,7 +4,7 @@
   import type { NodeState } from "../state/tree";
 
   let parent: NodeState | undefined;
-  $: parent = selectedStore?.["parent"];
+  $: parent = $selectedStore?.["parent"];
 
   let disabled: boolean;
   $: disabled = parent === undefined;
@@ -16,8 +16,9 @@
 <style>
   .buttonsContainer {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    justify-content: center;
   }
 </style>
 

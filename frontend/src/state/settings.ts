@@ -17,9 +17,9 @@ function getDefaultGenerationSettings(): GenerationSettings {
     width: 512,
     height: 512,
     steps: 50,
-    scale: 7.5,
+    scale: 5,
     eta: 0,
-    strength: 0.4
+    strength: 0.7
   }
 }
 

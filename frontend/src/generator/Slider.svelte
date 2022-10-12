@@ -4,6 +4,7 @@
   export let min: number | undefined = undefined;
   export let max: number | undefined = undefined;
   export let step: number | undefined = undefined;
+  export let disabled: boolean = false;
 
   export let value: number;
 </script>
@@ -26,6 +27,6 @@
 
 <label for={id}>{label}</label>
 <div class="row">
-  <input id={id} type="range" {min} {max} {step} bind:value/>
+  <input id={id} type="range" {min} {max} {step} {disabled} bind:value on:keydown|stopPropagation/>
   <span>{value}</span>
 </div>
