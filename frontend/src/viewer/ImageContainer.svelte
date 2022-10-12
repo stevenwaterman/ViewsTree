@@ -3,6 +3,7 @@
   import type { NodeState } from "../state/tree";
   import { imageUrl } from "../generator/generator";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
+    import Magnifier from "./Magnifier.svelte";
 
   let selected: NodeState | undefined;
   $: selected = $selectedStore;
@@ -48,16 +49,18 @@
   }
 </style>
 
-<div class="imageContainer" {style}>
-  {#if selected !== undefined}
-    <!-- svelte-ignore a11y-missing-attribute -->
-    <img class="child image" {style} src={imageUrl($saveNameStore, selected)}/>
-  {/if}
-
-  {#if parent !== undefined && showParent}
-    <!-- svelte-ignore a11y-missing-attribute -->
-    <img class="parent image" {style} class:difference={differenceParent} src={imageUrl($saveNameStore, parent)}/>
-  {/if}
-
-  <div class="background image" {style}/>
-</div>
+<Magnifier>
+  <div class="imageContainer" {style}>
+    {#if selected !== undefined}
+      <!-- svelte-ignore a11y-missing-attribute -->
+      <img class="child image" {style} src={imageUrl($saveNameStore, selected)}/>
+    {/if}
+  
+    {#if parent !== undefined && showParent}
+      <!-- svelte-ignore a11y-missing-attribute -->
+      <img class="parent image" {style} class:difference={differenceParent} src={imageUrl($saveNameStore, parent)}/>
+    {/if}
+  
+    <div class="background image" {style}/>
+  </div>
+</Magnifier>
