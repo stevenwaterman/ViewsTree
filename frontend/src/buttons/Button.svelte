@@ -20,6 +20,7 @@
   $: actualStyle = `color: ${textColor}; backgroundColor: ${bgColor};`;
 
   export let hovered: boolean = false;
+  export let pressed: boolean = false;
 
   function onClick(event: MouseEvent) {
     if (disabled) {
@@ -62,7 +63,9 @@
   on:click
   on:click={onClick}
   on:mouseenter={() => {hovered = true;}}
-  on:mouseleave={() => {hovered = false;}}
+  on:mouseleave={() => {hovered = false; pressed = false;}}
+  on:mousedown={() => {pressed = true;}}
+  on:mouseup={() => {pressed = false;}}
 >
   <slot {hovered}/>
 </div>

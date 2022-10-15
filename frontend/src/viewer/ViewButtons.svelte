@@ -23,6 +23,6 @@
 </style>
 
 <div class="buttonsContainer">
-  <Button bind:hovered={compareParent} {disabled}>Show Parent</Button>
-  <Button bind:hovered={differenceParent} {disabled}>Show Difference</Button>
+  <Button bind:pressed={compareParent} {disabled}>Show Parent</Button>
+  <Button bind:pressed={differenceParent} {disabled}>Show Difference</Button>
 </div>
