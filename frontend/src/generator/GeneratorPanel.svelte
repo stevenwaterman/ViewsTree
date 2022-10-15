@@ -32,6 +32,10 @@
   <Slider label="Scale" id="scale_slider" min={1} max={25} step={1} bind:value={$generationSettingsStore.scale} />
   <Slider label="Eta" id="eta_slider" min={0} max={1} step={0.01} bind:value={$generationSettingsStore.eta} disabled={$selectedStore === undefined} />
   <Slider label="Strength" id="strength_slider" min={0} max={1} step={0.05} bind:value={$generationSettingsStore.strength} disabled={$selectedStore === undefined} />
+  
+  <label for="color_correction">Color Correction</label>
+  <input type="checkbox" id="color_correction" bind:checked={$generationSettingsStore.colorCorrection} disabled={$selectedStore === undefined} on:keydown|stopPropagation />
+
   <SeedInput/>
 
   <button

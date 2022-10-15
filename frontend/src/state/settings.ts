@@ -19,17 +19,21 @@ function getDefaultGenerationSettings(): GenerationSettings {
     steps: 50,
     scale: 5,
     eta: 0,
-    strength: 0.7
-  }
+    strength: 0.7,
+    colorCorrection: true,
+  };
 }
 
-function copySettings(current: GenerationSettings, node: NodeState): GenerationSettings {
+function copySettings(
+  current: GenerationSettings,
+  node: NodeState
+): GenerationSettings {
   const newSettings: GenerationSettings = {
     ...current,
     prompt: node.prompt,
     steps: node.steps,
     scale: node.scale,
-    seed: node.seed.random ? undefined : node.seed.actual
+    seed: node.seed.random ? undefined : node.seed.actual,
   };
 
   if (node.type === "root") {
@@ -38,17 +42,27 @@ function copySettings(current: GenerationSettings, node: NodeState): GenerationS
   } else {
     newSettings.eta = node.eta;
     newSettings.strength = node.strength;
+    newSettings.colorCorrection = node.colorCorrection;
   }
 
   return newSettings;
 }
 
-const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(getDefaultGenerationSettings());
+const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(
+  getDefaultGenerationSettings()
+);
 export const generationSettingsStore = {
   ...generationSettingsStoreInternal,
-  copySettings: (node: NodeState) => generationSettingsStoreInternal.update(current => copySettings(current, node)),
-  copySeed: (node: NodeState) => generationSettingsStoreInternal.update(current => ({ ...current, seed: node.seed.actual }))
-}
-selectedStore.subscribe(selected => {
+  copySettings: (node: NodeState) =>
+    generationSettingsStoreInternal.update((current) =>
+      copySettings(current, node)
+    ),
+  copySeed: (node: NodeState) =>
+    generationSettingsStoreInternal.update((current) => ({
+      ...current,
+      seed: node.seed.actual,
+    })),
+};
+selectedStore.subscribe((selected) => {
   if (selected) generationSettingsStore.copySettings(selected);
 });
