@@ -7,6 +7,12 @@
   export let disabled: boolean = false;
 
   export let value: number;
+
+  let input: HTMLInputElement;
+
+  function focus() {
+    input.focus();
+  }
 </script>
 
 <style>
@@ -23,10 +29,14 @@
     text-align: right;
     user-select: none;
   }
+
+  input {
+    outline: none;
+  }
 </style>
 
-<label for={id}>{label}</label>
-<div class="row">
-  <input id={id} type="range" {min} {max} {step} {disabled} bind:value on:keydown|stopPropagation/>
+<label for={id} on:mouseenter={focus}>{label}</label>
+<div class="row" on:mouseenter={focus}>
+  <input id={id} type="range" {min} {max} {step} {disabled} bind:value bind:this={input} />
   <span>{value}</span>
 </div>
