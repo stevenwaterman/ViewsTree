@@ -5,11 +5,11 @@
   import { draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
   import { sineInOut } from "svelte/easing";
-  import { lastSelectedRootStore, type BranchState, type NodeState } from "../state/tree";
   import { selectedPathIdStore, selectedStore } from "../state/selected";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
+  import type { BranchNode } from "../state/nodeTypes/nodes";
 
-  export let state: NodeState;
+  export let node: BranchNode;
   export let treeContainer: HTMLDivElement;
 
   export let depth: number;
@@ -17,35 +17,35 @@
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) {
-      if (event.shiftKey) generationSettingsStore.copySettings(state);
-      else if (event.ctrlKey) generationSettingsStore.copySeed(state);
-      else selectedStore.set(state);
+      if (event.shiftKey) generationSettingsStore.copySettings(node);
+      else if (event.ctrlKey) generationSettingsStore.copySeed(node);
+      else selectedStore.set(node);
     }
   }
 
-  let childrenStore: Readable<BranchState[]>;
-  $: childrenStore = state.children;
+  let childrenStore: Readable<BranchNode[]>;
+  $: childrenStore = node.children;
 
-  let children: BranchState[];
+  let children: BranchNode[];
   $: children = $childrenStore ?? [];
 
   let childLeafCountStore: Readable<number[]>;
-  $: childLeafCountStore = state.childLeafCountStore;
+  $: childLeafCountStore = node.childLeafCount;
 
   let childrenOffsets: number[];
   $: childrenOffsets = getPlacements($childLeafCountStore);
 
   let selected: boolean;
-  $: selected = $selectedStore?.id === state.id;
+  $: selected = $selectedStore.id === node.id;
 
   let onSelectedPath: boolean;
-  $: onSelectedPath = $selectedPathIdStore.includes(state.id);
+  $: onSelectedPath = $selectedPathIdStore.includes(node.id);
 
   let lastSelectedIdStore: Readable<string | undefined>;
-  $: lastSelectedIdStore = state.type === "root" ? lastSelectedRootStore : state.parent.lastSelectedId;
+  $: lastSelectedIdStore = node.parent.lastSelectedId;
 
   let isLastSelected: boolean;
-  $: isLastSelected = $lastSelectedIdStore === state.id;
+  $: isLastSelected = $lastSelectedIdStore === node.id;
 
   let edgeColor: string;
   $: edgeColor = onSelectedPath ? "var(--edgePlaying)" : isLastSelected ? "var(--edgeWarm)" : "var(--edgeInactive)";
@@ -75,7 +75,7 @@
   $: lineLeft = Math.min(offset, 0) * placementWidth - 5;
 
   let pendingLoad: Readable<number>;
-  $: pendingLoad = state.pendingChildren;
+  $: pendingLoad = node.pendingChildren;
 
   // if offset is 0, either option is fine
   // but changing it causes weird transitions
@@ -184,7 +184,7 @@
   >
     <!-- svelte-ignore a11y-missing-attribute -->
     <img
-      src={thumbnailUrl($saveNameStore, state)}
+      src={thumbnailUrl($saveNameStore, node)}
       class="thumbnail"
       class:selected
       in:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
@@ -197,7 +197,7 @@
   </div>
   {#each children as child, idx (child.id)}
     <svelte:self
-      state={child}
+      node={child}
       depth={depth + 1}
       offset={childrenOffsets[idx]}
       {treeContainer}

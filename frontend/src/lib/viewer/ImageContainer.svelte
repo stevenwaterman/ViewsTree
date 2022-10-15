@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { selectedStore } from "../state/selected";
-  import type { NodeState } from "../state/tree";
   import { imageUrl } from "../generator/generator";
+  import Magnifier from "./Magnifier.svelte";
+  import { selectedStore } from "../state/selected";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
-    import Magnifier from "./Magnifier.svelte";
+  import type { AnyNode } from "../state/nodeTypes/nodes";
 
-  let selected: NodeState | undefined;
+  let selected: AnyNode;
   $: selected = $selectedStore;
 
-  let parent: NodeState | undefined;
-  $: parent = selected?.["parent"];
+  let parent: AnyNode | undefined;
+  $: parent = selected.parent;
 
   export let compareParent: boolean = false;
   export let differenceParent: boolean = false;
@@ -51,12 +51,12 @@
 
 <Magnifier>
   <div class="imageContainer" {style}>
-    {#if selected !== undefined}
+    {#if selected.isBranch}
       <!-- svelte-ignore a11y-missing-attribute -->
       <img class="child image" {style} src={imageUrl($saveNameStore, selected)}/>
     {/if}
   
-    {#if parent !== undefined && showParent}
+    {#if parent?.isBranch && showParent}
       <!-- svelte-ignore a11y-missing-attribute -->
       <img class="parent image" {style} class:difference={differenceParent} src={imageUrl($saveNameStore, parent)}/>
     {/if}

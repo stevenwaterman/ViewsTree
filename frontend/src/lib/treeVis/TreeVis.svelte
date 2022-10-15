@@ -2,7 +2,7 @@
   import { afterUpdate } from "svelte";
   import panzoom from "panzoom";
   import type { PanZoom } from "panzoom";
-  import VisOrigin from "./VisOrigin.svelte";
+  import VisRoot from "./VisRoot.svelte";
 
   let container: HTMLDivElement;
 
@@ -60,7 +60,7 @@
   on:keypress={keyPressed}>
   <div class="pan-container" bind:this={container}>
     <div class="tree-position">
-      <VisOrigin {treeContainer} />
+      <VisRoot {treeContainer} />
     </div>
   </div>
 </div>

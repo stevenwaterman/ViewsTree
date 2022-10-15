@@ -1,6 +1,7 @@
 <script lang="ts">
   import { generationSettingsStore } from "../state/settings";
 
+
   let element: HTMLDivElement;
 
   let width: number;

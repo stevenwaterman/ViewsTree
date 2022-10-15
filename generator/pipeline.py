@@ -105,7 +105,6 @@ class Pipeline():
     self.busy = False
 
     return {
-      'type': "root",
       'prompt': prompt,
       'width': width,
       'height': height,
@@ -161,7 +160,6 @@ class Pipeline():
     self.busy = False
 
     return {
-      'type': "branch",
       'init_run_id': init_run_id,
       'prompt': prompt,
       'steps': steps,

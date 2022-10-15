@@ -1,19 +1,27 @@
 <script lang="ts">
+  import type { Readable } from "svelte/store";
+  import type { PrimaryBranchNode } from "../state/nodeTypes/nodes";
+  import { rootNode } from "../state/nodeTypes/rootNodes";
   import { selectedStore } from "../state/selected";
-  import { pendingRootsStore, rootsLeafCountStore, treeStore, type RootState } from "../state/tree";
   import { getPlacements } from "./placement";
-  import VisNode from "./VisNode.svelte";
+  import VisBranch from "./VisBranch.svelte";
 
   export let treeContainer: HTMLDivElement;
 
-  let roots: RootState[];
-  $: roots = $treeStore;
+  let childrenStore: Readable<PrimaryBranchNode[]>;
+  $: childrenStore = rootNode.children;
+
+  let childLeafCountsStore: Readable<number[]>;
+  $: childLeafCountsStore = rootNode.childLeafCount;
 
   let childrenOffsets: number[];
-  $: childrenOffsets = getPlacements($rootsLeafCountStore);
+  $: childrenOffsets = getPlacements($childLeafCountsStore);
+
+  let pendingChildrenStore: Readable<number>;
+  $: pendingChildrenStore = rootNode.pendingChildren;
 
   function leftClick(event: MouseEvent) {
-    if (event.button === 0) selectedStore.set(undefined);
+    if (event.button === 0) selectedStore.set(rootNode);
   }
 </script>
 
@@ -62,9 +70,9 @@
   }
 </style>
 
-{#each roots as root, idx (root.id)}
-  <VisNode
-    state={root}
+{#each $childrenStore as child, idx (child.id)}
+  <VisBranch
+    node={child}
     {treeContainer}
     depth={1}
     offset={childrenOffsets[idx]}
@@ -73,13 +81,13 @@
 <div class="placement" on:mousedown={leftClick}>
   <div
     class="node"
-    class:selected={$selectedStore === undefined}
+    class:selected={$selectedStore.type === "Root"}
     tabindex={0}>
     <span class="label">Root</span>
   </div>
-  {#if $pendingRootsStore > 0}
+  {#if $pendingChildrenStore > 0}
     <p class="pendingLoad">
-      +{$pendingRootsStore}
+      +{$pendingChildrenStore}
     </p>
   {/if}
 </div>

@@ -1,11 +1,12 @@
-import type { BranchRequest, RootRequest } from "../generator/generator";
-import { derived, writable, type Readable, type Writable } from "svelte/store";
-import type { NodeState } from "./tree";
+import { writable, type Writable } from "svelte/store";
+import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
+import type { BranchNode } from "./nodeTypes/nodes";
+import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
 import { selectedStore } from "./selected";
 
 export const saveNameStore: Writable<string> = writable("test");
 
-export type GenerationSettings = RootRequest & BranchRequest;
+export type GenerationSettings = TxtImgRequest & ImgImgRequest;
 
 export function randomSeed() {
   return Math.random() * Number.MAX_SAFE_INTEGER;
@@ -26,7 +27,7 @@ function getDefaultGenerationSettings(): GenerationSettings {
 
 function copySettings(
   current: GenerationSettings,
-  node: NodeState
+  node: BranchNode
 ): GenerationSettings {
   const newSettings: GenerationSettings = {
     ...current,
@@ -36,7 +37,7 @@ function copySettings(
     seed: node.seed.random ? undefined : node.seed.actual,
   };
 
-  if (node.type === "root") {
+  if (node.type === "TxtImg") {
     newSettings.width = node.width;
     newSettings.height = node.height;
   } else {
@@ -53,16 +54,16 @@ const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(
 );
 export const generationSettingsStore = {
   ...generationSettingsStoreInternal,
-  copySettings: (node: NodeState) =>
+  copySettings: (node: BranchNode) =>
     generationSettingsStoreInternal.update((current) =>
       copySettings(current, node)
     ),
-  copySeed: (node: NodeState) =>
+  copySeed: (node: BranchNode) =>
     generationSettingsStoreInternal.update((current) => ({
       ...current,
       seed: node.seed.actual,
     })),
 };
 selectedStore.subscribe((selected) => {
-  if (selected) generationSettingsStore.copySettings(selected);
+  if (selected.isBranch) generationSettingsStore.copySettings(selected);
 });

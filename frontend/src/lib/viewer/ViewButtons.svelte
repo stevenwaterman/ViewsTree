@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { selectedStore } from "../state/selected";
   import Button from "../buttons/Button.svelte";
-  import type { NodeState } from "../state/tree";
+  import type { AnyNode } from "../state/nodeTypes/nodes";
+  import { selectedStore } from "../state/selected";
 
-  let parent: NodeState | undefined;
-  $: parent = $selectedStore?.["parent"];
+  let parent: AnyNode | undefined;
+  $: parent = $selectedStore.parent;
 
   let disabled: boolean;
-  $: disabled = parent === undefined;
+  $: disabled = parent === undefined || parent.type === "Root";
 
   export let compareParent: boolean;
   export let differenceParent: boolean;

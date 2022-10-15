@@ -1,19 +1,20 @@
 <script lang="ts">
-  import TreeVis from "./treeVis/TreeVis.svelte";
+  import TreeVis from "./lib/treeVis/TreeVis.svelte";
   import Modal from "svelte-simple-modal";
-  import ViewPanel from "./viewer/ViewPanel.svelte";
-  import GeneratorPanel from "./generator/GeneratorPanel.svelte";
-  import { selectedStore } from "./state/selected";
-  import { generate } from "./generator/generator";
-  import { generationSettingsStore, saveNameStore } from "./state/settings";
+  import ViewPanel from "./lib/viewer/ViewPanel.svelte";
+  import GeneratorPanel from "./lib/generator/GeneratorPanel.svelte";
+  import { selectedStore } from "./lib/state/selected";
+  import { generationSettingsStore, saveNameStore } from "./lib/state/settings";
+  import { removeNode } from "./lib/state/tree";
+  import { queueGeneration } from "./lib/generator/generator";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
     else if (event.key === "ArrowRight") selectedStore.selectNext();
     else if (event.key === "ArrowLeft") selectedStore.selectPrev();
     else if (event.key === "ArrowDown") selectedStore.selectChild();
-    else if (event.key === "d") $selectedStore?.remove();
-    else if (event.key === "r") generate($saveNameStore, $generationSettingsStore, $selectedStore);
+    else if (event.key === "d" && $selectedStore.isBranch) removeNode($selectedStore);
+    else if (event.key === "r") queueGeneration($saveNameStore, $generationSettingsStore, $selectedStore);
   }
 
   function captureKeydown(event: KeyboardEvent) {
