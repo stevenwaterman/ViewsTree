@@ -76,6 +76,13 @@
 
   let pendingLoad: Readable<number>;
   $: pendingLoad = state.pendingChildren;
+
+  // if offset is 0, either option is fine
+  // but changing it causes weird transitions
+  // so we only change it when we have to
+  let flip: boolean = false;
+  $: if (offset < 0 && !flip) flip = true;
+  $: if (offset > 0 && flip) flip = false;
 </script>
 
 <style>
@@ -180,7 +187,7 @@
       src={thumbnailUrl($saveNameStore, state)}
       class="thumbnail"
       class:selected
-      transition:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
+      in:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
     >
     {#if $pendingLoad > 0}
       <p class="pendingLoad">
@@ -201,7 +208,7 @@
   class="line"
   width={lineWidth}
   height={ch * 2 + 2}
-  style={`left: ${lineLeft}px; top: ${24}px; transform: scaleX(${offset < 0 ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
+  style={`left: ${lineLeft}px; top: ${24}px; transform: scaleX(${flip ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
 >
   {#if cwTweened !== undefined}
     <path
@@ -210,7 +217,7 @@
       stroke={edgeColor}
       stroke-width="4px"
       fill="none"
-      transition:draw={{duration: placementTransitionMs}}
+      in:draw={{duration: placementTransitionMs}}
     />
   {/if}
 </svg>
