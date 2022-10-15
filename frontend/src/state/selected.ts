@@ -37,6 +37,20 @@ function getNext(node: NodeState): NodeState | undefined {
   return siblings[newIdx];
 }
 
+function getNextOrPrev(node: NodeState): NodeState | undefined {
+  if (node === undefined) return undefined;
+
+  const siblings: NodeState[] =
+    node.type === "root" ? treeStore.state : node.parent.children.state;
+  const idx = siblings.indexOf(node);
+
+  const isLast = idx === siblings.length - 1;
+  const requestedIdx = isLast ? idx - 1 : idx + 1;
+  const newIdx = (siblings.length + requestedIdx) % siblings.length;
+
+  return siblings[newIdx];
+}
+
 function getPrev(node: NodeState): NodeState | undefined {
   if (node === undefined) return undefined;
 
@@ -62,8 +76,8 @@ function onRemovedNode(deletedNode: NodeState) {
     if (!ancestors.includes(deletedNode)) return selectedNode;
 
     // Deleted node was an ancestor, select its sibling
-    const nextNode = getNext(deletedNode);
-    if (deletedNode !== nextNode) return nextNode;
+    const siblingNode = getNextOrPrev(deletedNode);
+    if (deletedNode !== siblingNode) return siblingNode;
 
     // No sibling exists, select parent instead
     if (deletedNode.type === "branch") return deletedNode.parent;
