@@ -53,7 +53,8 @@ def branch(save_name, init_run_id):
     scale = json.get("scale", 8), 
     eta = json.get("eta", 0),
     seed = json.get("seed", None),
-    strength = json.get("strength", 0.4)
+    strength = json.get("strength", 0.4),
+    color_correction_id = json.get("color_correction_id", None)
   )
 
   if config is None:

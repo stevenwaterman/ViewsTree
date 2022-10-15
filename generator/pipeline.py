@@ -1,3 +1,4 @@
+from colors import apply_color_correction
 import torch
 
 from diffusers import LMSDiscreteScheduler, StableDiffusionPipeline, DDIMScheduler, StableDiffusionImg2ImgPipeline
@@ -115,7 +116,7 @@ class Pipeline():
       'run_id': run_id
     }
 
-  def run_img(self, save_name, init_run_id, prompt, steps, scale, eta, seed, strength):
+  def run_img(self, save_name, init_run_id, prompt, steps, scale, eta, seed, strength, color_correction_id):
     if self.busy:
       return None
 
@@ -131,9 +132,10 @@ class Pipeline():
     actual_seed = random_seed() if seed is None else seed
     generator = torch.cuda.manual_seed(actual_seed)
 
+    init_pil = Image.open(init_path)
+    init_image = preprocess(init_pil)
+
     with torch.autocast("cuda"):
-        img = Image.open(init_path)
-        init_image = preprocess(img)
         result = self.pipe_img(
           prompt=prompt,
           init_image=init_image,
@@ -146,6 +148,11 @@ class Pipeline():
 
         sample = result["sample"]
         image = sample[0]
+
+    if color_correction_id is not None:
+      reference_path = f'../data/{save_name}/{color_correction_id}.png'
+      reference_image = Image.open(reference_path)
+      image = apply_color_correction(image, [reference_image])
     
     image.save(f'{file_path}.png')
     thumb = thumbnail(image)
