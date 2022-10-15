@@ -24,7 +24,7 @@ function getChild(node: NodeState | undefined): NodeState | undefined {
   const requestedId =
     node?.lastSelectedId?.state ?? lastSelectedRootStore.state;
 
-  return children.find((node) => node.id === requestedId);
+  return children.find((node) => node.id === requestedId) ?? children[0];
 }
 
 function getNext(node: NodeState): NodeState | undefined {
