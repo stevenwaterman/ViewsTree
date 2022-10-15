@@ -3,7 +3,6 @@ load images in
 GPU limiter
 screen split vertical etc
 preview settings by hovering
-magnifier
 max resolution
 inpainting
 persistence (including save names)
@@ -15,4 +14,6 @@ transition out is a bit weird when deleting nodes
 keyboard shortcuts to compare parent / show difference
 auto focus sliders on hover so you can scroll them
 after delete, node should immediately have low z-index so it gets drawn under others during the transition
-line glitches during transition
+cancel requests under deleted nodes
+show which pending is happening next
+different kinds of color correction

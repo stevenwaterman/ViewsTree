@@ -64,6 +64,7 @@ export async function generate(
   request: GenerationSettings,
   parent: NodeState | undefined
 ): Promise<void> {
+  request = { ...request };
   if (parent) {
     parent.pendingChildren.update((count) => count + 1);
     lastGeneration = lastGeneration
