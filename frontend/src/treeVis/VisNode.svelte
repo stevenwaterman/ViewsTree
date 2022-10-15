@@ -5,8 +5,8 @@
   import { draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
   import { sineInOut } from "svelte/easing";
-  import { lastSelectedRootStore, treeStore, type BranchState, type NodeState } from "../state/tree";
-  import { selectedPathStore, selectedStore } from "../state/selected";
+  import { lastSelectedRootStore, type BranchState, type NodeState } from "../state/tree";
+  import { selectedPathIdStore, selectedStore } from "../state/selected";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
 
   export let state: NodeState;
@@ -32,9 +32,6 @@
   let childLeafCountStore: Readable<number[]>;
   $: childLeafCountStore = state.childLeafCountStore;
 
-  let leafCountStore: Readable<number>;
-  $: leafCountStore = state.leafCountStore;
-
   let childrenOffsets: number[];
   $: childrenOffsets = getPlacements($childLeafCountStore);
 
@@ -42,19 +39,13 @@
   $: selected = $selectedStore?.id === state.id;
 
   let onSelectedPath: boolean;
-  $: onSelectedPath = $selectedPathStore.includes(state.id);
+  $: onSelectedPath = $selectedPathIdStore.includes(state.id);
 
-  let lastSelectedStore: Readable<number>;
-  $: lastSelectedStore = state.type === "root" ? lastSelectedRootStore : state.parent.lastSelectedChild;
-
-  let siblingStore: Readable<NodeState[]>;
-  $: siblingStore = state.type === "root" ? treeStore : state.parent.children;
-
-  let siblings: NodeState[];
-  $: siblings = $siblingStore;
+  let lastSelectedIdStore: Readable<string | undefined>;
+  $: lastSelectedIdStore = state.type === "root" ? lastSelectedRootStore : state.parent.lastSelectedId;
 
   let isLastSelected: boolean;
-  $: isLastSelected = $lastSelectedStore === siblings.indexOf(state);
+  $: isLastSelected = $lastSelectedIdStore === state.id;
 
   let edgeColor: string;
   $: edgeColor = onSelectedPath ? "var(--edgePlaying)" : isLastSelected ? "var(--edgeWarm)" : "var(--edgeInactive)";

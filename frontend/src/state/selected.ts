@@ -1,22 +1,15 @@
 import { stateful } from "../utils";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
-import { lastSelectedRootStore, treeStore, type NodeState } from "./tree";
+import {
+  lastSelectedRootStore,
+  treeStore,
+  type BranchState,
+  type NodeState,
+  type RootState,
+} from "./tree";
 
-const internalSelectedStore: Writable<NodeState | undefined> = writable(undefined);
-internalSelectedStore.subscribe(selectedNode => {
-  if (selectedNode === undefined) return;
-
-  if (selectedNode.type === "root") {
-    const siblings: NodeState[] = treeStore.state;
-    const idx = siblings.indexOf(selectedNode);
-    lastSelectedRootStore.set(idx);
-  } else {
-    const siblings: NodeState[] = selectedNode.parent.children.state;
-    const idx = siblings.indexOf(selectedNode);
-    console.log(siblings, idx)
-    selectedNode.parent.lastSelectedChild.set(idx);
-  }
-})
+const internalSelectedStore: Writable<NodeState | undefined> =
+  writable(undefined);
 
 function getParent(node: NodeState): NodeState | undefined {
   if (node === undefined) return node;
@@ -25,18 +18,20 @@ function getParent(node: NodeState): NodeState | undefined {
 }
 
 function getChild(node: NodeState | undefined): NodeState | undefined {
-  const children = node?.children?.state ?? treeStore.state;
+  const children: NodeState[] = node?.children?.state ?? treeStore.state;
   if (children.length === 0) return node;
 
-  const requestedIdx = node?.lastSelectedChild?.state ?? lastSelectedRootStore.state;
-  const clampedIdx = Math.min(children.length, requestedIdx);
-  return children[clampedIdx];
+  const requestedId =
+    node?.lastSelectedId?.state ?? lastSelectedRootStore.state;
+
+  return children.find((node) => node.id === requestedId);
 }
 
 function getNext(node: NodeState): NodeState | undefined {
   if (node === undefined) return undefined;
 
-  const siblings: NodeState[] = node.type === "root" ? treeStore.state : node.parent.children.state;
+  const siblings: NodeState[] =
+    node.type === "root" ? treeStore.state : node.parent.children.state;
   const idx = siblings.indexOf(node);
   const newIdx = (idx + 1) % siblings.length;
   return siblings[newIdx];
@@ -45,14 +40,15 @@ function getNext(node: NodeState): NodeState | undefined {
 function getPrev(node: NodeState): NodeState | undefined {
   if (node === undefined) return undefined;
 
-  const siblings: NodeState[] = node.type === "root" ? treeStore.state : node.parent.children.state;
+  const siblings: NodeState[] =
+    node.type === "root" ? treeStore.state : node.parent.children.state;
   const idx = siblings.indexOf(node);
   const newIdx = (siblings.length + idx - 1) % siblings.length;
   return siblings[newIdx];
 }
 
 function onRemovedNode(deletedNode: NodeState) {
-  internalSelectedStore.update(selectedNode => {
+  internalSelectedStore.update((selectedNode) => {
     if (selectedNode === undefined) return undefined;
 
     const ancestors: NodeState[] = [selectedNode];
@@ -83,17 +79,39 @@ export const selectedStore = stateful({
   selectParent: () => internalSelectedStore.update(getParent),
   selectNext: () => internalSelectedStore.update(getNext),
   selectPrev: () => internalSelectedStore.update(getPrev),
-  onRemovedNode
+  onRemovedNode,
 });
 
-export const selectedPathStore: Readable<string[]> = derived(selectedStore, selected => {
-  if (selected === undefined) return [];
-  const path: string[] = [];
-  let node: NodeState = selected;
-  while (node.type === "branch") {
-    path.unshift(node.id);
-    node = node.parent;
+function getPath(node: NodeState | undefined): NodeState[] {
+  if (node === undefined) return [];
+
+  const path: NodeState[] = [];
+  let pointer: NodeState = node;
+  while (pointer.type === "branch") {
+    path.unshift(pointer);
+    pointer = pointer.parent;
   }
-  path.unshift(node.id);
+  path.unshift(pointer);
+
   return path;
+}
+
+export const selectedPathStore: Readable<NodeState[]> = derived(
+  selectedStore,
+  (selected) => getPath(selected)
+);
+
+export const selectedPathIdStore: Readable<string[]> = derived(
+  selectedPathStore,
+  (selectedPath) => selectedPath.map((node) => node.id)
+);
+
+selectedPathStore.subscribe((path) => {
+  path.forEach((node) => {
+    if (node.type === "root") {
+      lastSelectedRootStore.set(node.id);
+    } else {
+      node.parent.lastSelectedId.set(node.id);
+    }
+  });
 });
