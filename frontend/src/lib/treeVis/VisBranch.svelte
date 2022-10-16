@@ -53,16 +53,20 @@
   let edgeZ: number;
   $: edgeZ = onSelectedPath ? 1 : 0;
 
-  let cw: number;
-  $: cw = Math.abs(offset) * (placementWidth / 2);
+  let lineTopX: number;
+  $: lineTopX = Math.max(-offset, 0) * placementWidth + 5;
+  let lineTopXTweened: Writable<number>;
+  $: if (lineTopX !== undefined && !isNaN(lineTopX)) {
+    if (lineTopXTweened === undefined) lineTopXTweened = tweened(lineTopX, { duration: placementTransitionMs, easing: sineInOut });
+    else lineTopXTweened.set(lineTopX);
+  }
 
-  let cwTweened: Writable<number>;
-  $: if (cw !== undefined && !isNaN(cw)) {
-    if (cwTweened === undefined) {
-      cwTweened = tweened(cw, { duration: placementTransitionMs, easing: sineInOut });
-    } else {
-      cwTweened.set(cw);
-    }
+  let lineBottomX: number;
+  $: lineBottomX = offset * placementWidth;
+  let lineBottomXTweened: Writable<number>;
+  $: if (lineBottomX !== undefined && !isNaN(lineBottomX)) {
+    if (lineBottomXTweened === undefined) lineBottomXTweened = tweened(lineBottomX, { duration: placementTransitionMs, easing: sineInOut });
+    else lineBottomXTweened.set(lineBottomX);
   }
 
   let ch: number;
@@ -79,13 +83,6 @@
 
   let requestInProgress: Readable<boolean>;
   $: requestInProgress = $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
-
-  // if offset is 0, either option is fine
-  // but changing it causes weird transitions
-  // so we only change it when we have to
-  let flip: boolean = false;
-  $: if (offset < 0 && !flip) flip = true;
-  $: if (offset > 0 && flip) flip = false;
 </script>
 
 <style>
@@ -216,14 +213,14 @@
 </div>
 <svg
   class="line"
-  width={lineWidth}
+  width={lineWidth + 5}
   height={ch * 2 + 2}
-  style={`left: ${lineLeft}px; top: ${24}px; transform: scaleX(${flip ? -1 : 1}); z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
+  style={`left: ${lineLeft}px; top: ${24}px; z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
 >
-  {#if cwTweened !== undefined}
+  {#if lineTopXTweened && lineBottomXTweened}
     <path
       class="path"
-      d={`m 5 0 c 0 ${ch + 0.5} ${$cwTweened * 2} ${ch + 0.5} ${$cwTweened * 2} ${ch * 2 + 1}`}
+      d={`m ${$lineTopXTweened} 0 c 0 ${ch + 0.5} ${$lineBottomXTweened} ${ch + 0.5} ${$lineBottomXTweened} ${ch * 2 + 1}`}
       stroke={edgeColor}
       stroke-width="4px"
       fill="none"
