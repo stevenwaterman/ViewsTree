@@ -6,7 +6,7 @@
   import { selectedStore } from "./lib/state/selected";
   import { generationSettingsStore, saveNameStore } from "./lib/state/settings";
   import { removeNode } from "./lib/state/tree";
-  import { queueGeneration } from "./lib/generator/generator";
+  import { cancelRequest, queueGeneration } from "./lib/generator/generator";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -15,10 +15,7 @@
     else if (event.key === "ArrowDown") selectedStore.selectChild();
     else if (event.key === "d" && $selectedStore.isBranch) removeNode($selectedStore);
     else if (event.key === "r") queueGeneration($saveNameStore, $generationSettingsStore, $selectedStore);
-  }
-
-  function captureKeydown(event: KeyboardEvent) {
-    console.log(event);
+    else if (event.key === "c") cancelRequest($selectedStore)
   }
 </script>
 

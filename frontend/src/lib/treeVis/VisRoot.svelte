@@ -1,10 +1,12 @@
 <script lang="ts">
-  import type { Readable } from "svelte/store";
+  import { writable, type Readable } from "svelte/store";
+  import type { GenerationRequest } from "../generator/generator";
   import type { PrimaryBranchNode } from "../state/nodeTypes/nodes";
   import { rootNode } from "../state/nodeTypes/rootNodes";
   import { selectedStore } from "../state/selected";
-  import { getPlacements } from "./placement";
+  import { getPlacements, placementTransitionMs } from "./placement";
   import VisBranch from "./VisBranch.svelte";
+  import { scale } from "svelte/transition";
 
   export let treeContainer: HTMLDivElement;
 
@@ -17,8 +19,11 @@
   let childrenOffsets: number[];
   $: childrenOffsets = getPlacements($childLeafCountsStore);
 
-  let pendingChildrenStore: Readable<number>;
-  $: pendingChildrenStore = rootNode.pendingChildren;
+  let pendingRequests: Readable<GenerationRequest[]>;
+  $: pendingRequests = rootNode.pendingRequests;
+
+  let requestInProgress: Readable<boolean>;
+  $: requestInProgress = $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(rootNode);
@@ -31,8 +36,8 @@
     justify-content: center;
     align-items: center;
 
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     outline: none;
 
@@ -61,11 +66,18 @@
     color: var(--textDark);
     background-color: var(--bgDark);
     border: 2px solid var(--border);
+    box-sizing: border-box;
+
+    transition: color 0.2s ease-in-out;
+  }
+
+  .running {
+    color: var(--nodePlaying);
   }
 
   .placement {
     position: absolute;
-    left: -25px;
+    left: -24px;
     z-index: 2;
   }
 </style>
@@ -85,9 +97,9 @@
     tabindex={0}>
     <span class="label">Root</span>
   </div>
-  {#if $pendingChildrenStore > 0}
-    <p class="pendingLoad">
-      +{$pendingChildrenStore}
+  {#if $pendingRequests.length > 0}
+    <p class="pendingLoad" class:running={$requestInProgress} transition:scale|local={{duration: placementTransitionMs}}>
+      +{$pendingRequests.length}
     </p>
   {/if}
 </div>

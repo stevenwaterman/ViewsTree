@@ -6,12 +6,13 @@ import {
   type NodeIsTypes,
   type PrimaryBranchNode,
 } from "./nodes";
+import type { GenerationRequest } from "src/lib/generator/generator";
 
 export type RootNode = NodeIsTypes<"Root"> & {
   id: undefined;
   parent: undefined;
   children: Stateful<Writable<PrimaryBranchNode[]>>;
-  pendingChildren: Writable<number>;
+  pendingRequests: Stateful<Writable<GenerationRequest[]>>;
   childLeafCount: Readable<number[]>;
   leafCount: Readable<number>;
   lastSelectedId: Stateful<Writable<string | undefined>>;
@@ -26,6 +27,6 @@ export const rootNode: RootNode = {
   children,
   childLeafCount,
   leafCount,
-  pendingChildren: writable(0),
+  pendingRequests: stateful(writable([])),
   lastSelectedId: stateful(writable(undefined)),
 };

@@ -7,6 +7,7 @@ import {
   type SecondaryBranchNode,
 } from "./nodes";
 import { rootNode, type RootNode } from "./rootNodes";
+import type { GenerationRequest } from "src/lib/generator/generator";
 
 export type TxtImgRequest = {
   prompt: string;
@@ -34,7 +35,7 @@ export type TxtImgNode = TxtImgResult &
   NodeIsTypes<"TxtImg"> & {
     parent: RootNode;
     children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingChildren: Writable<number>;
+    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
     childLeafCount: Readable<number[]>;
     leafCount: Readable<number>;
     lastSelectedId: Stateful<Writable<string | undefined>>;
@@ -51,7 +52,7 @@ function createTxtImgNode(result: TxtImgResult): TxtImgNode {
     ...getNodeIsTypes("TxtImg"),
     parent: rootNode,
     children,
-    pendingChildren: writable(0),
+    pendingRequests: stateful(writable([])),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { Readable, Writable } from "svelte/store";
-  import { thumbnailUrl } from "../generator/generator";
+  import { writable, type Readable, type Writable } from "svelte/store";
+  import { thumbnailUrl, type GenerationRequest } from "../generator/generator";
   import { getPlacements, placementHeight, placementTransitionMs, placementWidth } from "./placement";
   import { draw, scale } from "svelte/transition";
   import { tweened } from "svelte/motion";
   import { sineInOut } from "svelte/easing";
   import { selectedPathIdStore, selectedStore } from "../state/selected";
   import { generationSettingsStore, saveNameStore } from "../state/settings";
-  import type { BranchNode } from "../state/nodeTypes/nodes";
+  import type { BranchNode, SecondaryBranchNode } from "../state/nodeTypes/nodes";
 
   export let node: BranchNode;
   export let treeContainer: HTMLDivElement;
@@ -74,8 +74,11 @@
   let lineLeft: number;
   $: lineLeft = Math.min(offset, 0) * placementWidth - 5;
 
-  let pendingLoad: Readable<number>;
-  $: pendingLoad = node.pendingChildren;
+  let pendingRequests: Readable<GenerationRequest[]>;
+  $: pendingRequests = node.pendingRequests;
+
+  let requestInProgress: Readable<boolean>;
+  $: requestInProgress = $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
 
   // if offset is 0, either option is fine
   // but changing it causes weird transitions
@@ -116,16 +119,23 @@
     text-align: center;
     margin: 8px 0 0 0;
     border-radius: 30%;
-    width: fit-content;
+    width: 48px;
     color: var(--textDark);
     background-color: var(--bgDark);
     border: 2px solid var(--border);
+    box-sizing: border-box;
 
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
     z-index: 999;
+
+    transition: color 0.2s ease-in-out;
+  }
+
+  .running {
+    color: var(--nodePlaying);
   }
 
   .line {
@@ -146,7 +156,7 @@
     display: grid;
     grid-template-columns: auto;
     grid-template-rows: auto;
-    justify-content: center;
+    justify-items: center;
     align-items: center;
 
     margin-left: -32px;
@@ -189,9 +199,9 @@
       class:selected
       in:scale={{delay: placementTransitionMs * 0.75, duration: placementTransitionMs * 0.25}}
     >
-    {#if $pendingLoad > 0}
-      <p class="pendingLoad">
-        +{$pendingLoad}
+    {#if $pendingRequests.length > 0}
+      <p class="pendingLoad" class:running={$requestInProgress} transition:scale|local={{duration: placementTransitionMs}}>
+        +{$pendingRequests.length}
       </p>
     {/if}
   </div>

@@ -7,6 +7,7 @@ import {
   type NodeIsTypes,
   type SecondaryBranchNode,
 } from "./nodes";
+import type { GenerationRequest } from "src/lib/generator/generator";
 
 export type ImgImgRequest = {
   prompt: string;
@@ -36,7 +37,7 @@ export type ImgImgNode = ImgImgResult &
   NodeIsTypes<"ImgImg"> & {
     parent: BranchNode;
     children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingChildren: Writable<number>;
+    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
     childLeafCount: Readable<number[]>;
     leafCount: Readable<number>;
     lastSelectedId: Stateful<Writable<string | undefined>>;
@@ -56,7 +57,7 @@ function createImgImgNode(
     ...getNodeIsTypes("ImgImg"),
     parent,
     children,
-    pendingChildren: writable(0),
+    pendingRequests: stateful(writable([])),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
@@ -67,8 +68,8 @@ function createImgImgNode(
 
 export async function fetchImgImgNode(
   saveName: string,
-  parent: BranchNode,
-  request: ImgImgRequest
+  request: ImgImgRequest,
+  parent: BranchNode
 ): Promise<ImgImgNode> {
   return await fetch(`http://localhost:5001/${saveName}/branch/${parent.id}`, {
     method: "POST",
