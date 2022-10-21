@@ -48,7 +48,7 @@ class Pipeline():
       beta_schedule="scaled_linear"
     )
     self.pipe_txt = StableDiffusionPipeline.from_pretrained(
-        "./stable-diffusion-v1-4", 
+        "./stable-diffusion-v1-5", 
         scheduler=scheduler_txt,
         # revision="fp16",
         # torch_dtype=torch.float16
@@ -63,7 +63,7 @@ class Pipeline():
       set_alpha_to_one=False
     )
     self.pipe_img = StableDiffusionImg2ImgPipeline.from_pretrained(
-        "./stable-diffusion-v1-4", 
+        "./stable-diffusion-v1-5", 
         scheduler=scheduler_img,
         # revision="fp16",
         # torch_dtype=torch.float16
