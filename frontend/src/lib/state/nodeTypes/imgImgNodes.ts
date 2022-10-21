@@ -7,7 +7,7 @@ import {
   type NodeIsTypes,
   type SecondaryBranchNode,
 } from "./nodes";
-import type { GenerationRequest } from "src/lib/generator/generator";
+import type { GenerationRequest } from "../../generator/generator";
 
 export type ImgImgRequest = {
   prompt: string;

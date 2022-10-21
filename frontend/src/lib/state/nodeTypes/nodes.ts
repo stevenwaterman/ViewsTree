@@ -3,24 +3,28 @@ import { derived, type Readable } from "svelte/store";
 import type { ImgImgNode } from "./imgImgNodes";
 import type { RootNode } from "./rootNodes";
 import type { TxtImgNode } from "./txtImgNodes";
+import type { UploadNode } from "./uploadNode";
 
-type NodeTypeStrings = "Root" | "TxtImg" | "ImgImg";
+type NodeTypeStrings = "Root" | "TxtImg" | "Upload" | "ImgImg";
 
 const isBranch = {
   Root: false,
   TxtImg: true,
+  Upload: true,
   ImgImg: true,
 } as const;
 
 const isPrimaryBranch = {
   Root: false,
   TxtImg: true,
+  Upload: true,
   ImgImg: false,
 } as const;
 
 const isSecondaryBranch = {
   Root: false,
   TxtImg: false,
+  Upload: false,
   ImgImg: true,
 } as const;
 
@@ -42,7 +46,7 @@ export function getNodeIsTypes<T extends NodeTypeStrings>(
   };
 }
 
-export type PrimaryBranchNode = TxtImgNode;
+export type PrimaryBranchNode = TxtImgNode | UploadNode;
 export type SecondaryBranchNode = ImgImgNode;
 export type BranchNode = PrimaryBranchNode | SecondaryBranchNode;
 export type AnyNode = RootNode | BranchNode;

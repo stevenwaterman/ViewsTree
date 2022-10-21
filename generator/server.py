@@ -2,6 +2,9 @@ import os
 from pipeline import Pipeline
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
+from PIL import Image
+import io
+import base64
 
 
 if not os.path.exists("../data"):
@@ -9,10 +12,11 @@ if not os.path.exists("../data"):
 
 pipe = Pipeline()
 app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = "../data"
 CORS(app)
 
 @app.route("/<string:save_name>/txtimg", methods=["POST"])
-def root(save_name):
+def txtimg(save_name):
   json = request.get_json(force=True)
 
   prompt = json.get("prompt", None)
@@ -37,7 +41,7 @@ def root(save_name):
   return config
 
 @app.route("/<string:save_name>/imgimg/<uuid:init_run_id>", methods=["POST"])
-def branch(save_name, init_run_id):
+def imgimg(save_name, init_run_id):
   json = request.get_json(force=True)
 
   prompt = json.get("prompt", None)
@@ -61,6 +65,32 @@ def branch(save_name, init_run_id):
     return "busy", 429
 
   print("Refined", config)
+  return config
+
+@app.route("/<string:save_name>/upload", methods=["POST"])
+def upload(save_name):
+  json = request.get_json(force=True)
+
+  image = json.get("image", None)
+  if image is None:
+    raise "Image is required"
+
+  crop = json.get("crop", None)
+  if crop is None:
+    raise "Crop is required"
+
+  config = pipe.run_upload(
+    save_name = save_name,
+    image = image,
+    crop = crop,
+    width = json.get("width", 512),
+    height = json.get("height", 512)
+  )
+
+  if config is None:
+    return "busy", 429
+
+  print("Uploaded", config)
   return config
 
 @app.route("/<string:save_name>/image/<uuid:run_id>", methods=["GET"])

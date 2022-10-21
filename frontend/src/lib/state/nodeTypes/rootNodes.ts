@@ -6,7 +6,7 @@ import {
   type NodeIsTypes,
   type PrimaryBranchNode,
 } from "./nodes";
-import type { GenerationRequest } from "src/lib/generator/generator";
+import type { GenerationRequest } from "../../generator/generator";
 
 export type RootNode = NodeIsTypes<"Root"> & {
   id: undefined;

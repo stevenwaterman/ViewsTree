@@ -3,36 +3,28 @@ import { type Writable, type Readable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
+  type BranchNode,
   type NodeIsTypes,
   type SecondaryBranchNode,
 } from "./nodes";
-import { rootNode, type RootNode } from "./rootNodes";
 import type { GenerationRequest } from "../../generator/generator";
+import { rootNode, type RootNode } from "./rootNodes";
 
-export type TxtImgRequest = {
-  prompt: string;
+export type UploadRequest = {
+  image: string;
+  crop: {top: number; right: number; bottom: number; left: number};
   width: number;
   height: number;
-  steps: number;
-  scale: number;
-  seed?: number;
 };
 
-export type TxtImgResult = {
+export type UploadResult = {
   id: string;
-  prompt: string;
   width: number;
   height: number;
-  steps: number;
-  scale: number;
-  seed: {
-    random: boolean;
-    actual: number;
-  };
 };
 
-export type TxtImgNode = TxtImgResult &
-  NodeIsTypes<"TxtImg"> & {
+export type UploadNode = UploadResult &
+  NodeIsTypes<"Upload"> & {
     parent: RootNode;
     children: Stateful<Writable<SecondaryBranchNode[]>>;
     pendingRequests: Stateful<Writable<GenerationRequest[]>>;
@@ -41,15 +33,15 @@ export type TxtImgNode = TxtImgResult &
     lastSelectedId: Stateful<Writable<string | undefined>>;
   };
 
-function createTxtImgNode(result: TxtImgResult): TxtImgNode {
+function createUploadNode(result: UploadResult): UploadNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     writable([])
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
-  const node: TxtImgNode = {
+  const node: UploadNode = {
     ...result,
-    ...getNodeIsTypes("TxtImg"),
+    ...getNodeIsTypes("Upload"),
     parent: rootNode,
     children,
     pendingRequests: stateful(writable([])),
@@ -61,11 +53,11 @@ function createTxtImgNode(result: TxtImgResult): TxtImgNode {
   return node;
 }
 
-export async function fetchTxtImgNode(
+export async function fetchUploadNode(
   saveName: string,
-  request: TxtImgRequest
-): Promise<TxtImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/txtimg`, {
+  request: UploadRequest
+): Promise<UploadNode> {
+  return await fetch(`http://localhost:5001/${saveName}/upload`, {
     method: "POST",
     body: JSON.stringify(request),
   })
@@ -77,18 +69,10 @@ export async function fetchTxtImgNode(
     .then(
       (data) =>
         ({
-          type: "root",
           id: data["run_id"],
-          prompt: data["prompt"],
           width: data["width"],
           height: data["height"],
-          steps: data["steps"],
-          scale: data["scale"],
-          seed: {
-            random: data["seed"] === null,
-            actual: data["actual_seed"],
-          },
-        } as TxtImgResult)
+        } as UploadResult)
     )
-    .then((result) => createTxtImgNode(result));
+    .then((result) => createUploadNode(result));
 }

@@ -1,3 +1,6 @@
+import base64
+import io
+import re
 from colors import apply_color_correction
 import torch
 
@@ -168,5 +171,39 @@ class Pipeline():
       'seed': seed,
       'actual_seed': actual_seed,
       'strength': strength,
+      'run_id': run_id
+    }
+
+  def run_upload(self, save_name, image, crop, width, height):
+    if self.busy:
+      return None
+
+    self.busy = True
+
+    if not os.path.exists(f"../data/{save_name}"):
+      os.mkdir(f"../data/{save_name}")
+
+    run_id = str(uuid.uuid4())
+    file_path = f'../data/{save_name}/{run_id}'
+
+    image = re.sub('^data:image/.+;base64,', '', image)
+    decodedImage = Image.open(io.BytesIO(base64.decodebytes(bytes(image, "utf-8")))).convert("RGB")
+    croppedImage = decodedImage.crop((
+      crop["left"],
+      crop["top"],
+      crop["right"],
+      crop["bottom"]
+    ))
+    resizedImage = croppedImage.resize((width, height), Image.ANTIALIAS)
+
+    resizedImage.save(f'{file_path}.png')
+    thumb = thumbnail(resizedImage)
+    thumb.save(f'{file_path}_thumbnail.jpg')
+
+    self.busy = False
+
+    return {
+      'width': width,
+      'height': height,
       'run_id': run_id
     }

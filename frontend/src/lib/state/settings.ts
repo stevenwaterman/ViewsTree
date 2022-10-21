@@ -29,22 +29,19 @@ function copySettings(
   current: GenerationSettings,
   node: BranchNode
 ): GenerationSettings {
-  const newSettings: GenerationSettings = {
-    ...current,
-    prompt: node.prompt,
-    steps: node.steps,
-    scale: node.scale,
-    seed: node.seed.random ? undefined : node.seed.actual,
-  };
+  const newSettings: GenerationSettings = { ...current };
 
-  if (node.type === "TxtImg") {
-    newSettings.width = node.width;
-    newSettings.height = node.height;
-  } else {
-    newSettings.eta = node.eta;
-    newSettings.strength = node.strength;
-    newSettings.colorCorrection = node.colorCorrection;
-  }
+  if ("prompt" in node) newSettings.prompt = node.prompt;
+  if ("width" in node) newSettings.width = node.width;
+  if ("height" in node) newSettings.height = node.height;
+
+  if ("steps" in node) newSettings.steps = node.steps;
+  if ("scale" in node) newSettings.scale = node.scale;
+  if ("eta" in node) newSettings.eta = node.eta;
+  if ("strength" in node) newSettings.strength = node.strength;
+  if ("colorCorrection" in node) newSettings.colorCorrection = node.colorCorrection;
+
+  if ("seed" in node) newSettings.seed = node.seed.random ? undefined : node.seed.actual;
 
   return newSettings;
 }
@@ -58,11 +55,14 @@ export const generationSettingsStore = {
     generationSettingsStoreInternal.update((current) =>
       copySettings(current, node)
     ),
-  copySeed: (node: BranchNode) =>
-    generationSettingsStoreInternal.update((current) => ({
-      ...current,
-      seed: node.seed.actual,
-    })),
+  copySeed: (node: BranchNode) => {
+    if ("seed" in node) {
+      generationSettingsStoreInternal.update((current) => ({
+        ...current,
+        seed: node.seed.actual,
+      }))
+    }
+  },
 };
 selectedStore.subscribe((selected) => {
   if (selected.isBranch) generationSettingsStore.copySettings(selected);
