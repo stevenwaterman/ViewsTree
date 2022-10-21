@@ -1,6 +1,9 @@
-import { get_store_value } from "svelte/internal";
-import type { Readable, Writable } from "svelte/store";
+import { get_store_value, init } from "svelte/internal";
+import type { Readable, Updater, Writable } from "svelte/store";
 import { derived, writable } from "svelte/store";
+import { tweened, type Tweened } from "svelte/motion";
+import { sineInOut } from "svelte/easing";
+import type { EasingFunction } from "svelte/types/runtime/transition";
 
 export function firstLetterUC(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -131,4 +134,38 @@ export function stateful<T extends Readable<any>>(store: T): Stateful<T> {
   };
   output.subscribe((state) => (output.state = state));
   return output;
+}
+
+export type TweenedWritable<T> = Writable<T> & { tweened: Writable<T> };
+
+export function tweenedWritable<T>(
+  initial: T,
+  duration: number = 200,
+  easing: EasingFunction = sineInOut
+): TweenedWritable<T> {
+  const instantStore = writable(initial);
+  const tweenedStore = tweened(initial, { duration, easing });
+
+  return {
+    subscribe: instantStore.subscribe,
+    set: (value: T) => {
+      instantStore.set(value);
+      tweenedStore.set(value, { duration: 0 });
+    },
+    update: (updater: Updater<T>) => {
+      instantStore.update(updater);
+      tweenedStore.update(updater, { duration: 0 });
+    },
+    tweened: {
+      subscribe: tweenedStore.subscribe,
+      set: (value: T) => {
+        instantStore.set(value);
+        tweenedStore.set(value);
+      },
+      update: (updater: Updater<T>) => {
+        instantStore.update(updater);
+        tweenedStore.update(updater);
+      },
+    },
+  };
 }
