@@ -1,13 +1,12 @@
 import { stateful, type Stateful } from "../../utils";
-import { type Writable, type Readable, writable } from "svelte/store";
+import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
-  type NodeIsTypes,
+  type BaseNode,
   type SecondaryBranchNode,
 } from "./nodes";
-import { rootNode, type RootNode } from "./rootNodes";
-import type { GenerationRequest } from "../../generator/generator";
+import { rootNode } from "./rootNodes";
 
 export type TxtImgRequest = {
   prompt: string;
@@ -31,15 +30,7 @@ export type TxtImgResult = {
   };
 };
 
-export type TxtImgNode = TxtImgResult &
-  NodeIsTypes<"TxtImg"> & {
-    parent: RootNode;
-    children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
-    childLeafCount: Readable<number[]>;
-    leafCount: Readable<number>;
-    lastSelectedId: Stateful<Writable<string | undefined>>;
-  };
+export type TxtImgNode = TxtImgResult & BaseNode<"TxtImg">;
 
 function createTxtImgNode(result: TxtImgResult): TxtImgNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(

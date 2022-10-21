@@ -1,22 +1,12 @@
-import { stateful, type Stateful } from "../../utils";
-import { writable, type Readable, type Writable } from "svelte/store";
+import { stateful } from "../../utils";
+import { writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
-  type NodeIsTypes,
-  type PrimaryBranchNode,
+  type BaseNode,
 } from "./nodes";
-import type { GenerationRequest } from "../../generator/generator";
 
-export type RootNode = NodeIsTypes<"Root"> & {
-  id: undefined;
-  parent: undefined;
-  children: Stateful<Writable<PrimaryBranchNode[]>>;
-  pendingRequests: Stateful<Writable<GenerationRequest[]>>;
-  childLeafCount: Readable<number[]>;
-  leafCount: Readable<number>;
-  lastSelectedId: Stateful<Writable<string | undefined>>;
-};
+export type RootNode = BaseNode<"Root">;
 
 const children = stateful(writable([]));
 const { childLeafCount, leafCount } = getChildLeafCountStore(children);

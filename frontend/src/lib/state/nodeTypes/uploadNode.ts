@@ -3,8 +3,7 @@ import { type Writable, type Readable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
-  type BranchNode,
-  type NodeIsTypes,
+  type BaseNode,
   type SecondaryBranchNode,
 } from "./nodes";
 import type { GenerationRequest } from "../../generator/generator";
@@ -23,8 +22,7 @@ export type UploadResult = {
   height: number;
 };
 
-export type UploadNode = UploadResult &
-  NodeIsTypes<"Upload"> & {
+export type UploadNode = UploadResult & BaseNode<"Upload"> & {
     parent: RootNode;
     children: Stateful<Writable<SecondaryBranchNode[]>>;
     pendingRequests: Stateful<Writable<GenerationRequest[]>>;

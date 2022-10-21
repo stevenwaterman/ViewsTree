@@ -169,3 +169,9 @@ export function tweenedWritable<T>(
     },
   };
 }
+
+export type TAssert<Type, Value extends Type> = Value;
+export type ValueOf<T extends Record<any, any>> = T[keyof T];
+export function tassert<Type>(): <Value extends Type>(value: Value) => Value {
+  return <Value extends Type>(value: Value) => value;
+};

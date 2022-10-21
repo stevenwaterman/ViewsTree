@@ -1,38 +1,75 @@
-import { mapUnwrap } from "../../utils";
-import { derived, type Readable } from "svelte/store";
+import { mapUnwrap, tassert, type Stateful, type TAssert, type ValueOf } from "../../utils";
+import { derived, type Readable, type Writable } from "svelte/store";
 import type { ImgImgNode } from "./imgImgNodes";
 import type { RootNode } from "./rootNodes";
 import type { TxtImgNode } from "./txtImgNodes";
 import type { UploadNode } from "./uploadNode";
+import type { GenerationRequest } from "src/lib/generator/generator";
 
 type NodeTypeStrings = "Root" | "TxtImg" | "Upload" | "ImgImg";
 
-const isBranch = {
+const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
   TxtImg: true,
   Upload: true,
   ImgImg: true,
-} as const;
+} as const);
 
-const isPrimaryBranch = {
+const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
   TxtImg: true,
   Upload: true,
   ImgImg: false,
-} as const;
+} as const);
 
-const isSecondaryBranch = {
+const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
   TxtImg: false,
   Upload: false,
   ImgImg: true,
-} as const;
+} as const);
 
-export type NodeIsTypes<T extends NodeTypeStrings> = {
+type NodeCategories = TAssert<Record<NodeTypeStrings, "Root" | "Primary" | "Secondary">, {
+  Root: "Root",
+  TxtImg: "Primary",
+  Upload: "Primary",
+  ImgImg: "Secondary",
+}>;
+
+type NodeParent = TAssert<Record<ValueOf<NodeCategories>, undefined | RootNode | BranchNode>, {
+  Root: undefined,
+  Primary: RootNode,
+  Secondary: BranchNode,
+}>;
+
+type NodeChild = TAssert<Record<ValueOf<NodeCategories>, PrimaryBranchNode | SecondaryBranchNode>, {
+  Root: PrimaryBranchNode,
+  Primary: SecondaryBranchNode,
+  Secondary: SecondaryBranchNode,
+}>;
+
+type NodeId = TAssert<Record<ValueOf<NodeCategories>, string | undefined>, {
+  Root: undefined,
+  Primary: string,
+  Secondary: string,
+}>;
+
+type NodeIsTypes<T extends NodeTypeStrings> = {
   type: T;
+
   isBranch: typeof isBranch[T];
   isPrimaryBranch: typeof isPrimaryBranch[T];
   isSecondaryBranch: typeof isSecondaryBranch[T];
+};
+
+export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
+  id: NodeId[NodeCategories[T]];
+  parent: NodeParent[NodeCategories[T]];
+  children: Stateful<Writable<Array<NodeChild[NodeCategories[T]]>>>;
+  pendingRequests: Stateful<Writable<GenerationRequest[]>>;
+  childLeafCount: Readable<number[]>;
+  leafCount: Readable<number>;
+  lastSelectedId: Stateful<Writable<string | undefined>>;
 };
 
 export function getNodeIsTypes<T extends NodeTypeStrings>(

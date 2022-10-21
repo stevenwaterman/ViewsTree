@@ -1,4 +1,3 @@
-load images in
 GPU limiter
 screen split vertical etc
 preview settings by hovering
@@ -10,7 +9,6 @@ undo delete
 upscaling
 generation setting overrides
 cancel requests under deleted nodes
-show which pending is happening next
 different kinds of color correction
 magnifier margin
 prompt weighting
@@ -19,3 +17,4 @@ custom server url
 catch errors and set busy false in pipeline
 Allow changing height/width in the image cropper
 disable / fix SVG upload
+fix imgimg resolution not being recorded properly

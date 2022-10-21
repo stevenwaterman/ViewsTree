@@ -1,13 +1,12 @@
 import { stateful, type Stateful } from "../../utils";
-import { type Writable, type Readable, writable } from "svelte/store";
+import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
+  type BaseNode,
   type BranchNode,
-  type NodeIsTypes,
   type SecondaryBranchNode,
 } from "./nodes";
-import type { GenerationRequest } from "../../generator/generator";
 
 export type ImgImgRequest = {
   prompt: string;
@@ -33,15 +32,7 @@ export type ImgImgResult = {
   colorCorrection: boolean;
 };
 
-export type ImgImgNode = ImgImgResult &
-  NodeIsTypes<"ImgImg"> & {
-    parent: BranchNode;
-    children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
-    childLeafCount: Readable<number[]>;
-    leafCount: Readable<number>;
-    lastSelectedId: Stateful<Writable<string | undefined>>;
-  };
+export type ImgImgNode = ImgImgResult & BaseNode<"ImgImg">;
 
 function createImgImgNode(
   result: ImgImgResult,
