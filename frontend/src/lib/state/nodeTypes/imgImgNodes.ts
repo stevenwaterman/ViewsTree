@@ -71,7 +71,7 @@ export async function fetchImgImgNode(
   request: ImgImgRequest,
   parent: BranchNode
 ): Promise<ImgImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/branch/${parent.id}`, {
+  return await fetch(`http://localhost:5001/${saveName}/imgimg/${parent.id}`, {
     method: "POST",
     body: JSON.stringify({
       ...request,

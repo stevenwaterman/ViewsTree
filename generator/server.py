@@ -11,7 +11,7 @@ pipe = Pipeline()
 app = Flask(__name__)
 CORS(app)
 
-@app.route("/<string:save_name>/root", methods=["POST"])
+@app.route("/<string:save_name>/txtimg", methods=["POST"])
 def root(save_name):
   json = request.get_json(force=True)
 
@@ -36,7 +36,7 @@ def root(save_name):
   print("Generated", config)
   return config
 
-@app.route("/<string:save_name>/branch/<uuid:init_run_id>", methods=["POST"])
+@app.route("/<string:save_name>/imgimg/<uuid:init_run_id>", methods=["POST"])
 def branch(save_name, init_run_id):
   json = request.get_json(force=True)
 

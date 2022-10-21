@@ -65,7 +65,7 @@ export async function fetchTxtImgNode(
   saveName: string,
   request: TxtImgRequest
 ): Promise<TxtImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/root`, {
+  return await fetch(`http://localhost:5001/${saveName}/txtimg`, {
     method: "POST",
     body: JSON.stringify(request),
   })
