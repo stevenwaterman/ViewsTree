@@ -3,10 +3,12 @@ import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
+  loadNode,
   type BaseNode,
   type SecondaryBranchNode,
+  type Serialised,
 } from "./nodes";
-import { rootNode } from "./rootNodes";
+import type { RootNode } from "./rootNodes";
 
 export type TxtImgRequest = {
   prompt: string;
@@ -32,7 +34,7 @@ export type TxtImgResult = {
 
 export type TxtImgNode = TxtImgResult & BaseNode<"TxtImg">;
 
-function createTxtImgNode(result: TxtImgResult): TxtImgNode {
+function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     writable([])
   );
@@ -41,12 +43,18 @@ function createTxtImgNode(result: TxtImgResult): TxtImgNode {
   const node: TxtImgNode = {
     ...result,
     ...getNodeIsTypes("TxtImg"),
-    parent: rootNode,
+    parent,
     children,
     pendingRequests: stateful(writable([])),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    serialise: () => ({
+      ...result,
+      id: node.id,
+      type: node.type,
+      children: children.state.map((child) => child.serialise()),
+    }),
   };
 
   return node;
@@ -54,7 +62,8 @@ function createTxtImgNode(result: TxtImgResult): TxtImgNode {
 
 export async function fetchTxtImgNode(
   saveName: string,
-  request: TxtImgRequest
+  request: TxtImgRequest,
+  parent: RootNode
 ): Promise<TxtImgNode> {
   return await fetch(`http://localhost:5001/${saveName}/txtimg`, {
     method: "POST",
@@ -81,5 +90,16 @@ export async function fetchTxtImgNode(
           },
         } as TxtImgResult)
     )
-    .then((result) => createTxtImgNode(result));
+    .then((result) => createTxtImgNode(result, parent));
+}
+
+export function loadTxtImgNode(
+  data: Serialised<"TxtImg">,
+  parent: RootNode
+): TxtImgNode {
+  const node = createTxtImgNode(data, parent);
+  const children = data.children.map((child) => loadNode(child, node));
+  node.children.set(children);
+  parent.children.update((children) => [...children, node]);
+  return node;
 }

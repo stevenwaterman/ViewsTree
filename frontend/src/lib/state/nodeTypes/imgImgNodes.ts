@@ -3,9 +3,11 @@ import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
+  loadNode,
   type BaseNode,
   type BranchNode,
   type SecondaryBranchNode,
+  type Serialised,
 } from "./nodes";
 
 export type ImgImgRequest = {
@@ -52,6 +54,12 @@ function createImgImgNode(
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    serialise: () => ({
+      ...result,
+      id: node.id,
+      type: node.type,
+      children: children.state.map((child) => child.serialise()),
+    }),
   };
 
   return node;
@@ -92,6 +100,17 @@ export async function fetchImgImgNode(
         } as ImgImgResult)
     )
     .then((result) => createImgImgNode(result, parent));
+}
+
+export function loadImgImgNode(
+  data: Serialised<"ImgImg">,
+  parent: BranchNode
+): ImgImgNode {
+  const node = createImgImgNode(data, parent);
+  const children = data.children.map((child) => loadNode(child, node));
+  node.children.set(children);
+  parent.children.update((children) => [...children, node]);
+  return node;
 }
 
 function getColorCorrectionId(

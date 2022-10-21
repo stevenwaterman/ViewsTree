@@ -2,13 +2,16 @@
   import { writable, type Readable } from "svelte/store";
   import type { GenerationRequest } from "../generator/generator";
   import type { PrimaryBranchNode } from "../state/nodeTypes/nodes";
-  import { rootNode } from "../state/nodeTypes/rootNodes";
+  import { rootNodeStore, type RootNode } from "../state/nodeTypes/rootNodes";
   import { selectedStore } from "../state/selected";
   import { getPlacements, placementTransitionMs } from "./placement";
   import VisBranch from "./VisBranch.svelte";
   import { scale } from "svelte/transition";
 
   export let treeContainer: HTMLDivElement;
+
+  let rootNode: RootNode;
+  $: rootNode = $rootNodeStore;
 
   let childrenStore: Readable<PrimaryBranchNode[]>;
   $: childrenStore = rootNode.children;
@@ -23,12 +26,40 @@
   $: pendingRequests = rootNode.pendingRequests;
 
   let requestInProgress: Readable<boolean>;
-  $: requestInProgress = $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
+  $: requestInProgress =
+    $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(rootNode);
   }
 </script>
+
+{#each $childrenStore as child, idx (child.id)}
+  <VisBranch
+    node={child}
+    {treeContainer}
+    depth={1}
+    offset={childrenOffsets[idx]}
+  />
+{/each}
+<div class="placement" on:mousedown={leftClick}>
+  <div
+    class="node"
+    class:selected={$selectedStore.type === "Root"}
+    tabindex={0}
+  >
+    <span class="label">Root</span>
+  </div>
+  {#if $pendingRequests.length > 0}
+    <p
+      class="pendingLoad"
+      class:running={$requestInProgress}
+      transition:scale|local={{ duration: placementTransitionMs }}
+    >
+      +{$pendingRequests.length}
+    </p>
+  {/if}
+</div>
 
 <style>
   .node {
@@ -42,7 +73,7 @@
     outline: none;
 
     transform: scale(1);
-    transform-origin: center;;
+    transform-origin: center;
 
     cursor: pointer;
     transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
@@ -81,25 +112,3 @@
     z-index: 2;
   }
 </style>
-
-{#each $childrenStore as child, idx (child.id)}
-  <VisBranch
-    node={child}
-    {treeContainer}
-    depth={1}
-    offset={childrenOffsets[idx]}
-  />
-{/each}
-<div class="placement" on:mousedown={leftClick}>
-  <div
-    class="node"
-    class:selected={$selectedStore.type === "Root"}
-    tabindex={0}>
-    <span class="label">Root</span>
-  </div>
-  {#if $pendingRequests.length > 0}
-    <p class="pendingLoad" class:running={$requestInProgress} transition:scale|local={{duration: placementTransitionMs}}>
-      +{$pendingRequests.length}
-    </p>
-  {/if}
-</div>

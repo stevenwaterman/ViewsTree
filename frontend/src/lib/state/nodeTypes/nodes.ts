@@ -1,12 +1,18 @@
-import { mapUnwrap, tassert, type Stateful, type TAssert, type ValueOf } from "../../utils";
+import {
+  mapUnwrap,
+  tassert,
+  type Stateful,
+  type TAssert,
+  type ValueOf,
+} from "../../utils";
 import { derived, type Readable, type Writable } from "svelte/store";
-import type { ImgImgNode } from "./imgImgNodes";
-import type { RootNode } from "./rootNodes";
-import type { TxtImgNode } from "./txtImgNodes";
-import type { UploadNode } from "./uploadNode";
+import { loadImgImgNode, type ImgImgNode } from "./imgImgNodes";
+import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
+import { loadUploadNode, type UploadNode } from "./uploadNode";
 import type { GenerationRequest } from "src/lib/generator/generator";
+import { loadRootNode, type RootNode } from "./rootNodes";
 
-type NodeTypeStrings = "Root" | "TxtImg" | "Upload" | "ImgImg";
+export type NodeTypeStrings = "Root" | "TxtImg" | "Upload" | "ImgImg";
 
 const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
@@ -29,30 +35,52 @@ const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   ImgImg: true,
 } as const);
 
-type NodeCategories = TAssert<Record<NodeTypeStrings, "Root" | "Primary" | "Secondary">, {
-  Root: "Root",
-  TxtImg: "Primary",
-  Upload: "Primary",
-  ImgImg: "Secondary",
-}>;
+export type NodeTypes = TAssert<
+  Record<NodeTypeStrings, AnyNode>,
+  {
+    Root: RootNode;
+    TxtImg: TxtImgNode;
+    Upload: UploadNode;
+    ImgImg: ImgImgNode;
+  }
+>;
 
-type NodeParent = TAssert<Record<ValueOf<NodeCategories>, undefined | RootNode | BranchNode>, {
-  Root: undefined,
-  Primary: RootNode,
-  Secondary: BranchNode,
-}>;
+type NodeCategories = TAssert<
+  Record<NodeTypeStrings, "Root" | "Primary" | "Secondary">,
+  {
+    Root: "Root";
+    TxtImg: "Primary";
+    Upload: "Primary";
+    ImgImg: "Secondary";
+  }
+>;
 
-type NodeChild = TAssert<Record<ValueOf<NodeCategories>, PrimaryBranchNode | SecondaryBranchNode>, {
-  Root: PrimaryBranchNode,
-  Primary: SecondaryBranchNode,
-  Secondary: SecondaryBranchNode,
-}>;
+type NodeParent = TAssert<
+  Record<ValueOf<NodeCategories>, undefined | RootNode | BranchNode>,
+  {
+    Root: undefined;
+    Primary: RootNode;
+    Secondary: BranchNode;
+  }
+>;
 
-type NodeId = TAssert<Record<ValueOf<NodeCategories>, string | undefined>, {
-  Root: undefined,
-  Primary: string,
-  Secondary: string,
-}>;
+type NodeChild = TAssert<
+  Record<ValueOf<NodeCategories>, PrimaryBranchNode | SecondaryBranchNode>,
+  {
+    Root: PrimaryBranchNode;
+    Primary: SecondaryBranchNode;
+    Secondary: SecondaryBranchNode;
+  }
+>;
+
+type NodeId = TAssert<
+  Record<ValueOf<NodeCategories>, string | undefined>,
+  {
+    Root: undefined;
+    Primary: string;
+    Secondary: string;
+  }
+>;
 
 type NodeIsTypes<T extends NodeTypeStrings> = {
   type: T;
@@ -70,6 +98,7 @@ export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
   childLeafCount: Readable<number[]>;
   leafCount: Readable<number>;
   lastSelectedId: Stateful<Writable<string | undefined>>;
+  serialise: () => Serialised<T>;
 };
 
 export function getNodeIsTypes<T extends NodeTypeStrings>(
@@ -88,16 +117,14 @@ export type SecondaryBranchNode = ImgImgNode;
 export type BranchNode = PrimaryBranchNode | SecondaryBranchNode;
 export type AnyNode = RootNode | BranchNode;
 
-export function getChildLeafCountStore(
-  childrenStore: Readable<SecondaryBranchNode[]>
-): {
+export function getChildLeafCountStore(childrenStore: Readable<BranchNode[]>): {
   childLeafCount: Readable<number[]>;
   leafCount: Readable<number>;
 } {
-  const childLeafCount: Readable<number[]> = mapUnwrap<
-    SecondaryBranchNode,
-    number
-  >(childrenStore, (child) => child.leafCount);
+  const childLeafCount: Readable<number[]> = mapUnwrap<BranchNode, number>(
+    childrenStore,
+    (child) => child.leafCount
+  );
 
   const leafCount: Readable<number> = derived(childLeafCount, (children) => {
     if (children.length === 0) return 1;
@@ -105,4 +132,46 @@ export function getChildLeafCountStore(
   });
 
   return { childLeafCount, leafCount };
+}
+
+type NodeType<N extends AnyNode> = N["type"];
+type ChildOf<T extends NodeTypeStrings> = NodeChild[NodeCategories[T]];
+type ParentOf<T extends NodeTypeStrings> = NodeParent[NodeCategories[T]];
+type Result<T extends NodeTypeStrings> = Omit<NodeTypes[T], keyof BaseNode<T>>;
+type Dehydrated<T extends NodeTypeStrings> = Result<T> &
+  Pick<BaseNode<T>, "id" | "type">;
+export type Serialised<T extends NodeTypeStrings> = Dehydrated<T> & {
+  children: Serialised<NodeType<ChildOf<T>>>[];
+};
+
+export function loadNode<T extends NodeTypeStrings>(
+  data: Serialised<T>,
+  parent: ParentOf<T>
+): NodeTypes[T] {
+  // I give up.
+  const serial = data as Serialised<any>;
+  const type: NodeTypeStrings = data.type;
+
+  if (type === "Root")
+    return loadRootNode(serial as Serialised<"Root">) as NodeTypes[T];
+
+  if (type === "TxtImg")
+    return loadTxtImgNode(
+      serial as Serialised<"TxtImg">,
+      parent as ParentOf<"TxtImg">
+    ) as NodeTypes[T];
+
+  if (type === "Upload")
+    return loadUploadNode(
+      serial as Serialised<"Upload">,
+      parent as ParentOf<"Upload">
+    ) as NodeTypes[T];
+
+  if (type === "ImgImg")
+    return loadImgImgNode(
+      serial as Serialised<"ImgImg">,
+      parent as ParentOf<"ImgImg">
+    ) as NodeTypes[T];
+
+  throw "Forgot a case";
 }

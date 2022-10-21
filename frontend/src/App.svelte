@@ -9,7 +9,8 @@
   import FileSelectorModal from "./lib/upload/FileSelectorModal.svelte";
   import Modal from "svelte-simple-modal";
   import { modalComponent } from "./lib/modalStore";
-  import VisBranch from "./lib/treeVis/VisBranch.svelte";
+  import { loadRootNode, rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
+  import { loadNode } from "./lib/state/nodeTypes/nodes";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -22,6 +23,8 @@
       queueGeneration($saveNameStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "c") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
+    else if (event.key === "s")
+      console.log(JSON.stringify($rootNodeStore.serialise()));
   }
 </script>
 

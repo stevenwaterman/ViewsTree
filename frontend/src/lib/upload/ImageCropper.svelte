@@ -3,6 +3,7 @@
   import { generationSettingsStore, saveNameStore } from "../state/settings";
   import { queueGeneration, queueUpload } from "../generator/generator";
   import { modalComponent } from "../modalStore";
+  import { rootNodeStore } from "../state/nodeTypes/rootNodes";
 
   export let image: string;
 
@@ -40,7 +41,11 @@
 
   async function submit(): Promise<void> {
     if (crop === undefined) return;
-    const upload = queueUpload($saveNameStore, { image, crop, ...cropSize });
+    const upload = queueUpload(
+      $saveNameStore,
+      { image, crop, ...cropSize },
+      $rootNodeStore
+    );
     modalComponent.close();
     return upload;
   }

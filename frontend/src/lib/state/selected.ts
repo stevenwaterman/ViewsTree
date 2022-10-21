@@ -6,9 +6,9 @@ import type {
   PrimaryBranchNode,
   SecondaryBranchNode,
 } from "./nodeTypes/nodes";
-import { rootNode, type RootNode } from "./nodeTypes/rootNodes";
+import { rootNodeStore, type RootNode } from "./nodeTypes/rootNodes";
 
-const internalSelectedStore: Writable<AnyNode> = writable(rootNode);
+const internalSelectedStore: Writable<AnyNode> = writable(rootNodeStore.state);
 
 function getParent(node: AnyNode): AnyNode {
   if (node.type === "Root") return node;

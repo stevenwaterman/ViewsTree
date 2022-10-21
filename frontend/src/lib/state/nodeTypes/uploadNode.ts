@@ -3,15 +3,17 @@ import { type Writable, type Readable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
+  loadNode,
   type BaseNode,
   type SecondaryBranchNode,
+  type Serialised,
 } from "./nodes";
 import type { GenerationRequest } from "../../generator/generator";
-import { rootNode, type RootNode } from "./rootNodes";
+import type { RootNode } from "./rootNodes";
 
 export type UploadRequest = {
   image: string;
-  crop: {top: number; right: number; bottom: number; left: number};
+  crop: { top: number; right: number; bottom: number; left: number };
   width: number;
   height: number;
 };
@@ -22,7 +24,8 @@ export type UploadResult = {
   height: number;
 };
 
-export type UploadNode = UploadResult & BaseNode<"Upload"> & {
+export type UploadNode = UploadResult &
+  BaseNode<"Upload"> & {
     parent: RootNode;
     children: Stateful<Writable<SecondaryBranchNode[]>>;
     pendingRequests: Stateful<Writable<GenerationRequest[]>>;
@@ -31,7 +34,7 @@ export type UploadNode = UploadResult & BaseNode<"Upload"> & {
     lastSelectedId: Stateful<Writable<string | undefined>>;
   };
 
-function createUploadNode(result: UploadResult): UploadNode {
+function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     writable([])
   );
@@ -40,12 +43,18 @@ function createUploadNode(result: UploadResult): UploadNode {
   const node: UploadNode = {
     ...result,
     ...getNodeIsTypes("Upload"),
-    parent: rootNode,
+    parent,
     children,
     pendingRequests: stateful(writable([])),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    serialise: () => ({
+      ...result,
+      id: node.id,
+      type: node.type,
+      children: children.state.map((child) => child.serialise()),
+    }),
   };
 
   return node;
@@ -53,7 +62,8 @@ function createUploadNode(result: UploadResult): UploadNode {
 
 export async function fetchUploadNode(
   saveName: string,
-  request: UploadRequest
+  request: UploadRequest,
+  parent: RootNode
 ): Promise<UploadNode> {
   return await fetch(`http://localhost:5001/${saveName}/upload`, {
     method: "POST",
@@ -72,5 +82,16 @@ export async function fetchUploadNode(
           height: data["height"],
         } as UploadResult)
     )
-    .then((result) => createUploadNode(result));
+    .then((result) => createUploadNode(result, parent));
+}
+
+export function loadUploadNode(
+  data: Serialised<"Upload">,
+  parent: RootNode
+): UploadNode {
+  const node = createUploadNode(data, parent);
+  const children = data.children.map((child) => loadNode(child, node));
+  node.children.set(children);
+  parent.children.update((children) => [...children, node]);
+  return node;
 }

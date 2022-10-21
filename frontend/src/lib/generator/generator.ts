@@ -1,9 +1,12 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 import { fetchImgImgNode } from "../state/nodeTypes/imgImgNodes";
 import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
-import { rootNode } from "../state/nodeTypes/rootNodes";
+import type { RootNode } from "../state/nodeTypes/rootNodes";
 import { fetchTxtImgNode } from "../state/nodeTypes/txtImgNodes";
-import { fetchUploadNode, type UploadRequest } from "../state/nodeTypes/uploadNode";
+import {
+  fetchUploadNode,
+  type UploadRequest,
+} from "../state/nodeTypes/uploadNode";
 import type { GenerationSettings } from "../state/settings";
 
 export type GenerationRequest = {
@@ -65,7 +68,7 @@ export async function queueGeneration(
 
   if (parent.type === "Root")
     return addToQueue(parent.pendingRequests, () =>
-      fetchTxtImgNode(saveName, request)
+      fetchTxtImgNode(saveName, request, parent)
     );
 
   if (parent.isBranch)
@@ -76,11 +79,12 @@ export async function queueGeneration(
 
 export async function queueUpload(
   saveName: string,
-  request: UploadRequest
+  request: UploadRequest,
+  rootNode: RootNode
 ): Promise<void> {
-  request = {...request};
-  return addToQueue(rootNode.pendingRequests, () => 
-    fetchUploadNode(saveName, request)
+  request = { ...request };
+  return addToQueue(rootNode.pendingRequests, () =>
+    fetchUploadNode(saveName, request, rootNode)
   );
 }
 
