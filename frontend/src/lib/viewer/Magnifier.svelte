@@ -1,11 +1,10 @@
 <script lang="ts">
   import { generationSettingsStore } from "../state/settings";
 
-
   let element: HTMLDivElement;
 
   let width: number;
-  $: width = $generationSettingsStore.width
+  $: width = $generationSettingsStore.width;
 
   let height: number;
   $: height = $generationSettingsStore.height;
@@ -16,7 +15,7 @@
   let enableZoom: boolean = false;
 
   let marginFraction: number;
-  $: marginFraction = (0.5 / zoomLevel);
+  $: marginFraction = 0.5 / zoomLevel;
 
   let zoomX: number;
   $: zoomX = mouseX * (1 - marginFraction * 2) + marginFraction;
@@ -45,18 +44,10 @@
   }
 
   let style: string;
-  $: style = `transform: scale(${zoomLevel}) translateX(${50 - zoomX * 100}%) translateY(${50 - zoomY * 100}%);`;
+  $: style = `transform: scale(${zoomLevel}) translateX(${
+    50 - zoomX * 100
+  }%) translateY(${50 - zoomY * 100}%);`;
 </script>
-
-<style>
-  .magnifier {
-    overflow: hidden;
-  }
-
-  .inner {
-
-  }
-</style>
 
 <div
   class="magnifier"
@@ -67,7 +58,12 @@
   on:wheel={onScroll}
 >
   <div class="inner" style={enableZoom ? style : ""}>
-    <slot/>
+    <slot />
   </div>
 </div>
 
+<style>
+  .magnifier {
+    overflow: hidden;
+  }
+</style>

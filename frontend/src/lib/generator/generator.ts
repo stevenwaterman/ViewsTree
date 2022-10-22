@@ -1,4 +1,5 @@
 import { writable, type Readable, type Writable } from "svelte/store";
+import { saveStore } from "../persistence/saves";
 import { fetchImgImgNode } from "../state/nodeTypes/imgImgNodes";
 import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
@@ -40,21 +41,23 @@ function addToQueue<T extends BranchNode>(
 
   pendingRequests.update((reqs) => [...reqs, generationRequest]);
 
-  endOfQueue = endOfQueue.finally(async () => {
-    if (cancelled) return;
-    hasStarted = true;
-    started.set(true);
+  endOfQueue = endOfQueue
+    .finally(async () => {
+      if (cancelled) return;
+      hasStarted = true;
+      started.set(true);
 
-    await reqFn()
-      .then((node) =>
-        node.parent.children.update((children) => [...children, node])
-      )
-      .finally(() =>
-        pendingRequests.update((reqs) =>
-          reqs.filter((req) => req !== generationRequest)
+      await reqFn()
+        .then((node) =>
+          node.parent.children.update((children) => [...children, node])
         )
-      );
-  });
+        .finally(() =>
+          pendingRequests.update((reqs) =>
+            reqs.filter((req) => req !== generationRequest)
+          )
+        );
+    })
+    .finally(() => saveStore.save());
 
   return endOfQueue;
 }

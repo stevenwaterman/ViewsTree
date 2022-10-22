@@ -3,14 +3,14 @@
   import ViewPanel from "./lib/viewer/ViewPanel.svelte";
   import GeneratorPanel from "./lib/generator/GeneratorPanel.svelte";
   import { selectedStore } from "./lib/state/selected";
-  import { generationSettingsStore, saveNameStore } from "./lib/state/settings";
-  import { removeNode } from "./lib/state/tree";
+  import { generationSettingsStore } from "./lib/state/settings";
   import { cancelRequest, queueGeneration } from "./lib/generator/generator";
   import FileSelectorModal from "./lib/upload/FileSelectorModal.svelte";
   import Modal from "svelte-simple-modal";
   import { modalComponent } from "./lib/modalStore";
-  import { loadRootNode, rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
-  import { loadNode } from "./lib/state/nodeTypes/nodes";
+  import { saveStore } from "./lib/persistence/saves";
+  import { removeNode } from "./lib/state/state";
+  import SaveMenu from "./lib/persistence/SaveMenu.svelte";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -20,11 +20,9 @@
     else if (event.key === "d" && $selectedStore.isBranch)
       removeNode($selectedStore);
     else if (event.key === "r")
-      queueGeneration($saveNameStore, $generationSettingsStore, $selectedStore);
+      queueGeneration($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "c") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
-    else if (event.key === "s")
-      console.log(JSON.stringify($rootNodeStore.serialise()));
   }
 </script>
 
@@ -34,6 +32,7 @@
   <div class="topGrid">
     <div class="leftGrid">
       <ViewPanel />
+      <SaveMenu />
       <GeneratorPanel />
     </div>
 

@@ -7,8 +7,12 @@
   import { getPlacements, placementTransitionMs } from "./placement";
   import VisBranch from "./VisBranch.svelte";
   import { scale } from "svelte/transition";
+  import { saveStore } from "../persistence/saves";
 
   export let treeContainer: HTMLDivElement;
+
+  let saveName: string;
+  $: saveName = $saveStore;
 
   let rootNode: RootNode;
   $: rootNode = $rootNodeStore;
@@ -37,9 +41,10 @@
 {#each $childrenStore as child, idx (child.id)}
   <VisBranch
     node={child}
-    {treeContainer}
     depth={1}
     offset={childrenOffsets[idx]}
+    {treeContainer}
+    {saveName}
   />
 {/each}
 <div class="placement" on:mousedown={leftClick}>

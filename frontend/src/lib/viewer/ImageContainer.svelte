@@ -2,8 +2,9 @@
   import { imageUrl } from "../generator/generator";
   import Magnifier from "./Magnifier.svelte";
   import { selectedStore } from "../state/selected";
-  import { generationSettingsStore, saveNameStore } from "../state/settings";
+  import { generationSettingsStore } from "../state/settings";
   import type { AnyNode } from "../state/nodeTypes/nodes";
+  import { saveStore } from "../persistence/saves";
 
   let selected: AnyNode;
   $: selected = $selectedStore;
@@ -20,6 +21,27 @@
   $: style = `width: ${$generationSettingsStore.width}px; height: ${$generationSettingsStore.height}px;`;
 </script>
 
+<Magnifier>
+  <div class="imageContainer" {style}>
+    {#if selected.isBranch}
+      <!-- svelte-ignore a11y-missing-attribute -->
+      <img class="child image" {style} src={imageUrl($saveStore, selected)} />
+    {/if}
+
+    {#if parent?.isBranch && showParent}
+      <!-- svelte-ignore a11y-missing-attribute -->
+      <img
+        class="parent image"
+        {style}
+        class:difference={differenceParent}
+        src={imageUrl($saveStore, parent)}
+      />
+    {/if}
+
+    <div class="background image" {style} />
+  </div>
+</Magnifier>
+
 <style>
   .imageContainer {
     position: relative;
@@ -33,7 +55,11 @@
 
   .background {
     z-index: 0;
-    background: repeating-conic-gradient(var(--border) 0% 25%, var(--bgDark) 0% 50%) 50% / 32px 32px;
+    background: repeating-conic-gradient(
+        var(--border) 0% 25%,
+        var(--bgDark) 0% 50%
+      )
+      50% / 32px 32px;
   }
 
   .child {
@@ -48,19 +74,3 @@
     mix-blend-mode: difference;
   }
 </style>
-
-<Magnifier>
-  <div class="imageContainer" {style}>
-    {#if selected.isBranch}
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <img class="child image" {style} src={imageUrl($saveNameStore, selected)}/>
-    {/if}
-  
-    {#if parent?.isBranch && showParent}
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <img class="parent image" {style} class:difference={differenceParent} src={imageUrl($saveNameStore, parent)}/>
-    {/if}
-  
-    <div class="background image" {style}/>
-  </div>
-</Magnifier>

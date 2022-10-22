@@ -4,8 +4,6 @@ import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
 import { selectedStore } from "./selected";
 
-export const saveNameStore: Writable<string> = writable("test");
-
 export type GenerationSettings = TxtImgRequest & ImgImgRequest;
 
 export function randomSeed() {
@@ -39,9 +37,11 @@ function copySettings(
   if ("scale" in node) newSettings.scale = node.scale;
   if ("eta" in node) newSettings.eta = node.eta;
   if ("strength" in node) newSettings.strength = node.strength;
-  if ("colorCorrection" in node) newSettings.colorCorrection = node.colorCorrection;
+  if ("colorCorrection" in node)
+    newSettings.colorCorrection = node.colorCorrection;
 
-  if ("seed" in node) newSettings.seed = node.seed.random ? undefined : node.seed.actual;
+  if ("seed" in node)
+    newSettings.seed = node.seed.random ? undefined : node.seed.actual;
 
   return newSettings;
 }
@@ -60,7 +60,7 @@ export const generationSettingsStore = {
       generationSettingsStoreInternal.update((current) => ({
         ...current,
         seed: node.seed.actual,
-      }))
+      }));
     }
   },
 };

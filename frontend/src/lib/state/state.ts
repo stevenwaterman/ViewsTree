@@ -1,4 +1,5 @@
 import type { Writable } from "svelte/store";
+import { saveStore } from "../persistence/saves";
 import type { BranchNode } from "./nodeTypes/nodes";
 import { selectedStore } from "./selected";
 
@@ -8,4 +9,5 @@ export function removeNode(node: BranchNode) {
   children.update((children) =>
     children.filter((child) => child.id !== node.id)
   );
+  saveStore.save();
 }

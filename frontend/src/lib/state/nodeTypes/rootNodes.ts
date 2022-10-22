@@ -40,5 +40,6 @@ export function loadRootNode(data: Serialised<"Root">): RootNode {
 }
 
 const innerRootNodeStore: Writable<RootNode> = writable(createRootNode());
+
 export const rootNodeStore: Stateful<Readable<RootNode>> =
   stateful(innerRootNodeStore);

@@ -9,6 +9,7 @@ import type {
 import { rootNodeStore, type RootNode } from "./nodeTypes/rootNodes";
 
 const internalSelectedStore: Writable<AnyNode> = writable(rootNodeStore.state);
+rootNodeStore.subscribe((node) => internalSelectedStore.set(node));
 
 function getParent(node: AnyNode): AnyNode {
   if (node.type === "Root") return node;
