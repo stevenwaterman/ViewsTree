@@ -19,9 +19,9 @@
     else if (event.key === "ArrowDown") selectedStore.selectChild();
     else if (event.key === "d" && $selectedStore.isBranch)
       removeNode($selectedStore);
-    else if (event.key === "r")
+    else if (event.key === "r" && !event.ctrlKey)
       queueGeneration($saveStore, $generationSettingsStore, $selectedStore);
-    else if (event.key === "c") cancelRequest($selectedStore);
+    else if (event.key === "c" && !event.ctrlKey) cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
   }
 </script>
@@ -55,6 +55,6 @@
     min-height: 0;
     display: grid;
 
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
   }
 </style>
