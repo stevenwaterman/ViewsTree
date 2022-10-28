@@ -44,7 +44,7 @@
   .topGrid {
     display: grid;
     grid-template-rows: 1fr;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: auto 1fr;
     height: 100vh;
     width: 100vw;
     color: var(--text);
@@ -56,5 +56,6 @@
     display: grid;
 
     grid-template-rows: auto auto 1fr;
+    gap: 3em;
   }
 </style>

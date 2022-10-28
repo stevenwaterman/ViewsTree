@@ -51,6 +51,7 @@
 
 <div
   class="magnifier"
+  style={`width: ${width}px;`}
   bind:this={element}
   on:mousemove={onMouseMove}
   on:mouseenter={onMouseEnter}
@@ -65,5 +66,9 @@
 <style>
   .magnifier {
     overflow: hidden;
+  }
+
+  .inner {
+    width: fit-content;
   }
 </style>

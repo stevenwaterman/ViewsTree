@@ -93,11 +93,12 @@
   .container {
     display: grid;
     grid-template-columns: auto auto;
-    max-width: 0;
-    max-height: 0;
     column-gap: 1em;
     row-gap: 0.5em;
     padding: 1em;
+
+    height: fit-content;
+    width: fit-content;
   }
 
   label {
