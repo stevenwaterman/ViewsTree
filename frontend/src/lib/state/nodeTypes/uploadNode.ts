@@ -74,15 +74,14 @@ export async function fetchUploadNode(
       else return response;
     })
     .then((response) => response.json())
-    .then(
-      (data) =>
-        ({
-          id: data["run_id"],
-          width: data["width"],
-          height: data["height"],
-        } as UploadResult)
-    )
-    .then((result) => createUploadNode(result, parent));
+    .then((data) => {
+      const result: UploadResult = {
+        id: data["run_id"],
+        width: data["width"],
+        height: data["height"],
+      };
+      return createUploadNode(result, parent);
+    });
 }
 
 export function loadUploadNode(

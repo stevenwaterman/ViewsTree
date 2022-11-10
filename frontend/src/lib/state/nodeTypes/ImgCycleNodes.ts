@@ -9,8 +9,10 @@ import {
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
+import type { UploadNode } from "./uploadNode";
 
-export type ImgImgRequest = {
+export type ImgCycleRequest = {
+  sourcePrompt: string;
   prompt: string;
   steps: number;
   scale: number;
@@ -19,8 +21,9 @@ export type ImgImgRequest = {
   colorCorrection: boolean;
 };
 
-export type ImgImgResult = {
+export type ImgCycleResult = {
   id: string;
+  sourcePrompt: string;
   prompt: string;
   steps: number;
   scale: number;
@@ -32,20 +35,20 @@ export type ImgImgResult = {
   colorCorrection: boolean;
 };
 
-export type ImgImgNode = ImgImgResult & BaseNode<"ImgImg">;
+export type ImgCycleNode = ImgCycleResult & BaseNode<"ImgCycle">;
 
-function createImgImgNode(
-  result: ImgImgResult,
+function createImgCycleNode(
+  result: ImgCycleResult,
   parent: BranchNode
-): ImgImgNode {
+): ImgCycleNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     writable([])
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
-  const node: ImgImgNode = {
+  const node: ImgCycleNode = {
     ...result,
-    ...getNodeIsTypes("ImgImg"),
+    ...getNodeIsTypes("ImgCycle"),
     parent,
     children,
     pendingRequests: stateful(writable([])),
@@ -63,26 +66,30 @@ function createImgImgNode(
   return node;
 }
 
-export async function fetchImgImgNode(
+export async function fetchImgCycleNode(
   saveName: string,
-  request: ImgImgRequest,
+  request: ImgCycleRequest,
   parent: BranchNode
-): Promise<ImgImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/imgimg/${parent.id}`, {
-    method: "POST",
-    body: JSON.stringify({
-      ...request,
-      colorCorrectionId: getColorCorrectionId(parent, request),
-    }),
-  })
+): Promise<ImgCycleNode> {
+  return await fetch(
+    `http://localhost:5001/${saveName}/imgcycle/${parent.id}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        ...request,
+        colorCorrectionId: getColorCorrectionId(parent, request),
+      }),
+    }
+  )
     .then((response) => {
       if (response.status === 429) throw "Server busy";
       else return response;
     })
     .then((response) => response.json())
     .then((data) => {
-      const result: ImgImgResult = {
+      const result: ImgCycleResult = {
         id: data["run_id"],
+        sourcePrompt: data["source_prompt"],
         prompt: data["prompt"],
         steps: data["steps"],
         scale: data["scale"],
@@ -93,15 +100,15 @@ export async function fetchImgImgNode(
         strength: data["strength"],
         colorCorrection: request.colorCorrection,
       };
-      return createImgImgNode(result, parent);
+      return createImgCycleNode(result, parent);
     });
 }
 
-export function loadImgImgNode(
-  data: Serialised<"ImgImg">,
+export function loadImgCycleNode(
+  data: Serialised<"ImgCycle">,
   parent: BranchNode
-): ImgImgNode {
-  const node = createImgImgNode(data, parent);
+): ImgCycleNode {
+  const node = createImgCycleNode(data, parent);
   const children = data.children.map((child) => loadNode(child, node));
   node.children.set(children);
   parent.children.update((children) => [...children, node]);
@@ -110,7 +117,7 @@ export function loadImgImgNode(
 
 function getColorCorrectionId(
   parent: BranchNode,
-  request: ImgImgRequest
+  request: ImgCycleRequest
 ): string | undefined {
   // Only do color correction on branches that have it enabled
   if (!request.colorCorrection) return undefined;

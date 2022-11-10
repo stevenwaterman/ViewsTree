@@ -1,11 +1,20 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
+import { fetchImgCycleNode } from "../state/nodeTypes/ImgCycleNodes";
 import { fetchImgImgNode } from "../state/nodeTypes/imgImgNodes";
-import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
+import type {
+  AnyNode,
+  BranchNode,
+  NodeTypes,
+  NodeTypeStrings,
+  ParentOf,
+  PrimaryBranchNode,
+} from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
 import { fetchTxtImgNode } from "../state/nodeTypes/txtImgNodes";
 import {
   fetchUploadNode,
+  type UploadNode,
   type UploadRequest,
 } from "../state/nodeTypes/uploadNode";
 import type { GenerationSettings } from "../state/settings";
@@ -62,22 +71,37 @@ function addToQueue<T extends BranchNode>(
   return endOfQueue;
 }
 
-export async function queueGeneration(
+export async function queueTxtImg(
   saveName: string,
   request: GenerationSettings,
-  parent: AnyNode
+  parent: RootNode
 ): Promise<void> {
   request = { ...request };
+  return addToQueue(parent.pendingRequests, () =>
+    fetchTxtImgNode(saveName, request, parent)
+  );
+}
 
-  if (parent.type === "Root")
-    return addToQueue(parent.pendingRequests, () =>
-      fetchTxtImgNode(saveName, request, parent)
-    );
+export async function queueImgImg(
+  saveName: string,
+  request: GenerationSettings,
+  parent: BranchNode
+): Promise<void> {
+  request = { ...request };
+  return addToQueue(parent.pendingRequests, () =>
+    fetchImgImgNode(saveName, request, parent)
+  );
+}
 
-  if (parent.isBranch)
-    return addToQueue(parent.pendingRequests, () =>
-      fetchImgImgNode(saveName, request, parent)
-    );
+export async function queueImgCycle(
+  saveName: string,
+  request: GenerationSettings,
+  parent: BranchNode
+): Promise<void> {
+  request = { ...request };
+  return addToQueue(parent.pendingRequests, () =>
+    fetchImgCycleNode(saveName, request, parent)
+  );
 }
 
 export async function queueUpload(

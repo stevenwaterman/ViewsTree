@@ -11,14 +11,21 @@ import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
 import { loadUploadNode, type UploadNode } from "./uploadNode";
 import type { GenerationRequest } from "src/lib/generator/generator";
 import { loadRootNode, type RootNode } from "./rootNodes";
+import { loadImgCycleNode, type ImgCycleNode } from "./ImgCycleNodes";
 
-export type NodeTypeStrings = "Root" | "TxtImg" | "Upload" | "ImgImg";
+export type NodeTypeStrings =
+  | "Root"
+  | "TxtImg"
+  | "Upload"
+  | "ImgImg"
+  | "ImgCycle";
 
 const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
   TxtImg: true,
   Upload: true,
   ImgImg: true,
+  ImgCycle: true,
 } as const);
 
 const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
@@ -26,6 +33,7 @@ const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   TxtImg: true,
   Upload: true,
   ImgImg: false,
+  ImgCycle: false,
 } as const);
 
 const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
@@ -33,6 +41,7 @@ const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   TxtImg: false,
   Upload: false,
   ImgImg: true,
+  ImgCycle: true,
 } as const);
 
 export type NodeTypes = TAssert<
@@ -42,6 +51,7 @@ export type NodeTypes = TAssert<
     TxtImg: TxtImgNode;
     Upload: UploadNode;
     ImgImg: ImgImgNode;
+    ImgCycle: ImgCycleNode;
   }
 >;
 
@@ -52,6 +62,7 @@ type NodeCategories = TAssert<
     TxtImg: "Primary";
     Upload: "Primary";
     ImgImg: "Secondary";
+    ImgCycle: "Secondary";
   }
 >;
 
@@ -113,7 +124,7 @@ export function getNodeIsTypes<T extends NodeTypeStrings>(
 }
 
 export type PrimaryBranchNode = TxtImgNode | UploadNode;
-export type SecondaryBranchNode = ImgImgNode;
+export type SecondaryBranchNode = ImgImgNode | ImgCycleNode;
 export type BranchNode = PrimaryBranchNode | SecondaryBranchNode;
 export type AnyNode = RootNode | BranchNode;
 
@@ -136,7 +147,7 @@ export function getChildLeafCountStore(childrenStore: Readable<BranchNode[]>): {
 
 type NodeType<N extends AnyNode> = N["type"];
 type ChildOf<T extends NodeTypeStrings> = NodeChild[NodeCategories[T]];
-type ParentOf<T extends NodeTypeStrings> = NodeParent[NodeCategories[T]];
+export type ParentOf<T extends NodeTypeStrings> = NodeParent[NodeCategories[T]];
 type Result<T extends NodeTypeStrings> = Omit<NodeTypes[T], keyof BaseNode<T>>;
 type Dehydrated<T extends NodeTypeStrings> = Result<T> &
   Pick<BaseNode<T>, "id" | "type">;
@@ -171,6 +182,12 @@ export function loadNode<T extends NodeTypeStrings>(
     return loadImgImgNode(
       serial as Serialised<"ImgImg">,
       parent as ParentOf<"ImgImg">
+    ) as NodeTypes[T];
+
+  if (type === "ImgCycle")
+    return loadImgCycleNode(
+      serial as Serialised<"ImgCycle">,
+      parent as ParentOf<"ImgCycle">
     ) as NodeTypes[T];
 
   throw "Forgot a case";

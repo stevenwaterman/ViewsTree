@@ -1,13 +1,20 @@
 <script lang="ts">
   import Slider from "./Slider.svelte";
-  import { queueGeneration } from "./generator";
   import { generationSettingsStore } from "../state/settings";
   import SeedInput from "./SeedInput.svelte";
   import { selectedStore } from "../state/selected";
-  import { saveStore } from "../persistence/saves";
 </script>
 
 <div class="container">
+  <label for="prompt">Source Prompt</label>
+  <textarea
+    id="source_prompt"
+    bind:value={$generationSettingsStore.sourcePrompt}
+    rows={6}
+    on:keydown|stopPropagation
+    disabled={!$selectedStore.isBranch}
+  />
+
   <label for="prompt">Prompt</label>
   <textarea
     id="prompt"
@@ -51,15 +58,6 @@
     bind:value={$generationSettingsStore.scale}
   />
   <Slider
-    label="Eta"
-    id="eta_slider"
-    min={0}
-    max={1}
-    step={0.01}
-    bind:value={$generationSettingsStore.eta}
-    disabled={$selectedStore.type === "Root"}
-  />
-  <Slider
     label="Strength"
     id="strength_slider"
     min={0}
@@ -79,14 +77,6 @@
   />
 
   <SeedInput />
-
-  <button
-    on:click={() =>
-      queueGeneration($saveStore, $generationSettingsStore, $selectedStore)}
-    disabled={$generationSettingsStore.prompt.trim().length === 0}
-  >
-    Generate
-  </button>
 </div>
 
 <style>

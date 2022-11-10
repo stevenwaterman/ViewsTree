@@ -30,7 +30,7 @@ def txtimg(save_name):
     width = json.get("width", 512),
     height = json.get("height", 512),
     steps = json.get("steps", 50),
-    scale = json.get("scale", 8), 
+    scale = json.get("scale", 8),
     seed = json.get("seed", None)
   )
 
@@ -55,16 +55,46 @@ def imgimg(save_name, init_run_id):
 
     steps = json.get("steps", 50),
     scale = json.get("scale", 8), 
-    eta = json.get("eta", 0),
     seed = json.get("seed", None),
     strength = json.get("strength", 0.4),
-    color_correction_id = json.get("color_correction_id", None)
+    color_correction_id = json.get("colorCorrectionId", None)
   )
 
   if config is None:
     return "busy", 429
 
   print("Refined", config)
+  return config
+  
+@app.route("/<string:save_name>/imgcycle/<uuid:init_run_id>", methods=["POST"])
+def imgcycle(save_name, init_run_id):
+  json = request.get_json(force=True)
+
+  source_prompt = json.get("sourcePrompt", None)
+  if source_prompt is None:
+    raise "Source Prompt is required"
+
+  prompt = json.get("prompt", None)
+  if prompt is None:
+    raise "Prompt is required"
+
+  config = pipe.run_cycle(
+    save_name = save_name,
+    init_run_id = init_run_id,
+    source_prompt = source_prompt,
+    prompt = prompt,
+
+    steps = json.get("steps", 50),
+    scale = json.get("scale", 8), 
+    seed = json.get("seed", None),
+    strength = json.get("strength", 0.4),
+    color_correction_id = json.get("colorCorrectionId", None)
+  )
+
+  if config is None:
+    return "busy", 429
+
+  print("Cycled", config)
   return config
 
 @app.route("/<string:save_name>/upload", methods=["POST"])

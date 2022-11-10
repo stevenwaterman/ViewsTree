@@ -74,23 +74,21 @@ export async function fetchTxtImgNode(
       else return response;
     })
     .then((response) => response.json())
-    .then(
-      (data) =>
-        ({
-          type: "root",
-          id: data["run_id"],
-          prompt: data["prompt"],
-          width: data["width"],
-          height: data["height"],
-          steps: data["steps"],
-          scale: data["scale"],
-          seed: {
-            random: data["seed"] === null,
-            actual: data["actual_seed"],
-          },
-        } as TxtImgResult)
-    )
-    .then((result) => createTxtImgNode(result, parent));
+    .then((data) => {
+      const result: TxtImgResult = {
+        id: data["run_id"],
+        prompt: data["prompt"],
+        width: data["width"],
+        height: data["height"],
+        steps: data["steps"],
+        scale: data["scale"],
+        seed: {
+          random: data["seed"] === null,
+          actual: data["actual_seed"],
+        },
+      };
+      return createTxtImgNode(result, parent);
+    });
 }
 
 export function loadTxtImgNode(

@@ -1,10 +1,15 @@
+import { current_component } from "svelte/internal";
 import { writable, type Writable } from "svelte/store";
+import type { ImgCycleRequest } from "./nodeTypes/ImgCycleNodes";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
+import type { UploadNode } from "./nodeTypes/uploadNode";
 import { selectedStore } from "./selected";
 
-export type GenerationSettings = TxtImgRequest & ImgImgRequest;
+export type GenerationSettings = TxtImgRequest &
+  ImgImgRequest &
+  ImgCycleRequest;
 
 export function randomSeed() {
   return Math.random() * Number.MAX_SAFE_INTEGER;
@@ -12,14 +17,14 @@ export function randomSeed() {
 
 function getDefaultGenerationSettings(): GenerationSettings {
   return {
+    sourcePrompt: "",
     prompt: "",
     width: 512,
     height: 512,
     steps: 50,
-    scale: 5,
-    eta: 0,
+    scale: 7,
     strength: 0.7,
-    colorCorrection: true,
+    colorCorrection: false,
   };
 }
 
@@ -29,13 +34,15 @@ function copySettings(
 ): GenerationSettings {
   const newSettings: GenerationSettings = { ...current };
 
+  if (node.type === "ImgCycle") newSettings.sourcePrompt = node.sourcePrompt;
+  else if ("prompt" in node) newSettings.sourcePrompt = node.prompt;
+
   if ("prompt" in node) newSettings.prompt = node.prompt;
   if ("width" in node) newSettings.width = node.width;
   if ("height" in node) newSettings.height = node.height;
 
   if ("steps" in node) newSettings.steps = node.steps;
   if ("scale" in node) newSettings.scale = node.scale;
-  if ("eta" in node) newSettings.eta = node.eta;
   if ("strength" in node) newSettings.strength = node.strength;
   if ("colorCorrection" in node)
     newSettings.colorCorrection = node.colorCorrection;
@@ -60,6 +67,14 @@ export const generationSettingsStore = {
       generationSettingsStoreInternal.update((current) => ({
         ...current,
         seed: node.seed.actual,
+      }));
+    }
+  },
+  copyPromptAsSource: (node: Exclude<BranchNode, UploadNode>) => {
+    if ("prompt" in node) {
+      generationSettingsStoreInternal.update((current) => ({
+        ...current,
+        sourcePrompt: node.prompt,
       }));
     }
   },

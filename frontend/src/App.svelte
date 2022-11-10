@@ -4,7 +4,12 @@
   import GeneratorPanel from "./lib/generator/GeneratorPanel.svelte";
   import { selectedStore } from "./lib/state/selected";
   import { generationSettingsStore } from "./lib/state/settings";
-  import { cancelRequest, queueGeneration } from "./lib/generator/generator";
+  import {
+    cancelRequest,
+    queueImgCycle,
+    queueImgImg,
+    queueTxtImg,
+  } from "./lib/generator/generator";
   import FileSelectorModal from "./lib/upload/FileSelectorModal.svelte";
   import Modal from "svelte-simple-modal";
   import { modalComponent } from "./lib/modalStore";
@@ -17,11 +22,15 @@
     else if (event.key === "ArrowRight") selectedStore.selectNext();
     else if (event.key === "ArrowLeft") selectedStore.selectPrev();
     else if (event.key === "ArrowDown") selectedStore.selectChild();
-    else if (event.key === "d" && $selectedStore.isBranch)
+    else if (event.key === "Delete" && $selectedStore.isBranch)
       removeNode($selectedStore);
-    else if (event.key === "r" && !event.ctrlKey)
-      queueGeneration($saveStore, $generationSettingsStore, $selectedStore);
-    else if (event.key === "c" && !event.ctrlKey) cancelRequest($selectedStore);
+    else if (event.key === "r" && !event.ctrlKey) {
+      if ($selectedStore.isBranch)
+        queueImgImg($saveStore, $generationSettingsStore, $selectedStore);
+      else queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
+    } else if (event.key === "c" && !event.ctrlKey && $selectedStore.isBranch)
+      queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
+    else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
   }
 </script>

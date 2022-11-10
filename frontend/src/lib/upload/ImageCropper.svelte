@@ -1,7 +1,7 @@
 <script lang="ts">
   import Cropper from "./Cropper.svelte";
   import { generationSettingsStore } from "../state/settings";
-  import { queueGeneration, queueUpload } from "../generator/generator";
+  import { queueUpload } from "../generator/generator";
   import { modalComponent } from "../modalStore";
   import { rootNodeStore } from "../state/nodeTypes/rootNodes";
   import { saveStore } from "../persistence/saves";

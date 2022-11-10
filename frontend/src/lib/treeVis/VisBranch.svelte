@@ -28,6 +28,7 @@
     if (event.button === 0) {
       if (event.shiftKey) generationSettingsStore.copySettings(node);
       else if (event.ctrlKey) generationSettingsStore.copySeed(node);
+      else if (event.altKey && node.type !== "Upload") generationSettingsStore.copyPromptAsSource(node);
       else selectedStore.set(node);
     }
   }
