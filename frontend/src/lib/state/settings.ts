@@ -63,6 +63,7 @@ export const generationSettingsStore = {
       copySettings(current, node)
     ),
   copySeed: (node: BranchNode) => {
+    console.log(node);
     if ("seed" in node) {
       generationSettingsStoreInternal.update((current) => ({
         ...current,

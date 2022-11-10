@@ -213,6 +213,8 @@ class Pipeline():
       'prompt': prompt,
       'steps': steps,
       'scale': scale,
+      'seed': seed,
+      'actual_seed': actual_seed,
       'strength': strength,
       'run_id': run_id
     }
