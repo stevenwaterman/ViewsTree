@@ -4,7 +4,7 @@ import re
 from colors import apply_color_correction
 import torch
 
-from diffusers import LMSDiscreteScheduler, StableDiffusionPipeline, DDIMScheduler, StableDiffusionImg2ImgPipeline
+from diffusers import EulerAncestralDiscreteScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 from PIL import Image
 import uuid
 import numpy as np
@@ -45,31 +45,20 @@ class Pipeline():
   def __init__(self):
     self.busy = False
 
-    scheduler_txt = LMSDiscreteScheduler(
-      beta_start=0.00085, 
-      beta_end=0.012, 
-      beta_schedule="scaled_linear"
-    )
+    scheduler = EulerAncestralDiscreteScheduler.from_config("./stable-diffusion-v1-5", subfolder="scheduler")
     self.pipe_txt = StableDiffusionPipeline.from_pretrained(
         "./stable-diffusion-v1-5", 
-        scheduler=scheduler_txt,
-        # revision="fp16",
-        # torch_dtype=torch.float16
+        scheduler=scheduler,
+        revision="fp16",
+        torch_dtype=torch.float16
     ).to("cuda")
     self.pipe_txt.safety_checker = lambda images, **kwargs: (images, False)
 
-    scheduler_img = DDIMScheduler(
-      beta_start=0.00085,
-      beta_end=0.012,
-      beta_schedule="scaled_linear",
-      clip_sample=False,
-      set_alpha_to_one=False
-    )
     self.pipe_img = StableDiffusionImg2ImgPipeline.from_pretrained(
         "./stable-diffusion-v1-5", 
-        scheduler=scheduler_img,
-        # revision="fp16",
-        # torch_dtype=torch.float16
+        scheduler=scheduler,
+        revision="fp16",
+        torch_dtype=torch.float16
     ).to("cuda")
     self.pipe_img.safety_checker = lambda images, **kwargs: (images, False)
 
@@ -89,17 +78,14 @@ class Pipeline():
     generator = torch.cuda.manual_seed(actual_seed)
 
     with torch.autocast("cuda"):
-        result = self.pipe_txt(
+        image = self.pipe_txt(
           prompt=prompt,
           width=width,
           height=height,
           num_inference_steps=steps,
           guidance_scale=scale,
           generator=generator
-        )
-
-        sample = result["sample"]
-        image = sample[0]
+        ).images[0]
     
     image.save(f'{file_path}.png')
     thumb = thumbnail(image)
@@ -138,7 +124,7 @@ class Pipeline():
     init_image = preprocess(init_pil)
 
     with torch.autocast("cuda"):
-        result = self.pipe_img(
+        image = self.pipe_img(
           prompt=prompt,
           init_image=init_image,
           strength=strength,
@@ -146,10 +132,7 @@ class Pipeline():
           guidance_scale=scale,
           eta=eta,
           generator=generator
-        )
-
-        sample = result["sample"]
-        image = sample[0]
+        ).images[0]
 
     if color_correction_id is not None:
       reference_path = f'../data/{save_name}/{color_correction_id}.png'
