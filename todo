@@ -3,7 +3,6 @@ screen split vertical etc
 preview settings by hovering
 max resolution
 inpainting
-persistence (including save names)
 delete files from data folder
 undo delete
 upscaling
@@ -18,3 +17,4 @@ catch errors and set busy false in pipeline
 Allow changing height/width in the image cropper
 disable / fix SVG upload
 fix imgimg resolution not being recorded properly
+interrogation

@@ -1,0 +1,9 @@
+diffusers
+numpy
+opencv-python
+requests
+Pillow
+pytorch_lightning==1.7.7
+scikit-image>=0.19
+transformers==4.19.2
+torch

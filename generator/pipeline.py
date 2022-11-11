@@ -2,6 +2,7 @@ import base64
 import io
 import re
 from colors import apply_color_correction
+from encoder import _encode_prompt
 import torch
 
 from diffusers import EulerAncestralDiscreteScheduler, LMSDiscreteScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline
@@ -40,6 +41,10 @@ def thumbnail(img):
 def random_seed():
   return random.randint(0,2147483647)
 
+StableDiffusionPipeline._encode_prompt = _encode_prompt
+StableDiffusionImg2ImgPipeline._encode_prompt = _encode_prompt
+CycleDiffusionPipeline._encode_prompt = _encode_prompt
+
 # TODO maybe let people control this, eg only load one model at a time
 class Pipeline():
   def __init__(self):
@@ -70,7 +75,6 @@ class Pipeline():
         torch_dtype=torch.float16
     ).to("cuda")
     self.pipe_cycle.safety_checker = lambda images, **kwargs: (images, False)
-
 
   def run_txt(self, save_name, prompt, width, height, steps, scale, seed):
     if self.busy:
