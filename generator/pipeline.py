@@ -1,11 +1,14 @@
 import base64
 import io
 import re
+
+import requests
 from colors import apply_color_correction
 from encoder import _encode_prompt
 import torch
 
-from diffusers import EulerAncestralDiscreteScheduler, LMSDiscreteScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline
+from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
+from transformers import CLIPTextModel, CLIPTokenizer
 from PIL import Image
 import uuid
 import numpy as np
@@ -50,31 +53,14 @@ class Pipeline():
   def __init__(self):
     self.busy = False
 
-    eulerScheduler = EulerAncestralDiscreteScheduler.from_config("./stable-diffusion-v1-5", subfolder="scheduler")
-    self.pipe_txt = StableDiffusionPipeline.from_pretrained(
-        "./stable-diffusion-v1-5", 
-        scheduler=eulerScheduler,
-        revision="fp16",
-        torch_dtype=torch.float16
-    ).to("cuda")
-    self.pipe_txt.safety_checker = lambda images, **kwargs: (images, False)
+    model_path = "./stable-diffusion-v1-5"
+    self.vae = AutoencoderKL.from_pretrained(model_path, subfolder="vae")
+    self.tokenizer = CLIPTokenizer.from_pretrained(model_path, subfolder="tokenizer")
+    self.text_encoder = CLIPTextModel.from_pretrained(model_path, subfolder="text_encoder")
+    self.sd_unet = UNet2DConditionModel.from_pretrained(model_path, subfolder="unet")
 
-    self.pipe_img = StableDiffusionImg2ImgPipeline.from_pretrained(
-        "./stable-diffusion-v1-5", 
-        scheduler=eulerScheduler,
-        revision="fp16",
-        torch_dtype=torch.float16
-    ).to("cuda")
-    self.pipe_img.safety_checker = lambda images, **kwargs: (images, False)
-
-    lmsScheduler = LMSDiscreteScheduler.from_config("./stable-diffusion-v1-5", subfolder="scheduler")
-    self.pipe_cycle = CycleDiffusionPipeline.from_pretrained(
-        "./stable-diffusion-v1-5", 
-        scheduler=lmsScheduler,
-        revision="fp16",
-        torch_dtype=torch.float16
-    ).to("cuda")
-    self.pipe_cycle.safety_checker = lambda images, **kwargs: (images, False)
+    self.eulerScheduler = EulerAncestralDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+    self.ddimScheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
 
   def run_txt(self, save_name, prompt, width, height, steps, scale, seed):
     if self.busy:
@@ -91,8 +77,18 @@ class Pipeline():
     actual_seed = random_seed() if seed is None else seed
     generator = torch.cuda.manual_seed(actual_seed)
 
+    pipe = StableDiffusionPipeline(
+      vae = self.vae,
+      text_encoder = self.text_encoder,
+      tokenizer = self.tokenizer,
+      unet = self.sd_unet,
+      scheduler = self.eulerScheduler,
+      safety_checker = None,
+      feature_extractor = None
+    ).to("cuda")
+
     with torch.autocast("cuda"):
-        image = self.pipe_txt(
+        image = pipe(
           prompt=prompt,
           width=width,
           height=height,
@@ -137,8 +133,18 @@ class Pipeline():
     init_pil = Image.open(init_path)
     init_image = preprocess(init_pil)
 
+    pipe = StableDiffusionImg2ImgPipeline(
+      vae = self.vae,
+      text_encoder = self.text_encoder,
+      tokenizer = self.tokenizer,
+      unet = self.sd_unet,
+      scheduler = self.eulerScheduler,
+      safety_checker = None,
+      feature_extractor = None
+    ).to("cuda")
+
     with torch.autocast("cuda"):
-        image = self.pipe_img(
+        image = pipe(
           prompt=prompt,
           init_image=init_image,
           strength=strength,
@@ -188,15 +194,26 @@ class Pipeline():
     init_pil = Image.open(init_path)
     init_image = preprocess(init_pil)
 
+    pipe = CycleDiffusionPipeline(
+      vae = self.vae,
+      text_encoder = self.text_encoder,
+      tokenizer = self.tokenizer,
+      unet = self.sd_unet,
+      scheduler = self.ddimScheduler,
+      safety_checker = None,
+      feature_extractor = None
+    ).to("cuda")
+
     with torch.autocast("cuda"):
-        image = self.pipe_img(
+        image = pipe(
           prompt=prompt,
           source_prompt=source_prompt,
           init_image=init_image,
           strength=strength,
           num_inference_steps=steps,
-          guidance_scale=scale / 2.5,
+          guidance_scale=scale,
           source_guidance_scale=1,
+          eta=0.1,
           generator=generator
         ).images[0]
 
