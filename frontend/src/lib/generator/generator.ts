@@ -2,19 +2,11 @@ import { writable, type Readable, type Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
 import { fetchImgCycleNode } from "../state/nodeTypes/ImgCycleNodes";
 import { fetchImgImgNode } from "../state/nodeTypes/imgImgNodes";
-import type {
-  AnyNode,
-  BranchNode,
-  NodeTypes,
-  NodeTypeStrings,
-  ParentOf,
-  PrimaryBranchNode,
-} from "../state/nodeTypes/nodes";
+import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
 import { fetchTxtImgNode } from "../state/nodeTypes/txtImgNodes";
 import {
   fetchUploadNode,
-  type UploadNode,
   type UploadRequest,
 } from "../state/nodeTypes/uploadNode";
 import type { GenerationSettings } from "../state/settings";
@@ -76,7 +68,7 @@ export async function queueTxtImg(
   request: GenerationSettings,
   parent: RootNode
 ): Promise<void> {
-  request = { ...request };
+  request = JSON.parse(JSON.stringify(request));
   return addToQueue(parent.pendingRequests, () =>
     fetchTxtImgNode(saveName, request, parent)
   );
@@ -87,7 +79,7 @@ export async function queueImgImg(
   request: GenerationSettings,
   parent: BranchNode
 ): Promise<void> {
-  request = { ...request };
+  request = JSON.parse(JSON.stringify(request));
   return addToQueue(parent.pendingRequests, () =>
     fetchImgImgNode(saveName, request, parent)
   );
@@ -98,7 +90,7 @@ export async function queueImgCycle(
   request: GenerationSettings,
   parent: BranchNode
 ): Promise<void> {
-  request = { ...request };
+  request = JSON.parse(JSON.stringify(request));
   return addToQueue(parent.pendingRequests, () =>
     fetchImgCycleNode(saveName, request, parent)
   );
@@ -109,7 +101,7 @@ export async function queueUpload(
   request: UploadRequest,
   rootNode: RootNode
 ): Promise<void> {
-  request = { ...request };
+  request = JSON.parse(JSON.stringify(request));
   return addToQueue(rootNode.pendingRequests, () =>
     fetchUploadNode(saveName, request, rootNode)
   );

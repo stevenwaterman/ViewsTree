@@ -2,9 +2,9 @@ import base64
 import io
 import re
 
-import requests
 from colors import apply_color_correction
 from encoder import _encode_prompt
+from multiUnet import MultiUnet
 import torch
 
 from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
@@ -14,7 +14,6 @@ import uuid
 import numpy as np
 import os
 import random
-import sys
 
 def preprocess(image):
     w, h = image.size
@@ -53,16 +52,27 @@ class Pipeline():
   def __init__(self):
     self.busy = False
 
-    model_path = "./stable-diffusion-v1-5"
-    self.vae = AutoencoderKL.from_pretrained(model_path, subfolder="vae")
-    self.tokenizer = CLIPTokenizer.from_pretrained(model_path, subfolder="tokenizer")
-    self.text_encoder = CLIPTextModel.from_pretrained(model_path, subfolder="text_encoder")
-    self.sd_unet = UNet2DConditionModel.from_pretrained(model_path, subfolder="unet")
+    main_model_path = "./models/stable-diffusion-v1-5"
+    self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
+    self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
+    self.text_encoder = CLIPTextModel.from_pretrained(main_model_path, subfolder="text_encoder")
+    self.eulerScheduler = EulerAncestralDiscreteScheduler.from_config(main_model_path, subfolder="scheduler")
+    self.ddimScheduler = DDIMScheduler.from_config(main_model_path, subfolder="scheduler")
 
-    self.eulerScheduler = EulerAncestralDiscreteScheduler.from_config(model_path, subfolder="scheduler")
-    self.ddimScheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
+    self.unets = {}
+    model_paths = [f.name for f in os.scandir("./models") if f.is_dir()]
+    for model_name in model_paths:
+      self.unets[model_name] = UNet2DConditionModel.from_pretrained(f"./models/{model_name}", subfolder="unet")
 
-  def run_txt(self, save_name, prompt, width, height, steps, scale, seed):
+  def get_multi_unet(self, models):
+    tuples = []
+    for key, value in models.items():
+      unet = self.unets[key]
+      if (unet is not None):
+        tuples.append((unet, value))
+    return MultiUnet(tuples, "cuda")
+
+  def run_txt(self, save_name, models, prompt, width, height, steps, scale, seed):
     if self.busy:
       return None
 
@@ -81,7 +91,7 @@ class Pipeline():
       vae = self.vae,
       text_encoder = self.text_encoder,
       tokenizer = self.tokenizer,
-      unet = self.sd_unet,
+      unet = self.get_multi_unet(models),
       scheduler = self.eulerScheduler,
       safety_checker = None,
       feature_extractor = None
@@ -104,6 +114,7 @@ class Pipeline():
     self.busy = False
 
     return {
+      'models': models,
       'prompt': prompt,
       'width': width,
       'height': height,
@@ -114,7 +125,7 @@ class Pipeline():
       'run_id': run_id
     }
 
-  def run_img(self, save_name, init_run_id, prompt, steps, scale, seed, strength, color_correction_id):
+  def run_img(self, save_name, init_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
     if self.busy:
       return None
 
@@ -137,7 +148,7 @@ class Pipeline():
       vae = self.vae,
       text_encoder = self.text_encoder,
       tokenizer = self.tokenizer,
-      unet = self.sd_unet,
+      unet = self.get_multi_unet(models),
       scheduler = self.eulerScheduler,
       safety_checker = None,
       feature_extractor = None
@@ -166,6 +177,7 @@ class Pipeline():
 
     return {
       'init_run_id': init_run_id,
+      'models': models,
       'prompt': prompt,
       'steps': steps,
       'scale': scale,
@@ -175,7 +187,7 @@ class Pipeline():
       'run_id': run_id
     }
 
-  def run_cycle(self, save_name, init_run_id, source_prompt, prompt, steps, scale, seed, strength, color_correction_id):
+  def run_cycle(self, save_name, init_run_id, models, source_prompt, prompt, steps, scale, seed, strength, color_correction_id):
     if self.busy:
       return None
 
@@ -198,7 +210,7 @@ class Pipeline():
       vae = self.vae,
       text_encoder = self.text_encoder,
       tokenizer = self.tokenizer,
-      unet = self.sd_unet,
+      unet = self.get_multi_unet(models),
       scheduler = self.ddimScheduler,
       safety_checker = None,
       feature_extractor = None
@@ -230,6 +242,7 @@ class Pipeline():
 
     return {
       'init_run_id': init_run_id,
+      'models': models,
       'source_prompt': source_prompt ,
       'prompt': prompt,
       'steps': steps,

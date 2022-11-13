@@ -1,5 +1,6 @@
 import { current_component } from "svelte/internal";
 import { writable, type Writable } from "svelte/store";
+import { modelsStore } from "./models";
 import type { ImgCycleRequest } from "./nodeTypes/ImgCycleNodes";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
@@ -17,6 +18,7 @@ export function randomSeed() {
 
 function getDefaultGenerationSettings(): GenerationSettings {
   return {
+    models: {},
     sourcePrompt: "",
     prompt: "",
     width: 512,
@@ -33,6 +35,14 @@ function copySettings(
   node: BranchNode
 ): GenerationSettings {
   const newSettings: GenerationSettings = { ...current };
+
+  if ("models" in node) {
+    newSettings.models = {};
+    modelsStore.state.forEach((model) => {
+      const weight: number = node.models[model] ?? 0;
+      newSettings.models[model] = weight;
+    });
+  }
 
   if (node.type === "ImgCycle") newSettings.sourcePrompt = node.sourcePrompt;
   else if ("prompt" in node) newSettings.sourcePrompt = node.prompt;
@@ -56,6 +66,16 @@ function copySettings(
 const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(
   getDefaultGenerationSettings()
 );
+modelsStore.subscribe((models) => {
+  generationSettingsStoreInternal.update((generationSettings) => {
+    const newSettings = { ...generationSettings, models: {} };
+    models.forEach((model) => {
+      newSettings.models[model] = generationSettings.models[model] ?? 0;
+    });
+    return newSettings;
+  });
+});
+
 export const generationSettingsStore = {
   ...generationSettingsStoreInternal,
   copySettings: (node: BranchNode) =>

@@ -23,8 +23,13 @@ def txtimg(save_name):
   if prompt is None:
     raise "Prompt is required"
 
+  models = json.get("models", None)
+  if models is None:
+    raise "Models are required"
+
   config = pipe.run_txt(
     save_name = save_name,
+    models = models,
     prompt = prompt,
 
     width = json.get("width", 512),
@@ -48,9 +53,14 @@ def imgimg(save_name, init_run_id):
   if prompt is None:
     raise "Prompt is required"
 
+  models = json.get("models", None)
+  if models is None:
+    raise "Models are required"
+
   config = pipe.run_img(
     save_name = save_name,
     init_run_id = init_run_id,
+    models = models,
     prompt = prompt,
 
     steps = json.get("steps", 50),
@@ -70,6 +80,10 @@ def imgimg(save_name, init_run_id):
 def imgcycle(save_name, init_run_id):
   json = request.get_json(force=True)
 
+  models = json.get("models", None)
+  if models is None:
+    raise "Models are required"
+
   source_prompt = json.get("sourcePrompt", None)
   if source_prompt is None:
     raise "Source Prompt is required"
@@ -81,6 +95,7 @@ def imgcycle(save_name, init_run_id):
   config = pipe.run_cycle(
     save_name = save_name,
     init_run_id = init_run_id,
+    models = models,
     source_prompt = source_prompt,
     prompt = prompt,
 
@@ -130,4 +145,8 @@ def image(save_name, run_id):
 @app.route("/<string:save_name>/thumb/<uuid:run_id>", methods=["GET"])
 def thumb(save_name, run_id):
   return send_from_directory(f"../data/{save_name}", f"{run_id}_thumbnail.jpg")
+
+@app.route("/models", methods=["GET"])
+def models():
+  return list(pipe.unets.keys())
   

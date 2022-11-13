@@ -9,9 +9,9 @@ import {
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
-import type { UploadNode } from "./uploadNode";
 
 export type ImgCycleRequest = {
+  models: Record<string, number>;
   sourcePrompt: string;
   prompt: string;
   steps: number;
@@ -23,6 +23,7 @@ export type ImgCycleRequest = {
 
 export type ImgCycleResult = {
   id: string;
+  models: Record<string, number>;
   sourcePrompt: string;
   prompt: string;
   steps: number;
@@ -89,6 +90,7 @@ export async function fetchImgCycleNode(
     .then((data) => {
       const result: ImgCycleResult = {
         id: data["run_id"],
+        models: data["models"],
         sourcePrompt: data["source_prompt"],
         prompt: data["prompt"],
         steps: data["steps"],

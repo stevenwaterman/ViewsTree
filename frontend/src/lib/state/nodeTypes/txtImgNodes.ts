@@ -11,6 +11,7 @@ import {
 import type { RootNode } from "./rootNodes";
 
 export type TxtImgRequest = {
+  models: Record<string, number>;
   prompt: string;
   width: number;
   height: number;
@@ -21,6 +22,7 @@ export type TxtImgRequest = {
 
 export type TxtImgResult = {
   id: string;
+  models: Record<string, number>;
   prompt: string;
   width: number;
   height: number;
@@ -77,6 +79,7 @@ export async function fetchTxtImgNode(
     .then((data) => {
       const result: TxtImgResult = {
         id: data["run_id"],
+        models: data["models"],
         prompt: data["prompt"],
         width: data["width"],
         height: data["height"],

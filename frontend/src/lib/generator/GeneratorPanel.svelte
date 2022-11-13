@@ -3,9 +3,21 @@
   import { generationSettingsStore } from "../state/settings";
   import SeedInput from "./SeedInput.svelte";
   import { selectedStore } from "../state/selected";
+  import { modelsStore } from "../state/models";
 </script>
 
 <div class="container">
+  {#each $modelsStore as model (model)}
+    <Slider
+      label={model}
+      id={`model_${model}_slider`}
+      min={0}
+      max={10}
+      step={0.1}
+      bind:value={$generationSettingsStore.models[model]}
+    />
+  {/each}
+
   <label for="prompt">Source Prompt</label>
   <textarea
     id="source_prompt"

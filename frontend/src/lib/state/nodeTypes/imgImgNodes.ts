@@ -11,6 +11,7 @@ import {
 } from "./nodes";
 
 export type ImgImgRequest = {
+  models: Record<string, number>;
   prompt: string;
   steps: number;
   scale: number;
@@ -21,6 +22,7 @@ export type ImgImgRequest = {
 
 export type ImgImgResult = {
   id: string;
+  models: Record<string, number>;
   prompt: string;
   steps: number;
   scale: number;
@@ -83,6 +85,7 @@ export async function fetchImgImgNode(
     .then((data) => {
       const result: ImgImgResult = {
         id: data["run_id"],
+        models: data["models"],
         prompt: data["prompt"],
         steps: data["steps"],
         scale: data["scale"],
