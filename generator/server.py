@@ -3,8 +3,6 @@ from pipeline import Pipeline
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from PIL import Image
-import io
-import base64
 
 
 if not os.path.exists("../data"):

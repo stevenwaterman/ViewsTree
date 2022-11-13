@@ -64,7 +64,7 @@ class Pipeline():
     self.unets = {}
 
   def get_multi_unet(self, models):
-    new_model_count = len(set(models.keys()) + set(self.unets.keys()))
+    new_model_count = len(set(list(models.keys()) + list(self.unets.keys())))
     if new_model_count > 3:
       # Unload models
       models_to_unload = [model for model in self.unets.keys() if model not in models or models[model] == 0]
