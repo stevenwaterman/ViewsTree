@@ -148,5 +148,5 @@ def thumb(save_name, run_id):
 
 @app.route("/models", methods=["GET"])
 def models():
-  return list(pipe.unets.keys())
+  return pipe.models()
   

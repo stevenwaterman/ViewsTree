@@ -52,7 +52,9 @@ class Pipeline():
   def __init__(self):
     self.busy = False
 
-    main_model_path = "./models/stable-diffusion-v1-5"
+    self.model_folder = "./models"
+
+    main_model_path = f"{self.model_folder}/stable-diffusion-v1-5"
     self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
     self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
     self.text_encoder = CLIPTextModel.from_pretrained(main_model_path, subfolder="text_encoder")
@@ -60,16 +62,23 @@ class Pipeline():
     self.ddimScheduler = DDIMScheduler.from_config(main_model_path, subfolder="scheduler")
 
     self.unets = {}
-    model_paths = [f.name for f in os.scandir("./models") if f.is_dir()]
-    for model_name in model_paths:
-      self.unets[model_name] = UNet2DConditionModel.from_pretrained(f"./models/{model_name}", subfolder="unet")
 
   def get_multi_unet(self, models):
+    new_model_count = len(set(models.keys()) + set(self.unets.keys()))
+    if new_model_count > 3:
+      # Unload models
+      models_to_unload = [model for model in self.unets.keys() if model not in models or models[model] == 0]
+      for model in models_to_unload:
+        del self.unets[model]
+
     tuples = []
     for key, value in models.items():
-      unet = self.unets[key]
-      if (unet is not None):
-        tuples.append((unet, value))
+      if (value > 0):
+        # Load new models
+        if (key not in self.unets):
+          self.unets[key] = UNet2DConditionModel.from_pretrained(f"{self.model_folder}/{key}", subfolder="unet").to("cuda")
+        tuples.append((self.unets[key], value))
+
     return MultiUnet(tuples, "cuda")
 
   def run_txt(self, save_name, models, prompt, width, height, steps, scale, seed):
@@ -286,3 +295,6 @@ class Pipeline():
       'height': height,
       'run_id': run_id
     }
+
+  def models(self):
+    return [f.name for f in os.scandir(self.model_folder) if f.is_dir()]
