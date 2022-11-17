@@ -1,4 +1,3 @@
-from modelCache import ModelCache
 import torch
 from diffusers import UNet2DConditionModel
 from copy import deepcopy
@@ -7,19 +6,12 @@ from copy import deepcopy
 class MultiUnet():
     def __init__(self, model_folder_path):
         self.model_folder_path = model_folder_path
-        self.model_cache = ModelCache(4)
-
         self.last_unet = None
         self.last_models = None
 
     def get_model(self, model_name):
-        cached = self.model_cache.get(model_name)
-        if (cached is not None):
-            return cached
-        model = torch.load(
+        return torch.load(
             f"{self.model_folder_path}/{model_name}/unet/diffusion_pytorch_model.bin", map_location="cpu")
-        self.model_cache.put(model_name, model)
-        return model
 
     def load(self, models):
         models = {k: v for k, v in models.items() if v > 0}
@@ -34,7 +26,7 @@ class MultiUnet():
 
         self.last_models = models
         self.last_unet = UNet2DConditionModel.from_config(
-            f"{self.model_folder_path}/stable-diffusion-v1-5", subfolder="unet")
+            f"{self.model_folder_path}/stable-diffusion-v1-5", subfolder="unet").to("cuda")
 
         if (len(models) == 1):
             # If only one model, don't bother merging or anything
@@ -48,27 +40,27 @@ class MultiUnet():
             for path_b in models:
                 weight_b = models[path_b]
                 if (path_b != base_model_path and weight_b > 0):
-                    model_b = self.get_model(path_b)
-                    model_a = merge_two(
-                        model_a, weight_a, model_b, weight_b)
-                    del model_b
+                    model_a = self.merge_two(
+                        model_a, weight_a, path_b, weight_b)
                     weight_a += weight_b
             load_state_dict_into_model(self.last_unet, model_a)
 
         return self.last_unet
 
+    def merge_two(self, model_a, weight_a, path_b, weight_b):
+        print("merging " + path_b)
+        model_b = self.get_model(path_b)
 
-def merge_two(model_a, weight_a, model_b, weight_b):
-    total_weight = weight_a + weight_b
-    factor_a = weight_a / total_weight
-    factor_b = weight_b / total_weight
+        total_weight = weight_a + weight_b
+        factor_a = weight_a / total_weight
+        factor_b = weight_b / total_weight
 
-    for key in model_a.keys():
-        if key in model_b:
-            model_a[key] = model_a[key] * \
-                factor_a + model_b[key] * factor_b
-
-    return model_a
+        for key in model_a.keys():
+            if key in model_b:
+                model_a[key] = model_a[key] * \
+                    factor_a + model_b[key] * factor_b
+        del model_b
+        return model_a
 
 
 def load_state_dict_into_model(model_to_load, state_dict):
