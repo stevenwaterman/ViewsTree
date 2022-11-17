@@ -68,7 +68,7 @@ export async function queueTxtImg(
   request: GenerationSettings,
   parent: RootNode
 ): Promise<void> {
-  request = JSON.parse(JSON.stringify(request));
+  request = copyRequest(request);
   return addToQueue(parent.pendingRequests, () =>
     fetchTxtImgNode(saveName, request, parent)
   );
@@ -79,7 +79,7 @@ export async function queueImgImg(
   request: GenerationSettings,
   parent: BranchNode
 ): Promise<void> {
-  request = JSON.parse(JSON.stringify(request));
+  request = copyRequest(request);
   return addToQueue(parent.pendingRequests, () =>
     fetchImgImgNode(saveName, request, parent)
   );
@@ -90,7 +90,7 @@ export async function queueImgCycle(
   request: GenerationSettings,
   parent: BranchNode
 ): Promise<void> {
-  request = JSON.parse(JSON.stringify(request));
+  request = copyRequest(request);
   return addToQueue(parent.pendingRequests, () =>
     fetchImgCycleNode(saveName, request, parent)
   );
@@ -121,4 +121,18 @@ export function cancelRequest(node: AnyNode): void {
 
   const lastReq = pendingRequests[pendingRequests.length - 1];
   lastReq.cancel();
+}
+
+export function copyRequest<T extends Partial<GenerationSettings>>(
+  request: T
+): T {
+  const copy = { ...request };
+  if (copy.models) {
+    copy.models = {};
+    for (const key in request.models) {
+      const value = request.models[key];
+      if (value > 0) copy.models[key] = value;
+    }
+  }
+  return copy;
 }

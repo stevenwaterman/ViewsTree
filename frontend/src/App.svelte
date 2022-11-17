@@ -16,6 +16,7 @@
   import { saveStore } from "./lib/persistence/saves";
   import { removeNode } from "./lib/state/state";
   import SaveMenu from "./lib/persistence/SaveMenu.svelte";
+  import { rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -32,6 +33,7 @@
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
+    else if (event.key === "l") console.log(rootNodeStore.state.serialise());
   }
 </script>
 
