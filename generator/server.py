@@ -110,6 +110,38 @@ def imgcycle(save_name, init_run_id):
   print("Cycled", config)
   return config
 
+@app.route("/<string:save_name>/inpaint/<uuid:init_run_id>/<uuid:mask_run_id>", methods=["POST"])
+def inpaint(save_name, init_run_id, mask_run_id):
+  json = request.get_json(force=True)
+
+  prompt = json.get("prompt", None)
+  if prompt is None:
+    raise "Prompt is required"
+
+  models = json.get("models", None)
+  if models is None:
+    raise "Models are required"
+
+  config = pipe.run_inpaint(
+    save_name = save_name,
+    init_run_id = init_run_id,
+    mask_run_id = mask_run_id,
+    models = models,
+    prompt = prompt,
+
+    steps = json.get("steps", 50),
+    scale = json.get("scale", 8), 
+    seed = json.get("seed", None),
+    strength = json.get("strength", 0.4),
+    color_correction_id = json.get("colorCorrectionId", None)
+  )
+
+  if config is None:
+    return "busy", 429
+
+  print("Inpainted", config)
+  return config
+
 @app.route("/<string:save_name>/upload", methods=["POST"])
 def upload(save_name):
   json = request.get_json(force=True)

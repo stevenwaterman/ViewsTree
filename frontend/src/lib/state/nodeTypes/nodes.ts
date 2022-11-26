@@ -12,13 +12,17 @@ import { loadUploadNode, type UploadNode } from "./uploadNode";
 import type { GenerationRequest } from "src/lib/generator/generator";
 import { loadRootNode, type RootNode } from "./rootNodes";
 import { loadImgCycleNode, type ImgCycleNode } from "./ImgCycleNodes";
+import { loadMaskNode, type MaskNode } from "./maskNodes";
+import { loadInpaintNode, type InpaintNode } from "./inpaintNodes";
 
 export type NodeTypeStrings =
   | "Root"
   | "TxtImg"
   | "Upload"
   | "ImgImg"
-  | "ImgCycle";
+  | "ImgCycle"
+  | "Mask"
+  | "Inpaint";
 
 const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Root: false,
@@ -26,6 +30,8 @@ const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Upload: true,
   ImgImg: true,
   ImgCycle: true,
+  Mask: true,
+  Inpaint: true,
 } as const);
 
 const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
@@ -34,6 +40,8 @@ const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Upload: true,
   ImgImg: false,
   ImgCycle: false,
+  Mask: false,
+  Inpaint: false,
 } as const);
 
 const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
@@ -42,6 +50,8 @@ const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   Upload: false,
   ImgImg: true,
   ImgCycle: true,
+  Mask: true,
+  Inpaint: true,
 } as const);
 
 export type NodeTypes = TAssert<
@@ -52,6 +62,8 @@ export type NodeTypes = TAssert<
     Upload: UploadNode;
     ImgImg: ImgImgNode;
     ImgCycle: ImgCycleNode;
+    Mask: MaskNode;
+    Inpaint: InpaintNode;
   }
 >;
 
@@ -63,6 +75,8 @@ type NodeCategories = TAssert<
     Upload: "Primary";
     ImgImg: "Secondary";
     ImgCycle: "Secondary";
+    Mask: "Secondary";
+    Inpaint: "Secondary";
   }
 >;
 
@@ -124,7 +138,11 @@ export function getNodeIsTypes<T extends NodeTypeStrings>(
 }
 
 export type PrimaryBranchNode = TxtImgNode | UploadNode;
-export type SecondaryBranchNode = ImgImgNode | ImgCycleNode;
+export type SecondaryBranchNode =
+  | ImgImgNode
+  | ImgCycleNode
+  | MaskNode
+  | InpaintNode;
 export type BranchNode = PrimaryBranchNode | SecondaryBranchNode;
 export type AnyNode = RootNode | BranchNode;
 
@@ -188,6 +206,18 @@ export function loadNode<T extends NodeTypeStrings>(
     return loadImgCycleNode(
       serial as Serialised<"ImgCycle">,
       parent as ParentOf<"ImgCycle">
+    ) as NodeTypes[T];
+
+  if (type === "Mask")
+    return loadMaskNode(
+      serial as Serialised<"Mask">,
+      parent as ParentOf<"Mask">
+    ) as NodeTypes[T];
+
+  if (type === "Inpaint")
+    return loadInpaintNode(
+      serial as Serialised<"Inpaint">,
+      parent as ParentOf<"Inpaint">
     ) as NodeTypes[T];
 
   throw "Forgot a case";

@@ -7,9 +7,9 @@ from encoder import _encode_prompt
 from multiUnet import MultiUnet
 import torch
 
-from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
+from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, StableDiffusionInpaintPipelineLegacy, AutoencoderKL, UNet2DConditionModel
 from transformers import CLIPTextModel, CLIPTokenizer
-from PIL import Image
+from PIL import Image, ImageOps
 import uuid
 import numpy as np
 import os
@@ -73,7 +73,6 @@ class Pipeline():
             main_model_path, subfolder="scheduler")
 
         self.unet = MultiUnet(self.model_folder)
-        self.unets = {}
 
     def run_txt(self, save_name, models, prompt, width, height, steps, scale, seed):
         if self.busy:
@@ -255,6 +254,71 @@ class Pipeline():
             'strength': strength,
             'run_id': run_id
         }
+    
+    def run_inpaint(self, save_name, init_run_id, mask_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
+        if self.busy:
+            return None
+
+        self.busy = True
+
+        if not os.path.exists(f"../data/{save_name}"):
+            os.mkdir(f"../data/{save_name}")
+
+        run_id = str(uuid.uuid4())
+        file_path = f'../data/{save_name}/{run_id}'
+        init_path = f'../data/{save_name}/{init_run_id}.png'
+        mask_path = f'../data/{save_name}/{mask_run_id}.png'
+
+        actual_seed = random_seed() if seed is None else seed
+        generator = torch.cuda.manual_seed(actual_seed)
+
+        init_pil = Image.open(init_path)
+        mask_pil = Image.open(mask_path)
+        mask_pil = ImageOps.invert(mask_pil)
+
+        pipe = StableDiffusionInpaintPipelineLegacy(
+            vae=self.vae,
+            text_encoder=self.text_encoder,
+            tokenizer=self.tokenizer,
+            unet=self.unet.load(models),
+            scheduler=self.ddimScheduler,
+            safety_checker=None,
+            feature_extractor=None
+        ).to("cuda")
+
+        with torch.autocast("cuda"):
+            image = pipe(
+                prompt=prompt,
+                init_image=init_pil,
+                mask_image=mask_pil,
+                strength=strength,
+                num_inference_steps=steps,
+                guidance_scale=scale,
+                generator=generator
+            ).images[0]
+
+        if color_correction_id is not None:
+            reference_path = f'../data/{save_name}/{color_correction_id}.png'
+            reference_image = Image.open(reference_path)
+            image = apply_color_correction(image, [reference_image])
+
+        image.save(f'{file_path}.png')
+        thumb = thumbnail(image)
+        thumb.save(f'{file_path}_thumbnail.jpg')
+
+        self.busy = False
+
+        return {
+            'init_run_id': init_run_id,
+            'models': models,
+            'prompt': prompt,
+            'steps': steps,
+            'scale': scale,
+            'seed': seed,
+            'actual_seed': actual_seed,
+            'strength': strength,
+            'run_id': run_id
+        }
 
     def run_upload(self, save_name, image, crop, width, height):
         if self.busy:
@@ -277,10 +341,10 @@ class Pipeline():
             crop["right"],
             crop["bottom"]
         ))
-        resizedImage = croppedImage.resize((width, height), Image.ANTIALIAS)
+        resizedImage = decodedImage.resize((width, height), Image.ANTIALIAS)
 
-        resizedImage.save(f'{file_path}.png')
-        thumb = thumbnail(resizedImage)
+        decodedImage.save(f'{file_path}.png')
+        thumb = thumbnail(decodedImage)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
         self.busy = False

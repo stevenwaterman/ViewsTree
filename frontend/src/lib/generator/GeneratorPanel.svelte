@@ -4,9 +4,19 @@
   import SeedInput from "./SeedInput.svelte";
   import { selectedStore } from "../state/selected";
   import { modelsStore } from "../state/models";
+
+  let lockModels: boolean = false;
 </script>
 
 <div class="container">
+  <label for="lock_models">Lock Models</label>
+  <input
+    type="checkbox"
+    id="lock_models"
+    bind:checked={lockModels}
+    on:keydown|stopPropagation
+  />
+
   {#each $modelsStore as model (model)}
     <Slider
       label={model}
@@ -15,6 +25,7 @@
       max={10}
       step={0.1}
       bind:value={$generationSettingsStore.models[model]}
+      disabled={lockModels}
     />
   {/each}
 

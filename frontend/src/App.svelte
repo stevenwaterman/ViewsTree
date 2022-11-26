@@ -8,6 +8,7 @@
     cancelRequest,
     queueImgCycle,
     queueImgImg,
+    queueInpaint,
     queueTxtImg,
   } from "./lib/generator/generator";
   import FileSelectorModal from "./lib/upload/FileSelectorModal.svelte";
@@ -17,6 +18,7 @@
   import { removeNode } from "./lib/state/state";
   import SaveMenu from "./lib/persistence/SaveMenu.svelte";
   import { rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
+  import Painter from "./lib/paint/Painter.svelte";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -26,14 +28,19 @@
     else if (event.key === "Delete" && $selectedStore.isBranch)
       removeNode($selectedStore);
     else if (event.key === "r" && !event.ctrlKey) {
-      if ($selectedStore.isBranch)
+      if ($selectedStore.type === "Mask") {
+        queueInpaint($saveStore, $generationSettingsStore, $selectedStore);
+      } else if ($selectedStore.isBranch) {
         queueImgImg($saveStore, $generationSettingsStore, $selectedStore);
-      else queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
+      } else {
+        queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
+      }
     } else if (event.key === "c" && !event.ctrlKey && $selectedStore.isBranch)
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
     else if (event.key === "l") console.log(rootNodeStore.state.serialise());
+    else if (event.key === "p") modalComponent.open(Painter);
   }
 </script>
 

@@ -1,10 +1,21 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
-import { fetchImgCycleNode } from "../state/nodeTypes/ImgCycleNodes";
-import { fetchImgImgNode } from "../state/nodeTypes/imgImgNodes";
+import {
+  fetchImgCycleNode,
+  type ImgCycleRequest,
+} from "../state/nodeTypes/ImgCycleNodes";
+import {
+  fetchImgImgNode,
+  type ImgImgRequest,
+} from "../state/nodeTypes/imgImgNodes";
+import { fetchInpaintNode, type InpaintRequest } from "../state/nodeTypes/inpaintNodes";
+import { fetchMaskNode, type MaskRequest } from "../state/nodeTypes/maskNodes";
 import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
-import { fetchTxtImgNode } from "../state/nodeTypes/txtImgNodes";
+import {
+  fetchTxtImgNode,
+  type TxtImgRequest,
+} from "../state/nodeTypes/txtImgNodes";
 import {
   fetchUploadNode,
   type UploadRequest,
@@ -65,7 +76,7 @@ function addToQueue<T extends BranchNode>(
 
 export async function queueTxtImg(
   saveName: string,
-  request: GenerationSettings,
+  request: TxtImgRequest,
   parent: RootNode
 ): Promise<void> {
   request = copyRequest(request);
@@ -76,7 +87,7 @@ export async function queueTxtImg(
 
 export async function queueImgImg(
   saveName: string,
-  request: GenerationSettings,
+  request: ImgImgRequest,
   parent: BranchNode
 ): Promise<void> {
   request = copyRequest(request);
@@ -87,12 +98,23 @@ export async function queueImgImg(
 
 export async function queueImgCycle(
   saveName: string,
-  request: GenerationSettings,
+  request: ImgCycleRequest,
   parent: BranchNode
 ): Promise<void> {
   request = copyRequest(request);
   return addToQueue(parent.pendingRequests, () =>
     fetchImgCycleNode(saveName, request, parent)
+  );
+}
+
+export async function queueInpaint(
+  saveName: string,
+  request: InpaintRequest,
+  parent: BranchNode
+): Promise<void> {
+  request = copyRequest(request);
+  return addToQueue(parent.pendingRequests, () =>
+    fetchInpaintNode(saveName, request, parent)
   );
 }
 
@@ -104,6 +126,17 @@ export async function queueUpload(
   request = JSON.parse(JSON.stringify(request));
   return addToQueue(rootNode.pendingRequests, () =>
     fetchUploadNode(saveName, request, rootNode)
+  );
+}
+
+export async function queueMask(
+  saveName: string,
+  request: MaskRequest,
+  parent: BranchNode
+): Promise<void> {
+  request = JSON.parse(JSON.stringify(request));
+  return addToQueue(parent.pendingRequests, () =>
+    fetchMaskNode(saveName, request, parent)
   );
 }
 

@@ -9,14 +9,6 @@
   let selected: AnyNode;
   $: selected = $selectedStore;
 
-  let parent: AnyNode | undefined;
-  $: parent = selected.parent;
-
-  export let compareParent: boolean = false;
-  export let differenceParent: boolean = false;
-  let showParent: boolean;
-  $: showParent = compareParent || differenceParent;
-
   let style: string;
   $: style = `width: ${$generationSettingsStore.width}px; height: ${$generationSettingsStore.height}px;`;
 </script>
@@ -24,18 +16,20 @@
 <Magnifier>
   <div class="imageContainer" {style}>
     {#if selected.isBranch}
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <img class="child image" {style} src={imageUrl($saveStore, selected)} />
-    {/if}
-
-    {#if parent?.isBranch && showParent}
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <img
-        class="parent image"
-        {style}
-        class:difference={differenceParent}
-        src={imageUrl($saveStore, parent)}
-      />
+      {#if selected.type === "Mask"}
+        <!-- svelte-ignore a11y-missing-attribute -->
+        <img
+          class="child image"
+          style={`${style}; mask-image: url(${imageUrl(
+            $saveStore,
+            selected
+          )}); mask-mode: luminance;`}
+          src={imageUrl($saveStore, selected.parent)}
+        />
+      {:else}
+        <!-- svelte-ignore a11y-missing-attribute -->
+        <img class="child image" {style} src={imageUrl($saveStore, selected)} />
+      {/if}
     {/if}
 
     <div class="background image" {style} />
@@ -72,5 +66,9 @@
 
   .difference {
     mix-blend-mode: difference;
+  }
+
+  .mask {
+    mix-blend-mode: multiply;
   }
 </style>

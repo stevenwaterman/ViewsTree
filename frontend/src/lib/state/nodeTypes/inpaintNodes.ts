@@ -9,8 +9,9 @@ import {
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
+import type { MaskNode } from "./maskNodes";
 
-export type ImgImgRequest = {
+export type InpaintRequest = {
   models: Record<string, number>;
   prompt: string;
   steps: number;
@@ -20,7 +21,7 @@ export type ImgImgRequest = {
   colorCorrection: boolean;
 };
 
-export type ImgImgResult = {
+export type InpaintResult = {
   id: string;
   models: Record<string, number>;
   prompt: string;
@@ -34,20 +35,20 @@ export type ImgImgResult = {
   colorCorrection: boolean;
 };
 
-export type ImgImgNode = ImgImgResult & BaseNode<"ImgImg">;
+export type InpaintNode = InpaintResult & BaseNode<"Inpaint">;
 
-function createImgImgNode(
-  result: ImgImgResult,
+function createInpaintNode(
+  result: InpaintResult,
   parent: BranchNode
-): ImgImgNode {
+): InpaintNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     writable([])
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
-  const node: ImgImgNode = {
+  const node: InpaintNode = {
     ...result,
-    ...getNodeIsTypes("ImgImg"),
+    ...getNodeIsTypes("Inpaint"),
     parent,
     children,
     pendingRequests: stateful(writable([])),
@@ -65,25 +66,28 @@ function createImgImgNode(
   return node;
 }
 
-export async function fetchImgImgNode(
+export async function fetchInpaintNode(
   saveName: string,
-  request: ImgImgRequest,
+  request: InpaintRequest,
   parent: BranchNode
-): Promise<ImgImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/imgimg/${parent.id}`, {
-    method: "POST",
-    body: JSON.stringify({
-      ...request,
-      colorCorrectionId: getColorCorrectionId(parent, request),
-    }),
-  })
+): Promise<InpaintNode> {
+  return await fetch(
+    `http://localhost:5001/${saveName}/inpaint/${parent.parent.id}/${parent.id}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        ...request,
+        colorCorrectionId: getColorCorrectionId(parent, request),
+      }),
+    }
+  )
     .then((response) => {
       if (response.status === 429) throw "Server busy";
       else return response;
     })
     .then((response) => response.json())
     .then((data) => {
-      const result: ImgImgResult = {
+      const result: InpaintResult = {
         id: data["run_id"],
         models: data["models"],
         prompt: data["prompt"],
@@ -96,15 +100,15 @@ export async function fetchImgImgNode(
         strength: data["strength"],
         colorCorrection: request.colorCorrection,
       };
-      return createImgImgNode(result, parent);
+      return createInpaintNode(result, parent);
     });
 }
 
-export function loadImgImgNode(
-  data: Serialised<"ImgImg">,
+export function loadInpaintNode(
+  data: Serialised<"Inpaint">,
   parent: BranchNode
-): ImgImgNode {
-  const node = createImgImgNode(data, parent);
+): InpaintNode {
+  const node = createInpaintNode(data, parent);
   const children = data.children.map((child) => loadNode(child, node));
   node.children.set(children);
   parent.children.update((children) => [...children, node]);
@@ -113,7 +117,7 @@ export function loadImgImgNode(
 
 function getColorCorrectionId(
   parent: BranchNode,
-  request: ImgImgRequest
+  request: InpaintRequest
 ): string | undefined {
   // Only do color correction on branches that have it enabled
   if (!request.colorCorrection) return undefined;
