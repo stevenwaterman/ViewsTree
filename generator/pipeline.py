@@ -9,7 +9,7 @@ import torch
 
 from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, StableDiffusionInpaintPipelineLegacy, AutoencoderKL, UNet2DConditionModel
 from transformers import CLIPTextModel, CLIPTokenizer
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter, ImageChops
 import uuid
 import numpy as np
 import os
@@ -273,7 +273,14 @@ class Pipeline():
         generator = torch.cuda.manual_seed(actual_seed)
 
         init_pil = Image.open(init_path)
-        mask_pil = Image.open(mask_path)
+
+        mask_pil = Image.open(mask_path).convert("RGB")
+        blur_radius = min(mask_pil.size)/200
+        for _ in range(5):
+            blurred = mask_pil.filter(ImageFilter.GaussianBlur(blur_radius))
+            mask_pil = ImageChops.darker(mask_pil, blurred)
+            mask_pil = mask_pil.point(lambda i: 255 if i == 255 else i * 0.5 - 1)
+        mask_pil = mask_pil.filter(ImageFilter.GaussianBlur(blur_radius))
         mask_pil = ImageOps.invert(mask_pil)
 
         pipe = StableDiffusionInpaintPipelineLegacy(
@@ -296,6 +303,8 @@ class Pipeline():
                 guidance_scale=scale,
                 generator=generator
             ).images[0]
+
+        image = Image.composite(image, init_pil, mask_pil.convert("L"))
 
         if color_correction_id is not None:
             reference_path = f'../data/{save_name}/{color_correction_id}.png'
@@ -341,10 +350,10 @@ class Pipeline():
             crop["right"],
             crop["bottom"]
         ))
-        resizedImage = decodedImage.resize((width, height), Image.ANTIALIAS)
+        resizedImage = croppedImage.resize((width, height), Image.ANTIALIAS)
 
-        decodedImage.save(f'{file_path}.png')
-        thumb = thumbnail(decodedImage)
+        resizedImage.save(f'{file_path}.png')
+        thumb = thumbnail(resizedImage)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
         self.busy = False

@@ -2,7 +2,6 @@ GPU limiter
 screen split vertical etc
 preview settings by hovering
 max resolution
-inpainting
 delete files from data folder
 undo delete
 upscaling
@@ -10,7 +9,6 @@ generation setting overrides
 cancel requests under deleted nodes
 different kinds of color correction
 magnifier margin
-prompt weighting
 negative prompt
 custom server url
 catch errors and set busy false in pipeline
