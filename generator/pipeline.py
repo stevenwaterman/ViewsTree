@@ -53,6 +53,19 @@ StableDiffusionPipeline._encode_prompt = _encode_prompt
 StableDiffusionImg2ImgPipeline._encode_prompt = _encode_prompt
 CycleDiffusionPipeline._encode_prompt = _encode_prompt
 
+def lockout(func):
+  def inner(self, *args, **kwargs):
+    if (self.busy):
+      return None
+    
+    self.busy = True
+
+    try:
+      return func(self, *args, **kwargs)
+    finally:
+      self.busy = False
+
+  return inner
 
 class Pipeline():
     def __init__(self):
@@ -74,12 +87,8 @@ class Pipeline():
 
         self.unet = MultiUnet(self.model_folder)
 
+    @lockout
     def run_txt(self, save_name, models, prompt, width, height, steps, scale, seed):
-        if self.busy:
-            return None
-
-        self.busy = True
-
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -113,8 +122,6 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
-        self.busy = False
-
         return {
             'models': models,
             'prompt': prompt,
@@ -127,12 +134,8 @@ class Pipeline():
             'run_id': run_id
         }
 
+    @lockout
     def run_img(self, save_name, init_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
-        if self.busy:
-            return None
-
-        self.busy = True
-
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -175,8 +178,6 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
-        self.busy = False
-
         return {
             'init_run_id': init_run_id,
             'models': models,
@@ -189,12 +190,8 @@ class Pipeline():
             'run_id': run_id
         }
 
+    @lockout
     def run_cycle(self, save_name, init_run_id, models, source_prompt, prompt, steps, scale, seed, strength, color_correction_id):
-        if self.busy:
-            return None
-
-        self.busy = True
-
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -240,8 +237,6 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
-        self.busy = False
-
         return {
             'init_run_id': init_run_id,
             'models': models,
@@ -255,12 +250,8 @@ class Pipeline():
             'run_id': run_id
         }
     
+    @lockout
     def run_inpaint(self, save_name, init_run_id, mask_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
-        if self.busy:
-            return None
-
-        self.busy = True
-
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -315,8 +306,6 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
-        self.busy = False
-
         return {
             'init_run_id': init_run_id,
             'models': models,
@@ -330,11 +319,6 @@ class Pipeline():
         }
 
     def run_upload(self, save_name, image, crop, width, height):
-        if self.busy:
-            return None
-
-        self.busy = True
-
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -355,8 +339,6 @@ class Pipeline():
         resizedImage.save(f'{file_path}.png')
         thumb = thumbnail(resizedImage)
         thumb.save(f'{file_path}_thumbnail.jpg')
-
-        self.busy = False
 
         return {
             'width': width,

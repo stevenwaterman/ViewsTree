@@ -8,7 +8,10 @@ import {
   fetchImgImgNode,
   type ImgImgRequest,
 } from "../state/nodeTypes/imgImgNodes";
-import { fetchInpaintNode, type InpaintRequest } from "../state/nodeTypes/inpaintNodes";
+import {
+  fetchInpaintNode,
+  type InpaintRequest,
+} from "../state/nodeTypes/inpaintNodes";
 import { fetchMaskNode, type MaskRequest } from "../state/nodeTypes/maskNodes";
 import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
@@ -123,9 +126,8 @@ export async function queueUpload(
   request: UploadRequest,
   rootNode: RootNode
 ): Promise<void> {
-  request = JSON.parse(JSON.stringify(request));
-  return addToQueue(rootNode.pendingRequests, () =>
-    fetchUploadNode(saveName, request, rootNode)
+  return fetchUploadNode(saveName, request, rootNode).then((node) =>
+    node.parent.children.update((children) => [...children, node])
   );
 }
 
@@ -134,9 +136,8 @@ export async function queueMask(
   request: MaskRequest,
   parent: BranchNode
 ): Promise<void> {
-  request = JSON.parse(JSON.stringify(request));
-  return addToQueue(parent.pendingRequests, () =>
-    fetchMaskNode(saveName, request, parent)
+  return fetchMaskNode(saveName, request, parent).then((node) =>
+    node.parent.children.update((children) => [...children, node])
   );
 }
 
