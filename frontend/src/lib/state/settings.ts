@@ -21,6 +21,7 @@ function getDefaultGenerationSettings(): GenerationSettings {
     models: {},
     sourcePrompt: "",
     prompt: "",
+    negativePrompt: "",
     width: 512,
     height: 512,
     steps: 50,
@@ -48,6 +49,8 @@ function copySettings(
   else if ("prompt" in node) newSettings.sourcePrompt = node.prompt;
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
+  if ("negativePrompt" in node)
+    newSettings.negativePrompt = node.negativePrompt;
   if ("width" in node) newSettings.width = node.width;
   if ("height" in node) newSettings.height = node.height;
 
@@ -83,7 +86,6 @@ export const generationSettingsStore = {
       copySettings(current, node)
     ),
   copySeed: (node: BranchNode) => {
-    console.log(node);
     if ("seed" in node) {
       generationSettingsStoreInternal.update((current) => ({
         ...current,

@@ -14,6 +14,7 @@ export type ImgCycleRequest = {
   models: Record<string, number>;
   sourcePrompt: string;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   strength: number;
@@ -26,6 +27,7 @@ export type ImgCycleResult = {
   models: Record<string, number>;
   sourcePrompt: string;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   seed: {
@@ -93,6 +95,7 @@ export async function fetchImgCycleNode(
         models: data["models"],
         sourcePrompt: data["source_prompt"],
         prompt: data["prompt"],
+        negativePrompt: data["negative_prompt"],
         steps: data["steps"],
         scale: data["scale"],
         seed: {

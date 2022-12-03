@@ -14,6 +14,7 @@ import type { MaskNode } from "./maskNodes";
 export type InpaintRequest = {
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   strength: number;
@@ -25,6 +26,7 @@ export type InpaintResult = {
   id: string;
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   seed: {
@@ -91,6 +93,7 @@ export async function fetchInpaintNode(
         id: data["run_id"],
         models: data["models"],
         prompt: data["prompt"],
+        negativePrompt: data["negative_prompt"],
         steps: data["steps"],
         scale: data["scale"],
         seed: {

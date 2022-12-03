@@ -13,6 +13,7 @@ import {
 export type ImgImgRequest = {
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   strength: number;
@@ -24,6 +25,7 @@ export type ImgImgResult = {
   id: string;
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   steps: number;
   scale: number;
   seed: {
@@ -87,6 +89,7 @@ export async function fetchImgImgNode(
         id: data["run_id"],
         models: data["models"],
         prompt: data["prompt"],
+        negativePrompt: data["negative_prompt"],
         steps: data["steps"],
         scale: data["scale"],
         seed: {

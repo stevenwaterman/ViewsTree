@@ -13,6 +13,7 @@ import type { RootNode } from "./rootNodes";
 export type TxtImgRequest = {
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   width: number;
   height: number;
   steps: number;
@@ -24,6 +25,7 @@ export type TxtImgResult = {
   id: string;
   models: Record<string, number>;
   prompt: string;
+  negativePrompt: string;
   width: number;
   height: number;
   steps: number;
@@ -81,6 +83,7 @@ export async function fetchTxtImgNode(
         id: data["run_id"],
         models: data["models"],
         prompt: data["prompt"],
+        negativePrompt: data["negative_prompt"],
         width: data["width"],
         height: data["height"],
         steps: data["steps"],

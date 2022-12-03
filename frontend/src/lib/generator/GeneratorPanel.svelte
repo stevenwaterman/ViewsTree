@@ -46,6 +46,14 @@
     on:keydown|stopPropagation
   />
 
+  <label for="negativePrompt">Negative Prompt</label>
+  <textarea
+    id="negativePrompt"
+    bind:value={$generationSettingsStore.negativePrompt}
+    rows={6}
+    on:keydown|stopPropagation
+  />
+
   <Slider
     label="Width"
     id="width_slider"

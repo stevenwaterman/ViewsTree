@@ -71,24 +71,19 @@ class Pipeline():
     def __init__(self):
         self.busy = False
 
-    self.model_folder = "./models"
+        self.model_folder = "./models"
 
         main_model_path = f"{self.model_folder}/stable-diffusion-v1-5"
-        self.vae = AutoencoderKL.from_pretrained(
-            main_model_path, subfolder="vae")
-        self.tokenizer = CLIPTokenizer.from_pretrained(
-            main_model_path, subfolder="tokenizer")
-        self.text_encoder = CLIPTextModel.from_pretrained(
-            main_model_path, subfolder="text_encoder")
-        self.eulerScheduler = EulerAncestralDiscreteScheduler.from_config(
-            main_model_path, subfolder="scheduler")
-        self.ddimScheduler = DDIMScheduler.from_config(
-            main_model_path, subfolder="scheduler")
+        self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
+        self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
+        self.text_encoder = CLIPTextModel.from_pretrained(f"{main_model_path}/text_encoder")
+        self.eulerScheduler = EulerAncestralDiscreteScheduler.from_pretrained(main_model_path, subfolder="scheduler")
+        self.ddimScheduler = DDIMScheduler.from_pretrained(main_model_path, subfolder="scheduler")
 
         self.unet = MultiUnet(self.model_folder)
 
     @lockout
-    def run_txt(self, save_name, models, prompt, width, height, steps, scale, seed):
+    def run_txt(self, save_name, models, prompt, negative_prompt, width, height, steps, scale, seed):
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -111,6 +106,7 @@ class Pipeline():
         with torch.autocast("cuda"):
             image = pipe(
                 prompt=prompt,
+                negative_prompt=negative_prompt,
                 width=width,
                 height=height,
                 num_inference_steps=steps,
@@ -125,6 +121,7 @@ class Pipeline():
         return {
             'models': models,
             'prompt': prompt,
+            'negative_prompt': negative_prompt,
             'width': width,
             'height': height,
             'steps': steps,
@@ -135,7 +132,7 @@ class Pipeline():
         }
 
     @lockout
-    def run_img(self, save_name, init_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
+    def run_img(self, save_name, init_run_id, models, prompt, negative_prompt, steps, scale, seed, strength, color_correction_id):
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -162,6 +159,7 @@ class Pipeline():
         with torch.autocast("cuda"):
             image = pipe(
                 prompt=prompt,
+                negative_prompt=negative_prompt,
                 init_image=init_image,
                 strength=strength,
                 num_inference_steps=steps,
@@ -182,6 +180,7 @@ class Pipeline():
             'init_run_id': init_run_id,
             'models': models,
             'prompt': prompt,
+            'negative_prompt': negative_prompt,
             'steps': steps,
             'scale': scale,
             'seed': seed,
@@ -191,7 +190,7 @@ class Pipeline():
         }
 
     @lockout
-    def run_cycle(self, save_name, init_run_id, models, source_prompt, prompt, steps, scale, seed, strength, color_correction_id):
+    def run_cycle(self, save_name, init_run_id, models, source_prompt, prompt, negative_prompt, steps, scale, seed, strength, color_correction_id):
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -242,6 +241,7 @@ class Pipeline():
             'models': models,
             'source_prompt': source_prompt,
             'prompt': prompt,
+            'negative_prompt': negative_prompt,
             'steps': steps,
             'scale': scale,
             'seed': seed,
@@ -251,7 +251,7 @@ class Pipeline():
         }
     
     @lockout
-    def run_inpaint(self, save_name, init_run_id, mask_run_id, models, prompt, steps, scale, seed, strength, color_correction_id):
+    def run_inpaint(self, save_name, init_run_id, mask_run_id, models, prompt, negative_prompt, steps, scale, seed, strength, color_correction_id):
         if not os.path.exists(f"../data/{save_name}"):
             os.mkdir(f"../data/{save_name}")
 
@@ -287,6 +287,7 @@ class Pipeline():
         with torch.autocast("cuda"):
             image = pipe(
                 prompt=prompt,
+                negative_prompt=negative_prompt,
                 init_image=init_pil,
                 mask_image=mask_pil,
                 strength=strength,
@@ -310,6 +311,7 @@ class Pipeline():
             'init_run_id': init_run_id,
             'models': models,
             'prompt': prompt,
+            'negative_prompt': negative_prompt,
             'steps': steps,
             'scale': scale,
             'seed': seed,

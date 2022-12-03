@@ -30,6 +30,7 @@ def txtimg(save_name):
     models = models,
     prompt = prompt,
 
+    negative_prompt = json.get("negativePrompt", None),
     width = json.get("width", 512),
     height = json.get("height", 512),
     steps = json.get("steps", 50),
@@ -61,6 +62,7 @@ def imgimg(save_name, init_run_id):
     models = models,
     prompt = prompt,
 
+    negative_prompt = json.get("negativePrompt", None),
     steps = json.get("steps", 50),
     scale = json.get("scale", 8), 
     seed = json.get("seed", None),
@@ -97,6 +99,7 @@ def imgcycle(save_name, init_run_id):
     source_prompt = source_prompt,
     prompt = prompt,
 
+    negative_prompt = json.get("negativePrompt", None),
     steps = json.get("steps", 50),
     scale = json.get("scale", 8), 
     seed = json.get("seed", None),
@@ -128,7 +131,8 @@ def inpaint(save_name, init_run_id, mask_run_id):
     mask_run_id = mask_run_id,
     models = models,
     prompt = prompt,
-
+    
+    negative_prompt = json.get("negativePrompt", None),
     steps = json.get("steps", 50),
     scale = json.get("scale", 8), 
     seed = json.get("seed", None),

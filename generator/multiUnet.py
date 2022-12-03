@@ -25,8 +25,8 @@ class MultiUnet():
         base_model = self.get_model(base_model_path)
 
         self.last_models = models
-        self.last_unet = UNet2DConditionModel.from_config(
-            f"{self.model_folder_path}/stable-diffusion-v1-5", subfolder="unet").to("cuda")
+        unet_config = UNet2DConditionModel.load_config(f"{self.model_folder_path}/stable-diffusion-v1-5/unet")
+        self.last_unet = UNet2DConditionModel.from_config(unet_config).to("cuda")
 
         if (len(models) == 1):
             # If only one model, don't bother merging or anything
