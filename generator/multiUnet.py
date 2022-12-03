@@ -1,6 +1,7 @@
 import torch
 from diffusers import UNet2DConditionModel
 from copy import deepcopy
+import gc
 
 
 class MultiUnet():
@@ -23,6 +24,9 @@ class MultiUnet():
 
         base_model_path = max(models, key=models.get)
         base_model = self.get_model(base_model_path)
+
+        del self.last_unet
+        gc.collect()
 
         self.last_models = models
         unet_config = UNet2DConditionModel.load_config(f"{self.model_folder_path}/stable-diffusion-v1-5/unet")
@@ -60,6 +64,7 @@ class MultiUnet():
                 model_a[key] = model_a[key] * \
                     factor_a + model_b[key] * factor_b
         del model_b
+        gc.collect()
         return model_a
 
 

@@ -14,6 +14,7 @@ import uuid
 import numpy as np
 import os
 import random
+import gc
 
 
 def preprocess(image):
@@ -118,6 +119,9 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
+        del pipe
+        gc.collect()
+
         return {
             'models': models,
             'prompt': prompt,
@@ -154,7 +158,7 @@ class Pipeline():
             scheduler=self.eulerScheduler,
             safety_checker=None,
             feature_extractor=None
-        ).to("cuda")
+        ).to("cuda")  
 
         with torch.autocast("cuda"):
             image = pipe(
@@ -175,6 +179,9 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
+
+        del pipe
+        gc.collect()
 
         return {
             'init_run_id': init_run_id,
@@ -235,6 +242,9 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
+
+        del pipe
+        gc.collect()
 
         return {
             'init_run_id': init_run_id,
@@ -306,6 +316,9 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
+
+        del pipe
+        gc.collect()
 
         return {
             'init_run_id': init_run_id,
