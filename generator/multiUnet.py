@@ -43,7 +43,7 @@ class MultiUnet():
           if (model not in models_diff):
             models_diff[model] = 0
           models_diff[model] -= self.slot_components[slot][model]
-        models_diff = {k: v for k, v in models_diff.items() if v != 0}
+        models_diff = {k: v for k, v in models_diff.items() if abs(v) > 1e-10}
         return models_diff
 
     def load(self, components):
