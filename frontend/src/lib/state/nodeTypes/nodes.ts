@@ -232,6 +232,11 @@ export function sortChildren(a: AnyNode, b: AnyNode): number {
     if (a.seed.actual < b.seed.actual) return -1;
   }
 
+  if ("prompt" in a && "prompt" in b) {
+    if (a.prompt > b.prompt) return 1;
+    if (a.prompt < b.prompt) return -1;
+  }
+
   if ("strength" in a && "strength" in b) {
     if (a.strength > b.strength) return 1;
     if (a.strength < b.strength) return -1;
