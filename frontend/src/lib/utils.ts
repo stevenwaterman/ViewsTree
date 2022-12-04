@@ -135,6 +135,19 @@ export function stateful<T extends Readable<any>>(store: T): Stateful<T> {
   output.subscribe((state) => (output.state = state));
   return output;
 }
+export function sorted<T extends Readable<V[]>, V>(
+  store: T,
+  comparator: (a: V, b: V) => number
+): T {
+  const derivedStore = derived(store, (values: V[]) => {
+    values.sort(comparator);
+    return values;
+  });
+  return {
+    ...store,
+    subscribe: derivedStore.subscribe,
+  };
+}
 
 export type TweenedWritable<T> = Writable<T> & { tweened: Writable<T> };
 
@@ -174,4 +187,4 @@ export type TAssert<Type, Value extends Type> = Value;
 export type ValueOf<T extends Record<any, any>> = T[keyof T];
 export function tassert<Type>(): <Value extends Type>(value: Value) => Value {
   return <Value extends Type>(value: Value) => value;
-};
+}

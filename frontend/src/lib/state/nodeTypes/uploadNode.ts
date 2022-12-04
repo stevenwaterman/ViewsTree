@@ -1,9 +1,10 @@
-import { stateful, type Stateful } from "../../utils";
+import { sorted, stateful, type Stateful } from "../../utils";
 import { type Writable, type Readable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  sortChildren,
   type BaseNode,
   type SecondaryBranchNode,
   type Serialised,
@@ -36,7 +37,7 @@ export type UploadNode = UploadResult &
 
 function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
-    writable([])
+    sorted(writable([]), sortChildren)
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 

@@ -1,9 +1,10 @@
-import { stateful, type Stateful } from "../../utils";
+import { sorted, stateful, type Stateful } from "../../utils";
 import { type Writable, type Readable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  sortChildren,
   type BaseNode,
   type BranchNode,
   type SecondaryBranchNode,
@@ -35,7 +36,7 @@ export type MaskNode = MaskResult &
 
 function createMaskNode(result: MaskResult, parent: BranchNode): MaskNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
-    writable([])
+    sorted(writable([]), sortChildren)
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 

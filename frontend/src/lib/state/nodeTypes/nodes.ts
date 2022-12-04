@@ -222,3 +222,30 @@ export function loadNode<T extends NodeTypeStrings>(
 
   throw "Forgot a case";
 }
+
+export function sortChildren(a: AnyNode, b: AnyNode): number {
+  if (a.type > b.type) return 1;
+  if (a.type < b.type) return -1;
+
+  if ("seed" in a && "seed" in b) {
+    if (a.seed.actual > b.seed.actual) return 1;
+    if (a.seed.actual < b.seed.actual) return -1;
+  }
+
+  if ("strength" in a && "strength" in b) {
+    if (a.strength > b.strength) return 1;
+    if (a.strength < b.strength) return -1;
+  }
+
+  if ("scale" in a && "scale" in b) {
+    if (a.scale > b.scale) return 1;
+    if (a.scale < b.scale) return -1;
+  }
+
+  if ("steps" in a && "steps" in b) {
+    if (a.steps > b.steps) return 1;
+    if (a.steps < b.steps) return -1;
+  }
+
+  return 0;
+}

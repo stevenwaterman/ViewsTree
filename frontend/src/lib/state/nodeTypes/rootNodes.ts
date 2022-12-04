@@ -1,16 +1,19 @@
-import { stateful, type Stateful } from "../../utils";
+import { sorted, stateful, type Stateful } from "../../utils";
 import { writable, type Readable, type Writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  sortChildren,
   type BaseNode,
   type Serialised,
 } from "./nodes";
 
 export type RootNode = { id: undefined } & BaseNode<"Root">;
 
-const children: RootNode["children"] = stateful(writable([]));
+const children: RootNode["children"] = stateful(
+  sorted(writable([]), sortChildren)
+);
 const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
 function createRootNode(): RootNode {

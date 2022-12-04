@@ -18,7 +18,7 @@ class MultiUnet():
 
     def get_model(self, model_name):
         return torch.load(
-            f"{self.model_folder_path}/{model_name}/unet/diffusion_pytorch_model.bin")
+            f"{self.model_folder_path}/{model_name}/unet/diffusion_pytorch_model.bin", map_location=torch.device("cuda"))
 
     def load(self, models):
         scaling_factors = []

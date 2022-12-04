@@ -1,9 +1,10 @@
-import { stateful, type Stateful } from "../../utils";
+import { sorted, stateful, type Stateful } from "../../utils";
 import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  sortChildren,
   type BaseNode,
   type BranchNode,
   type SecondaryBranchNode,
@@ -45,7 +46,7 @@ function createImgCycleNode(
   parent: BranchNode
 ): ImgCycleNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
-    writable([])
+    sorted(writable([]), sortChildren)
   );
   const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
