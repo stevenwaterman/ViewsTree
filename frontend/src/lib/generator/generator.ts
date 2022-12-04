@@ -67,7 +67,7 @@ function addToQueue<T extends BranchNode>(
 
     if (!cancelled) {
       pendingRequests.update(({ requests }) => ({
-        requests: requests.filter((req) => req !== generationRequest),
+        requests,
         running: true,
       }));
 
@@ -76,7 +76,10 @@ function addToQueue<T extends BranchNode>(
       queue = queue.filter((req) => req !== generationRequest);
       saveStore.save();
 
-      pendingRequests.update(({ requests }) => ({ requests, running: false }));
+      pendingRequests.update(({ requests }) => ({
+        requests: requests.filter((req) => req !== generationRequest),
+        running: false,
+      }));
     }
 
     running = false;
