@@ -82,15 +82,12 @@ export class SimulatedAnnealing {
 
     const model =
       this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
-    const modelFactor = Math.pow(1.15, randNormal() * this.temperature);
+    const modelFactor = Math.pow(1.2, randNormal() * this.temperature);
     this.candidateModels[model] *= modelFactor;
     console.log("Mutation: ", model, modelFactor);
 
-    const totalWeight = Object.values(this.candidateModels).reduce(
-      (a, b) => a + b,
-      0
-    );
-    const scaleFactor = 10 / totalWeight;
+    const maxWeight = Math.max(...Object.values(this.candidateModels));
+    const scaleFactor = 10 / maxWeight;
 
     for (const model in this.candidateModels) {
       this.candidateModels[model] *= scaleFactor;
@@ -171,7 +168,6 @@ export class SimulatedAnnealing {
 
   async next(currentScore: number, candidateScore: number) {
     this.generating = false;
-    this.iteration++;
     this.sampleStoreInternal.set([]);
 
     await this.currentFetch;
@@ -184,6 +180,7 @@ export class SimulatedAnnealing {
     });
     this.generateSamples();
 
+    this.iteration++;
     this.temperature /= this.temperatureFactor;
   }
 

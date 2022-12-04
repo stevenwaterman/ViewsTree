@@ -12,6 +12,9 @@
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
 
+  let iteration: number = sa.iteration;
+  let temperature: number = sa.temperature;
+
   // Keep going until you hit +- score. +vs score means preferring candidate
   let currentScore: number = 0;
   let candidateScore: number = 0;
@@ -25,21 +28,27 @@
 
   function preferCurrent() {
     currentScore++;
-    if (sa.shouldStop(currentScore, candidateScore, skipped)) {
-      sa.next(currentScore, candidateScore);
-      currentScore = 0;
-      candidateScore = 0;
-      skipped = 0;
-    }
+    maybeNext();
   }
 
   function preferCandidate() {
     candidateScore++;
+    maybeNext();
+  }
+
+  function skip() {
+    skipped++;
+    maybeNext();
+  }
+
+  function maybeNext() {
     if (sa.shouldStop(currentScore, candidateScore, skipped)) {
       sa.next(currentScore, candidateScore);
       currentScore = 0;
       candidateScore = 0;
       skipped = 0;
+      iteration = sa.iteration;
+      temperature = sa.temperature;
     }
   }
 
@@ -68,18 +77,18 @@
     <!-- svelte-ignore a11y-missing-attribute -->
     <img
       class="current"
-      src={imageUrl($saveStore, $samplesStore[totalScore].current)}
+      src={imageUrl($saveStore, $samplesStore[sampleIdx].current)}
       on:click={preferCurrent}
     />
 
     <!-- svelte-ignore a11y-missing-attribute -->
     <img
       class="candidate"
-      src={imageUrl($saveStore, $samplesStore[totalScore].candidate)}
+      src={imageUrl($saveStore, $samplesStore[sampleIdx].candidate)}
       on:click={preferCandidate}
     />
 
-    <button on:click={() => skipped++}>Skip</button>
+    <button on:click={skip}>Skip</button>
   {:else}
     <p style="grid-column: span 2">Generating images...</p>
   {/if}
