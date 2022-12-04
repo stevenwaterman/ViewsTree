@@ -2,8 +2,10 @@ import os
 from pipeline import Pipeline
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
+import torch
 from PIL import Image
 
+torch.set_grad_enabled(False)
 
 if not os.path.exists("../data"):
     os.mkdir("../data")

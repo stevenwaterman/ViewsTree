@@ -9,11 +9,12 @@ generation setting overrides
 cancel requests under deleted nodes
 different kinds of color correction
 magnifier margin
-negative prompt
 custom server url
-catch errors and set busy false in pipeline
 Allow changing height/width in the image cropper
 disable / fix SVG upload
 fix imgimg resolution not being recorded properly
 interrogation
 gif
+save config
+save mixed model
+phrase list / templating in prompts

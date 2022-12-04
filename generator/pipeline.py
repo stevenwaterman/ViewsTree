@@ -14,8 +14,6 @@ import uuid
 import numpy as np
 import os
 import random
-import gc
-
 
 def preprocess(image):
     w, h = image.size
@@ -119,9 +117,6 @@ class Pipeline():
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
 
-        del pipe
-        gc.collect()
-
         return {
             'models': models,
             'prompt': prompt,
@@ -179,9 +174,6 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
-
-        del pipe
-        gc.collect()
 
         return {
             'init_run_id': init_run_id,
@@ -242,9 +234,6 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
-
-        del pipe
-        gc.collect()
 
         return {
             'init_run_id': init_run_id,
@@ -316,9 +305,6 @@ class Pipeline():
         image.save(f'{file_path}.png')
         thumb = thumbnail(image)
         thumb.save(f'{file_path}_thumbnail.jpg')
-
-        del pipe
-        gc.collect()
 
         return {
             'init_run_id': init_run_id,

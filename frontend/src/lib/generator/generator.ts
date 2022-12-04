@@ -165,7 +165,7 @@ export function copyRequest<T extends Partial<GenerationSettings>>(
     copy.models = {};
     for (const key in request.models) {
       const value = request.models[key];
-      if (value > 0) copy.models[key] = value;
+      if (value !== 0) copy.models[key] = value;
     }
   }
   return copy;
