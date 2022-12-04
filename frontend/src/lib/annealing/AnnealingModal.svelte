@@ -7,7 +7,7 @@
   import { generationSettingsStore } from "../state/settings";
   import { onDestroy } from "svelte";
 
-  let sa = new SimulatedAnnealing($generationSettingsStore, 10, 1, 5);
+  let sa = new SimulatedAnnealing($generationSettingsStore, 5, 0.5, 5);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
@@ -86,7 +86,7 @@
       on:click={preferCandidate}
     />
 
-    <button on:click={skip}>Skip</button>
+    <button on:click={skip} on:keypress|preventDefault>Skip</button>
   {:else}
     <p style="grid-column: span 2">Generating images...</p>
   {/if}

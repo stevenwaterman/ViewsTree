@@ -15,6 +15,7 @@ const batchSize = 10;
 export class SimulatedAnnealing {
   private readonly generationSettings: GenerationSettings;
   private readonly modelsList: string[];
+  private readonly lruModels: string[];
   private readonly temperatureFactor: number;
   public readonly steps: number;
 
@@ -64,9 +65,15 @@ export class SimulatedAnnealing {
     stepsPerModel: number
   ) {
     this.generationSettings = { ...generationSettings };
+
     this.modelsList = Object.entries(this.generationSettings.models)
       .filter((entry) => entry[1] > 0)
       .map((entry) => entry[0]);
+
+    this.lruModels = [...this.modelsList]
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value);
 
     this.steps = stepsPerModel * this.modelsList.length;
     this.temperature = startTemperature;
@@ -77,7 +84,7 @@ export class SimulatedAnnealing {
     this.candidateModels = { ...this.generationSettings.models };
     for (const model in this.candidateModels) {
       if (this.modelsList.includes(model)) {
-        this.candidateModels[model] = 10;
+        this.candidateModels[model] = Math.random();
       } else {
         this.candidateModels[model] = 0;
       }
@@ -91,8 +98,16 @@ export class SimulatedAnnealing {
     this.candidateModels = { ...this.currentModels };
 
     const model =
-      this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
-    const modelFactor = Math.pow(1.2, randNormal() * this.temperature);
+      this.lruModels[Math.floor(Math.random() * this.lruModels.length * 0.5)];
+    this.lruModels.splice(this.lruModels.indexOf(model), 1);
+    this.lruModels.push(model);
+
+    let factorPower = randNormal();
+    if (factorPower > 0) factorPower += this.temperature / 0.1;
+    else factorPower -= this.temperature / 0.1;
+    factorPower *= this.temperature;
+    const modelFactor = Math.pow(1.2, factorPower);
+
     this.candidateModels[model] *= modelFactor;
     console.log("Mutation: ", model, modelFactor);
 
@@ -115,7 +130,7 @@ export class SimulatedAnnealing {
     const currentWinFrac = currentScore / totalScore;
     const candidateWinFrac = candidateScore / totalScore;
     const winFracDifference = currentWinFrac - candidateWinFrac;
-    const acceptChance = Math.exp(- (20 * winFracDifference) / this.temperature);
+    const acceptChance = Math.exp(-(20 * winFracDifference) / this.temperature);
 
     console.log(
       "Score",
