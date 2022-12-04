@@ -10,7 +10,7 @@ import { selectedStore } from "./selected";
 
 export type GenerationSettings = TxtImgRequest &
   ImgImgRequest &
-  ImgCycleRequest;
+  ImgCycleRequest & { lockModels: boolean };
 
 export function randomSeed() {
   return Math.random() * Number.MAX_SAFE_INTEGER;
@@ -18,7 +18,8 @@ export function randomSeed() {
 
 function getDefaultGenerationSettings(): GenerationSettings {
   return {
-    models: {},
+    lockModels: false,
+    models: { "stable-diffusion-v1-5": 1 },
     sourcePrompt: "",
     prompt: "",
     negativePrompt: "",
@@ -37,7 +38,7 @@ function copySettings(
 ): GenerationSettings {
   const newSettings: GenerationSettings = { ...current };
 
-  if ("models" in node) {
+  if ("models" in node && !current.lockModels) {
     newSettings.models = {};
     modelsStore.state.forEach((model) => {
       const weight: number = node.models[model] ?? 0;

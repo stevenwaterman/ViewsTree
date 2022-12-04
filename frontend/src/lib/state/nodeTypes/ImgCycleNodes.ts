@@ -1,5 +1,5 @@
 import { sorted, stateful, type Stateful } from "../../utils";
-import { type Writable, writable } from "svelte/store";
+import { type Writable, writable, derived } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
@@ -55,7 +55,7 @@ function createImgCycleNode(
     ...getNodeIsTypes("ImgCycle"),
     parent,
     children,
-    pendingRequests: stateful(writable([])),
+    pendingRequests: stateful(writable({ requests: [], running: false })),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),

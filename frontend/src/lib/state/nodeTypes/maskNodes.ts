@@ -24,15 +24,7 @@ export type MaskResult = {
   height: number;
 };
 
-export type MaskNode = MaskResult &
-  BaseNode<"Mask"> & {
-    parent: BranchNode;
-    children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
-    childLeafCount: Readable<number[]>;
-    leafCount: Readable<number>;
-    lastSelectedId: Stateful<Writable<string | undefined>>;
-  };
+export type MaskNode = MaskResult & BaseNode<"Mask">;
 
 function createMaskNode(result: MaskResult, parent: BranchNode): MaskNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
@@ -45,7 +37,7 @@ function createMaskNode(result: MaskResult, parent: BranchNode): MaskNode {
     ...getNodeIsTypes("Mask"),
     parent,
     children,
-    pendingRequests: stateful(writable([])),
+    pendingRequests: stateful(writable({ requests: [], running: false })),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),

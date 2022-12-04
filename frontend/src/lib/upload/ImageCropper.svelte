@@ -1,7 +1,7 @@
 <script lang="ts">
   import Cropper from "./Cropper.svelte";
   import { generationSettingsStore } from "../state/settings";
-  import { queueUpload } from "../generator/generator";
+  import { sendUpload } from "../generator/generator";
   import { modalComponent } from "../modalStore";
   import { rootNodeStore } from "../state/nodeTypes/rootNodes";
   import { saveStore } from "../persistence/saves";
@@ -42,7 +42,7 @@
 
   async function submit(): Promise<void> {
     if (crop === undefined) return;
-    const upload = queueUpload(
+    const upload = sendUpload(
       $saveStore,
       { image, crop, ...cropSize },
       $rootNodeStore

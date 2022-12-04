@@ -1,4 +1,4 @@
-import { writable, type Readable, type Writable } from "svelte/store";
+import type { Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
 import {
   fetchImgCycleNode,
@@ -26,102 +26,128 @@ import {
 import type { GenerationSettings } from "../state/settings";
 
 export type GenerationRequest = {
-  started: Readable<boolean>;
+  modelsHash: string;
+  fire: () => Promise<void>;
   cancel: () => void;
 };
 
-let endOfQueue: Promise<any> = Promise.resolve();
+let running: boolean = false;
+let queue: GenerationRequest[] = [];
+
+function fireRequest() {
+  if (running) return;
+  if (queue.length === 0) return;
+  queue[0].fire();
+}
 
 function addToQueue<T extends BranchNode>(
-  pendingRequests: Writable<GenerationRequest[]>,
+  pendingRequests: Writable<{
+    requests: GenerationRequest[];
+    running: boolean;
+  }>,
+  models: Record<string, number>,
   reqFn: () => Promise<T>
-): Promise<void> {
-  const started = writable(false);
-
+) {
   let hasStarted = false;
   let cancelled = false;
   const cancel = () => {
     if (hasStarted) return;
     if (cancelled) return;
     cancelled = true;
-    pendingRequests.update((reqs) =>
-      reqs.filter((req) => req !== generationRequest)
-    );
+    queue = queue.filter((req) => req !== generationRequest);
+    pendingRequests.update(({ requests, running }) => ({
+      requests: requests.filter((req) => req !== generationRequest),
+      running,
+    }));
   };
 
-  const generationRequest: GenerationRequest = {
-    started,
-    cancel,
+  const fire = async () => {
+    running = true;
+    hasStarted = true;
+
+    if (!cancelled) {
+      pendingRequests.update(({ requests }) => ({
+        requests: requests.filter((req) => req !== generationRequest),
+        running: true,
+      }));
+
+      const node = await reqFn();
+      node.parent.children.update((children) => [...children, node]);
+      queue = queue.filter((req) => req !== generationRequest);
+      saveStore.save();
+
+      pendingRequests.update(({ requests }) => ({ requests, running: false }));
+    }
+
+    running = false;
+    fireRequest();
   };
 
-  pendingRequests.update((reqs) => [...reqs, generationRequest]);
+  const modelsPairs = Object.entries(models).filter((entry) => entry[1] !== 0);
+  modelsPairs.sort((a, b) => a[1] - b[1]);
+  const modelsHash: string = modelsPairs
+    .map(([model, weight]) => `${model}${weight}`)
+    .join("");
 
-  endOfQueue = endOfQueue
-    .finally(async () => {
-      if (cancelled) return;
-      hasStarted = true;
-      started.set(true);
-
-      await reqFn()
-        .then((node) =>
-          node.parent.children.update((children) => [...children, node])
-        )
-        .finally(() =>
-          pendingRequests.update((reqs) =>
-            reqs.filter((req) => req !== generationRequest)
-          )
-        );
-    })
-    .finally(() => saveStore.save());
-
-  return endOfQueue;
+  const generationRequest: GenerationRequest = { modelsHash, fire, cancel };
+  pendingRequests.update(({ requests, running }) => ({
+    requests: [...requests, generationRequest],
+    running,
+  }));
+  queue.push(generationRequest);
+  queue.sort((a, b) => {
+    if (a.modelsHash > b.modelsHash) return 1;
+    if (a.modelsHash < b.modelsHash) return -1;
+    return 0;
+  });
+  fireRequest();
 }
 
-export async function queueTxtImg(
+export function queueTxtImg(
   saveName: string,
   request: TxtImgRequest,
   parent: RootNode
-): Promise<void> {
+) {
   request = copyRequest(request);
-  return addToQueue(parent.pendingRequests, () =>
+  addToQueue(parent.pendingRequests, request.models, () =>
     fetchTxtImgNode(saveName, request, parent)
   );
 }
 
-export async function queueImgImg(
+export function queueImgImg(
   saveName: string,
   request: ImgImgRequest,
   parent: BranchNode
-): Promise<void> {
+) {
   request = copyRequest(request);
-  return addToQueue(parent.pendingRequests, () =>
+  addToQueue(parent.pendingRequests, request.models, () =>
     fetchImgImgNode(saveName, request, parent)
   );
 }
 
-export async function queueImgCycle(
+export function queueImgCycle(
   saveName: string,
   request: ImgCycleRequest,
   parent: BranchNode
-): Promise<void> {
+) {
   request = copyRequest(request);
-  return addToQueue(parent.pendingRequests, () =>
+  addToQueue(parent.pendingRequests, request.models, () =>
     fetchImgCycleNode(saveName, request, parent)
   );
 }
 
-export async function queueInpaint(
+export function queueInpaint(
   saveName: string,
   request: InpaintRequest,
   parent: BranchNode
-): Promise<void> {
+) {
   request = copyRequest(request);
-  return addToQueue(parent.pendingRequests, () =>
+  addToQueue(parent.pendingRequests, request.models, () =>
     fetchInpaintNode(saveName, request, parent)
   );
 }
 
-export async function queueUpload(
+export async function sendUpload(
   saveName: string,
   request: UploadRequest,
   rootNode: RootNode
@@ -131,7 +157,7 @@ export async function queueUpload(
   );
 }
 
-export async function queueMask(
+export async function sendMask(
   saveName: string,
   request: MaskRequest,
   parent: BranchNode
@@ -151,9 +177,9 @@ export function thumbnailUrl(saveName: string, node: BranchNode): string {
 
 export function cancelRequest(node: AnyNode): void {
   const pendingRequests = node.pendingRequests.state;
-  if (pendingRequests.length === 0) return;
+  if (pendingRequests.requests.length === 0) return;
 
-  const lastReq = pendingRequests[pendingRequests.length - 1];
+  const lastReq = pendingRequests.requests[pendingRequests.requests.length - 1];
   lastReq.cancel();
 }
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { writable, type Readable, type Writable } from "svelte/store";
   import { thumbnailUrl, type GenerationRequest } from "../generator/generator";
   import {
     getPlacements,
@@ -12,10 +11,8 @@
   import { sineInOut } from "svelte/easing";
   import { selectedPathIdStore, selectedStore } from "../state/selected";
   import { generationSettingsStore } from "../state/settings";
-  import type {
-    BranchNode,
-    SecondaryBranchNode,
-  } from "../state/nodeTypes/nodes";
+  import type { BranchNode } from "../state/nodeTypes/nodes";
+  import type { Readable, Writable } from "svelte/store";
 
   export let node: BranchNode;
   export let treeContainer: HTMLDivElement;
@@ -28,7 +25,8 @@
     if (event.button === 0) {
       if (event.shiftKey) generationSettingsStore.copySettings(node);
       else if (event.ctrlKey) generationSettingsStore.copySeed(node);
-      else if (event.altKey && node.type !== "Upload") generationSettingsStore.copyPromptAsSource(node);
+      else if (event.altKey && node.type !== "Upload")
+        generationSettingsStore.copyPromptAsSource(node);
       else selectedStore.set(node);
     }
   }
@@ -100,12 +98,11 @@
   let lineLeft: number;
   $: lineLeft = Math.min(offset, 0) * placementWidth - 5;
 
-  let pendingRequests: Readable<GenerationRequest[]>;
+  let pendingRequests: Readable<{
+    requests: GenerationRequest[];
+    running: boolean;
+  }>;
   $: pendingRequests = node.pendingRequests;
-
-  let requestInProgress: Readable<boolean>;
-  $: requestInProgress =
-    $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
 </script>
 
 <div
@@ -129,13 +126,13 @@
         duration: placementTransitionMs * 0.25,
       }}
     />
-    {#if $pendingRequests.length > 0}
+    {#if $pendingRequests.requests.length > 0}
       <p
         class="pendingLoad"
-        class:running={$requestInProgress}
+        class:running={$pendingRequests.running}
         transition:scale|local={{ duration: placementTransitionMs }}
       >
-        +{$pendingRequests.length}
+        +{$pendingRequests.requests.length}
       </p>
     {/if}
   </div>

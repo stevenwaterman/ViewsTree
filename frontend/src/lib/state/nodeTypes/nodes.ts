@@ -1,11 +1,12 @@
 import {
   mapUnwrap,
+  stateful,
   tassert,
   type Stateful,
   type TAssert,
   type ValueOf,
 } from "../../utils";
-import { derived, type Readable, type Writable } from "svelte/store";
+import { derived, writable, type Readable, type Writable } from "svelte/store";
 import { loadImgImgNode, type ImgImgNode } from "./imgImgNodes";
 import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
 import { loadUploadNode, type UploadNode } from "./uploadNode";
@@ -119,7 +120,9 @@ export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
   id: NodeId[NodeCategories[T]];
   parent: NodeParent[NodeCategories[T]];
   children: Stateful<Writable<Array<NodeChild[NodeCategories[T]]>>>;
-  pendingRequests: Stateful<Writable<GenerationRequest[]>>;
+  pendingRequests: Stateful<
+    Writable<{ requests: GenerationRequest[]; running: boolean }>
+  >;
   childLeafCount: Readable<number[]>;
   leafCount: Readable<number>;
   lastSelectedId: Stateful<Writable<string | undefined>>;
@@ -224,6 +227,21 @@ export function loadNode<T extends NodeTypeStrings>(
 }
 
 export function sortChildren(a: AnyNode, b: AnyNode): number {
+  // Put masks at the end
+  if (a.type === "Mask" && b.type !== "Mask") return 1;
+  if (a.type !== "Mask" && b.type === "Mask") return -1;
+
+  // Put uploads at the end
+  if (a.type === "Upload" && b.type !== "Upload") return 1;
+  if (a.type !== "Upload" && b.type === "Upload") return -1;
+
+  // Put set-seed images at the end
+  if ("seed" in a && "seed" in b) {
+    if (a.seed.random && !b.seed.random) return -1;
+    if (!a.seed.random && b.seed.random) return 1;
+  }
+
+  // Put same-set-seed together
   if ("seed" in a && "seed" in b) {
     if (!a.seed.random && !b.seed.random) {
       if (a.seed.actual > b.seed.actual) return 1;
@@ -231,33 +249,33 @@ export function sortChildren(a: AnyNode, b: AnyNode): number {
     }
   }
 
+  // Put same-prompt together
   if ("prompt" in a && "prompt" in b) {
     if (a.prompt > b.prompt) return 1;
     if (a.prompt < b.prompt) return -1;
   }
 
-  if ("seed" in a && "seed" in b) {
-    if (a.seed.actual > b.seed.actual) return 1;
-    if (a.seed.actual < b.seed.actual) return -1;
-  }
+  // Put same-type together
+  if (a.type > b.type) return 1;
+  if (a.type < b.type) return -1;
 
+  // Sort by strength
   if ("strength" in a && "strength" in b) {
     if (a.strength > b.strength) return 1;
     if (a.strength < b.strength) return -1;
   }
 
+  // Sort by scale
   if ("scale" in a && "scale" in b) {
     if (a.scale > b.scale) return 1;
     if (a.scale < b.scale) return -1;
   }
 
+  // Sort by steps
   if ("steps" in a && "steps" in b) {
     if (a.steps > b.steps) return 1;
     if (a.steps < b.steps) return -1;
   }
-
-  if (a.type > b.type) return 1;
-  if (a.type < b.type) return -1;
 
   return 0;
 }

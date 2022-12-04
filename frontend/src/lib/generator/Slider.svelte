@@ -15,6 +15,22 @@
   }
 </script>
 
+<label for={id} on:mouseenter={focus}>{label}</label>
+<div class="row" on:mouseenter={focus}>
+  <input
+    {id}
+    type="range"
+    {min}
+    {max}
+    {step}
+    {disabled}
+    bind:value
+    bind:this={input}
+    on:keydown|preventDefault
+  />
+  <span>{value}</span>
+</div>
+
 <style>
   label {
     user-select: none;
@@ -34,9 +50,3 @@
     outline: none;
   }
 </style>
-
-<label for={id} on:mouseenter={focus}>{label}</label>
-<div class="row" on:mouseenter={focus}>
-  <input id={id} type="range" {min} {max} {step} {disabled} bind:value bind:this={input} />
-  <span>{value}</span>
-</div>

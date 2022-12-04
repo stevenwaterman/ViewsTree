@@ -54,7 +54,7 @@ function createInpaintNode(
     ...getNodeIsTypes("Inpaint"),
     parent,
     children,
-    pendingRequests: stateful(writable([])),
+    pendingRequests: stateful(writable({ requests: [], running: false })),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),

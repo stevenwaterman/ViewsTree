@@ -24,7 +24,7 @@ function createRootNode(): RootNode {
     children,
     childLeafCount,
     leafCount,
-    pendingRequests: stateful(writable([])),
+    pendingRequests: stateful(writable({ requests: [], running: false })),
     lastSelectedId: stateful(writable(undefined)),
     serialise: () => ({
       id: undefined,

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { writable, type Readable } from "svelte/store";
-  import type { GenerationRequest } from "../generator/generator";
+  import type { Readable } from "svelte/store";
   import type { PrimaryBranchNode } from "../state/nodeTypes/nodes";
   import { rootNodeStore, type RootNode } from "../state/nodeTypes/rootNodes";
   import { selectedStore } from "../state/selected";
@@ -8,6 +7,7 @@
   import VisBranch from "./VisBranch.svelte";
   import { scale } from "svelte/transition";
   import { saveStore } from "../persistence/saves";
+  import type { GenerationRequest } from "../generator/generator";
 
   export let treeContainer: HTMLDivElement;
 
@@ -26,12 +26,11 @@
   let childrenOffsets: number[];
   $: childrenOffsets = getPlacements($childLeafCountsStore);
 
-  let pendingRequests: Readable<GenerationRequest[]>;
+  let pendingRequests: Readable<{
+    requests: GenerationRequest[];
+    running: boolean;
+  }>;
   $: pendingRequests = rootNode.pendingRequests;
-
-  let requestInProgress: Readable<boolean>;
-  $: requestInProgress =
-    $pendingRequests.length > 0 ? $pendingRequests[0].started : writable(false);
 
   function leftClick(event: MouseEvent) {
     if (event.button === 0) selectedStore.set(rootNode);
@@ -55,13 +54,13 @@
   >
     <span class="label">Root</span>
   </div>
-  {#if $pendingRequests.length > 0}
+  {#if $pendingRequests.requests.length > 0}
     <p
       class="pendingLoad"
-      class:running={$requestInProgress}
+      class:running={$pendingRequests.running}
       transition:scale|local={{ duration: placementTransitionMs }}
     >
-      +{$pendingRequests.length}
+      +{$pendingRequests.requests.length}
     </p>
   {/if}
 </div>

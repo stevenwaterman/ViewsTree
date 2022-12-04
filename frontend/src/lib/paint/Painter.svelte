@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { imageUrl, queueMask } from "../generator/generator";
+  import { imageUrl, sendMask } from "../generator/generator";
   import { modalComponent } from "../modalStore";
   import { saveStore } from "../persistence/saves";
   import type { BranchNode } from "../state/nodeTypes/nodes";
@@ -56,7 +56,7 @@
   }
 
   async function submit(): Promise<void> {
-    const mask = queueMask(
+    const mask = sendMask(
       $saveStore,
       {
         image: canvas.toDataURL()!,

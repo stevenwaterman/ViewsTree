@@ -25,15 +25,7 @@ export type UploadResult = {
   height: number;
 };
 
-export type UploadNode = UploadResult &
-  BaseNode<"Upload"> & {
-    parent: RootNode;
-    children: Stateful<Writable<SecondaryBranchNode[]>>;
-    pendingRequests: Stateful<Writable<GenerationRequest[]>>;
-    childLeafCount: Readable<number[]>;
-    leafCount: Readable<number>;
-    lastSelectedId: Stateful<Writable<string | undefined>>;
-  };
+export type UploadNode = UploadResult & BaseNode<"Upload">;
 
 function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
@@ -46,7 +38,7 @@ function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
     ...getNodeIsTypes("Upload"),
     parent,
     children,
-    pendingRequests: stateful(writable([])),
+    pendingRequests: stateful(writable({ requests: [], running: false })),
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
