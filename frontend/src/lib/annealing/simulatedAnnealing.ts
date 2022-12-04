@@ -197,10 +197,12 @@ export class SimulatedAnnealing {
   }
 
   shouldStop(currentScore: number, candidateScore: number, skipped: number) {
-    const mercy = 5;
+    // If new models are winning by 3, we are confident they will win and therefore will be accepted
+    if (candidateScore - currentScore >= 3) return true;
+
+    // Requirement is higher to stop when old model is winning, because the fraction of votes won is important
+    if (currentScore - candidateScore >= 8) return true;
     const draw = 50 / Math.pow(this.temperature, 0.7);
-    if (currentScore - candidateScore >= mercy) return true;
-    if (candidateScore - currentScore >= mercy) return true;
     if (candidateScore + currentScore + skipped >= draw) return true;
     return false;
   }
