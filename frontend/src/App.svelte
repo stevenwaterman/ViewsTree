@@ -19,6 +19,7 @@
   import SaveMenu from "./lib/persistence/SaveMenu.svelte";
   import { rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
   import Painter from "./lib/paint/Painter.svelte";
+  import AnnealingModal from "./lib/annealing/AnnealingModal.svelte";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -35,19 +36,33 @@
       } else {
         queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
       }
-    } else if (event.key === "c" && !event.ctrlKey && $selectedStore.isBranch)
+    } else if (
+      event.key === "c" &&
+      !event.ctrlKey &&
+      $selectedStore.isBranch &&
+      $selectedStore.type !== "Mask"
+    )
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
+    else if (event.key === "s") modalComponent.open(AnnealingModal);
+    else if (
+      event.key === "p" &&
+      $selectedStore.type !== "Root" &&
+      $selectedStore.type !== "Mask"
+    )
+      modalComponent.open(Painter);
     else if (event.key === "l")
       console.log(JSON.stringify(rootNodeStore.state.serialise()));
-    else if (event.key === "p") modalComponent.open(Painter);
   }
 </script>
 
 <svelte:body on:keydown={onKeydown} />
 
-<Modal show={$modalComponent}>
+<Modal
+  show={$modalComponent}
+  styleWindow={{ width: "fit-content", height: "fit-content" }}
+>
   <div class="topGrid">
     <div class="leftGrid">
       <ViewPanel />

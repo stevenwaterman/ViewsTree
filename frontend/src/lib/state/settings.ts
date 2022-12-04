@@ -1,7 +1,6 @@
-import { current_component } from "svelte/internal";
 import { writable, type Writable } from "svelte/store";
 import { modelsStore } from "./models";
-import type { ImgCycleRequest } from "./nodeTypes/ImgCycleNodes";
+import type { ImgCycleRequest } from "./nodeTypes/imgCycleNodes";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";

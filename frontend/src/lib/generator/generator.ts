@@ -3,7 +3,7 @@ import { saveStore } from "../persistence/saves";
 import {
   fetchImgCycleNode,
   type ImgCycleRequest,
-} from "../state/nodeTypes/ImgCycleNodes";
+} from "../state/nodeTypes/imgCycleNodes";
 import {
   fetchImgImgNode,
   type ImgImgRequest,
@@ -76,7 +76,7 @@ function addToQueue<T extends BranchNode>(
         running: true,
       }));
 
-      const node = await reqFn();
+      const node = await reqFn(); // TODO what if this fails
       node.parent.children.update((children) => [...children, node]);
       queue = queue.filter((req) => req !== generationRequest);
       saveStore.save();

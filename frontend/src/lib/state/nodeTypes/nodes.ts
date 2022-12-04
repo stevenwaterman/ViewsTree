@@ -12,7 +12,7 @@ import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
 import { loadUploadNode, type UploadNode } from "./uploadNode";
 import type { GenerationRequest } from "src/lib/generator/generator";
 import { loadRootNode, type RootNode } from "./rootNodes";
-import { loadImgCycleNode, type ImgCycleNode } from "./ImgCycleNodes";
+import { loadImgCycleNode, type ImgCycleNode } from "./imgCycleNodes";
 import { loadMaskNode, type MaskNode } from "./maskNodes";
 import { loadInpaintNode, type InpaintNode } from "./inpaintNodes";
 import { modelsStore } from "../models";

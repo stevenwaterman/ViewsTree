@@ -16,7 +16,7 @@ const children: RootNode["children"] = stateful(
 );
 const { childLeafCount, leafCount } = getChildLeafCountStore(children);
 
-function createRootNode(): RootNode {
+export function createRootNode(): RootNode {
   return {
     ...getNodeIsTypes("Root"),
     id: undefined,
