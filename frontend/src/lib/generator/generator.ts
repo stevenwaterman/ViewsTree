@@ -13,7 +13,11 @@ import {
   type InpaintRequest,
 } from "../state/nodeTypes/inpaintNodes";
 import { fetchMaskNode, type MaskRequest } from "../state/nodeTypes/maskNodes";
-import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
+import {
+  modelsHash,
+  type AnyNode,
+  type BranchNode,
+} from "../state/nodeTypes/nodes";
 import type { RootNode } from "../state/nodeTypes/rootNodes";
 import {
   fetchTxtImgNode,
@@ -32,6 +36,7 @@ export type GenerationRequest = {
 };
 
 let running: boolean = false;
+let loadedModelHash: string = modelsHash({ "stable-diffusion-v1-5": 1 });
 let queue: GenerationRequest[] = [];
 
 function fireRequest() {
@@ -100,6 +105,10 @@ function addToQueue<T extends BranchNode>(
   }));
   queue.push(generationRequest);
   queue.sort((a, b) => {
+    if (a.modelsHash === loadedModelHash && b.modelsHash !== loadedModelHash)
+      return -1;
+    if (a.modelsHash !== loadedModelHash && b.modelsHash === loadedModelHash)
+      return 1;
     if (a.modelsHash > b.modelsHash) return 1;
     if (a.modelsHash < b.modelsHash) return -1;
     return 0;
