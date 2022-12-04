@@ -4,13 +4,13 @@ import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  modelsHash,
   sortChildren,
   type BaseNode,
   type BranchNode,
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
-import type { MaskNode } from "./maskNodes";
 
 export type InpaintRequest = {
   models: Record<string, number>;
@@ -38,7 +38,7 @@ export type InpaintResult = {
   colorCorrection: boolean;
 };
 
-export type InpaintNode = InpaintResult & BaseNode<"Inpaint">;
+export type InpaintNode = InpaintResult & BaseNode<"Inpaint"> & { modelsHash: string };
 
 function createInpaintNode(
   result: InpaintResult,
@@ -58,6 +58,7 @@ function createInpaintNode(
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    modelsHash: modelsHash(result.models),
     serialise: () => ({
       ...result,
       id: node.id,

@@ -4,6 +4,7 @@ import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  modelsHash,
   sortChildren,
   type BaseNode,
   type BranchNode,
@@ -39,7 +40,8 @@ export type ImgCycleResult = {
   colorCorrection: boolean;
 };
 
-export type ImgCycleNode = ImgCycleResult & BaseNode<"ImgCycle">;
+export type ImgCycleNode = ImgCycleResult &
+  BaseNode<"ImgCycle"> & { modelsHash: string };
 
 function createImgCycleNode(
   result: ImgCycleResult,
@@ -59,6 +61,7 @@ function createImgCycleNode(
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    modelsHash: modelsHash(result.models),
     serialise: () => ({
       ...result,
       id: node.id,

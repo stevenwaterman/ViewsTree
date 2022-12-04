@@ -15,6 +15,7 @@ import { loadRootNode, type RootNode } from "./rootNodes";
 import { loadImgCycleNode, type ImgCycleNode } from "./ImgCycleNodes";
 import { loadMaskNode, type MaskNode } from "./maskNodes";
 import { loadInpaintNode, type InpaintNode } from "./inpaintNodes";
+import { modelsStore } from "../models";
 
 export type NodeTypeStrings =
   | "Root"
@@ -165,11 +166,13 @@ export function getChildLeafCountStore(childrenStore: Readable<BranchNode[]>): {
 
   return { childLeafCount, leafCount };
 }
-
 type NodeType<N extends AnyNode> = N["type"];
 type ChildOf<T extends NodeTypeStrings> = NodeChild[NodeCategories[T]];
 export type ParentOf<T extends NodeTypeStrings> = NodeParent[NodeCategories[T]];
-type Result<T extends NodeTypeStrings> = Omit<NodeTypes[T], keyof BaseNode<T>>;
+type Result<T extends NodeTypeStrings> = Omit<
+  NodeTypes[T],
+  keyof BaseNode<T> | "modelsHash"
+>;
 type Dehydrated<T extends NodeTypeStrings> = Result<T> &
   Pick<BaseNode<T>, "id" | "type">;
 export type Serialised<T extends NodeTypeStrings> = Dehydrated<T> & {
@@ -226,6 +229,31 @@ export function loadNode<T extends NodeTypeStrings>(
   throw "Forgot a case";
 }
 
+export function modelsHash(models: Record<string, number>): string {
+  const modelEntries = Object.entries(models).filter(
+    ([_, weight]) => weight !== 0
+  );
+  if (modelEntries.length === 0) return "";
+  modelEntries.sort((a, b) => {
+    if (a[0] > b[0]) return 1;
+    if (a[0] < b[0]) return -1;
+    if (a[1] > b[1]) return 1;
+    if (a[1] < b[1]) return -1;
+    return 0;
+  });
+
+  const totalWeight = modelEntries.reduce(
+    (acc, [_, weight]) => acc + weight,
+    0
+  );
+  const fractional = modelEntries.map(
+    ([model, weight]) => `${model}_${(weight / totalWeight).toFixed(5)}`
+  );
+  const original = modelEntries.map(([_, weight]) => `${weight}`);
+  fractional.push(...original);
+  return fractional.join(",");
+}
+
 export function sortChildren(a: AnyNode, b: AnyNode): number {
   // Put masks at the end
   if (a.type === "Mask" && b.type !== "Mask") return 1;
@@ -258,6 +286,12 @@ export function sortChildren(a: AnyNode, b: AnyNode): number {
   // Put same-type together
   if (a.type > b.type) return 1;
   if (a.type < b.type) return -1;
+
+  // Sort by models
+  if ("modelsHash" in a && "modelsHash" in b) {
+    if (a.modelsHash > b.modelsHash) return 1;
+    if (a.modelsHash < b.modelsHash) return -1;
+  }
 
   // Sort by strength
   if ("strength" in a && "strength" in b) {

@@ -3,7 +3,7 @@ import { stateful, type Stateful } from "../utils";
 
 const internalModelsStore: Writable<string[]> = writable([]);
 export const modelsStore: Stateful<Readable<string[]>> & {
-  reload: () => void;
+  reload: () => Promise<void>;
 } = stateful({
   subscribe: internalModelsStore.subscribe,
   reload: async () =>

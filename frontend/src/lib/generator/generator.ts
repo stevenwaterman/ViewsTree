@@ -88,8 +88,9 @@ function addToQueue<T extends BranchNode>(
 
   const modelsPairs = Object.entries(models).filter((entry) => entry[1] !== 0);
   modelsPairs.sort((a, b) => a[1] - b[1]);
+  const totalWeight = modelsPairs.reduce((acc, elem) => acc + elem[1], 0);
   const modelsHash: string = modelsPairs
-    .map(([model, weight]) => `${model}${weight}`)
+    .map(([model, weight]) => `${model}${weight / totalWeight}`)
     .join("");
 
   const generationRequest: GenerationRequest = { modelsHash, fire, cancel };

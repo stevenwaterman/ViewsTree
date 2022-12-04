@@ -4,6 +4,7 @@ import {
   getChildLeafCountStore,
   getNodeIsTypes,
   loadNode,
+  modelsHash,
   sortChildren,
   type BaseNode,
   type SecondaryBranchNode,
@@ -37,7 +38,7 @@ export type TxtImgResult = {
   };
 };
 
-export type TxtImgNode = TxtImgResult & BaseNode<"TxtImg">;
+export type TxtImgNode = TxtImgResult & BaseNode<"TxtImg"> & { modelsHash: string };
 
 function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
@@ -54,6 +55,7 @@ function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
+    modelsHash: modelsHash(result.models),
     serialise: () => ({
       ...result,
       id: node.id,

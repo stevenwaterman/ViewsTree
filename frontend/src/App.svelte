@@ -39,7 +39,8 @@
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
-    else if (event.key === "l") console.log(rootNodeStore.state.serialise());
+    else if (event.key === "l")
+      console.log(JSON.stringify(rootNodeStore.state.serialise()));
     else if (event.key === "p") modalComponent.open(Painter);
   }
 </script>
