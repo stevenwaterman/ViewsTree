@@ -225,7 +225,7 @@ export function loadNode<T extends NodeTypeStrings>(
 
 export function sortChildren(a: AnyNode, b: AnyNode): number {
   if ("seed" in a && "seed" in b) {
-    if (!a.seed.random || !b.seed.random) {
+    if (!a.seed.random && !b.seed.random) {
       if (a.seed.actual > b.seed.actual) return 1;
       if (a.seed.actual < b.seed.actual) return -1;
     }
