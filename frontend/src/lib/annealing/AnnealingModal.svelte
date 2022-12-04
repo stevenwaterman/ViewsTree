@@ -43,7 +43,7 @@
 
   function maybeNext() {
     if (sa.shouldStop(currentScore, candidateScore, skipped)) {
-      sa.next(currentScore, candidateScore);
+      sa.next(currentScore, candidateScore, skipped);
       currentScore = 0;
       candidateScore = 0;
       skipped = 0;
@@ -86,7 +86,9 @@
       on:click={preferCandidate}
     />
 
-    <button on:click={skip} on:keypress|preventDefault>Skip</button>
+    <button on:click={skip} on:keypress|preventDefault on:keydown|preventDefault
+      >Skip</button
+    >
   {:else}
     <p style="grid-column: span 2">Generating images...</p>
   {/if}

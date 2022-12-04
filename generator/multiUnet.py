@@ -5,11 +5,18 @@ import gc
 class MultiUnet():
     def __init__(self, model_folder_path):
         self.model_folder_path = model_folder_path
-        self.last_models = {
-          'stable-diffusion-v1-5': 1
-        }
 
-        self.model = self.get_model("stable-diffusion-v1-5")
+        self.slot_components = (
+          { 'stable-diffusion-v1-5': 1 },
+          { 'stable-diffusion-v1-5': 1 }
+        )
+
+        self.slots = (
+          self.get_model("stable-diffusion-v1-5"),
+          self.get_model("stable-diffusion-v1-5")
+        )
+
+        self.loaded_slot = 0
 
         unet_config = UNet2DConditionModel.load_config(f"{self.model_folder_path}/stable-diffusion-v1-5/unet")
         self.unet = UNet2DConditionModel.from_config(unet_config).to("cuda")
@@ -20,56 +27,77 @@ class MultiUnet():
         return torch.load(
             f"{self.model_folder_path}/{model_name}/unet/diffusion_pytorch_model.bin", map_location=torch.device("cuda"))
 
-    def load(self, models):
+    def calculate_component_diff(self, components, slot):
+        last_components = self.slot_components[slot]
         scaling_factors = []
-        for model in self.last_models:
-          old_weight = self.last_models.get(model, 0)
-          new_weight = models.get(model, 0)
+        for model in last_components:
+          old_weight = last_components.get(model, 0)
+          new_weight = components.get(model, 0)
           if (old_weight > 0 and new_weight > 0):
             scaling_factors.append(new_weight / old_weight)
 
         scaling_factor = max(set(scaling_factors), key=scaling_factors.count, default=1)
-        self.last_models = {k: v * scaling_factor for k, v in self.last_models.items()}
+        last_components = {k: v * scaling_factor for k, v in self.slot_components[slot].items()}
 
-        models_diff = models.copy()
-        for model in self.last_models:
+        models_diff = components.copy()
+        for model in self.slot_components[slot]:
           if (model not in models_diff):
             models_diff[model] = 0
-          models_diff[model] -= self.last_models[model]
+          models_diff[model] -= self.slot_components[slot][model]
         models_diff = {k: v for k, v in models_diff.items() if v != 0}
+        return models_diff
 
-        # No changes
-        if (len(models_diff) == 0):
+    def load(self, components):
+        slot_diffs = (
+            self.calculate_component_diff(components, 0),
+            self.calculate_component_diff(components, 1)
+        )
+
+        # Currently loaded model is correct
+        if (len(slot_diffs[self.loaded_slot]) == 0):
             print("Same models")
             return self.unet
 
+        # Other slot is correct
+        if (len(slot_diffs[1 - self.loaded_slot]) == 0):
+            print("Same models, other slot")
+            self.loaded_slot = 1 - self.loaded_slot
+            print(f"Slot {self.loaded_slot}")
+            self.load_model_into_unet()
+            return self.unet
+
+        # Neither loaded slot is correct, need to mutate one
+        # Mutate the LRU slot
+        self.loaded_slot = 1 - self.loaded_slot
+        component_diff = slot_diffs[self.loaded_slot]
+        print(f"Slot {self.loaded_slot}")
+
         # Faster to start from scratch
-        if (len(models) <= len(models_diff)):
+        if (len(components) <= len(component_diff)):
           # Load the biggest model
-          model_path = max(models, key=models.get)
+          model_path = max(component_diff, key=component_diff.get)
           print(f"Loading fresh {model_path}")
 
-          del self.model
-
-          self.model = self.get_model(model_path)
+          del self.slots[self.loaded_slot]
+          self.slots[self.loaded_slot] = self.get_model(model_path)
 
           # Calculate weight based on the one we just did
-          self.last_models = {}
-          self.last_models[model_path] = models[model_path]
+          self.slot_components[self.loaded_slot] = {}
+          self.slot_components[self.loaded_slot][model_path] = components[model_path]
 
           # The diff is invalid now, recalculate
-          models_diff = models.copy()
-          del models_diff[model_path]
+          component_diff = components.copy()
+          del component_diff[model_path]
 
-        for path in models_diff:
-            weight = models_diff[path]
+        for path in component_diff:
+            weight = component_diff[path]
             self.merge_two(path, weight)
 
         self.load_model_into_unet()
         return self.unet
 
     def merge_two(self, add_path, add_weight):
-        base_weight = sum(self.last_models.values())
+        base_weight = sum(self.slot_components[self.loaded_slot].values())
         total_weight = base_weight + add_weight
         base_factor = base_weight / total_weight
         add_factor = add_weight / total_weight
@@ -77,14 +105,14 @@ class MultiUnet():
         percent_composition = round(100 * add_weight / (total_weight), 2)
         print(f"Adding {percent_composition}% {add_path}")
 
-        if (add_path not in self.last_models):
-          self.last_models[add_path] = 0
-        self.last_models[add_path] += add_weight
+        if (add_path not in self.slot_components[self.loaded_slot]):
+          self.slot_components[self.loaded_slot][add_path] = 0
+        self.slot_components[self.loaded_slot][add_path] += add_weight
 
         add_model = self.get_model(add_path)
-        for key in self.model.keys():
+        for key in self.slots[self.loaded_slot].keys():
             if key in add_model:
-                self.model[key] = self.model[key] * base_factor + add_model[key] * add_factor
+                self.slots[self.loaded_slot][key] = self.slots[self.loaded_slot][key] * base_factor + add_model[key] * add_factor
         del add_model
         gc.collect()
 
@@ -92,7 +120,7 @@ class MultiUnet():
     def load_model_into_unet(self):
         # Convert old format to new format if needed from a PyTorch state_dict
         # copy state_dict so _load_from_state_dict can modify it
-        state_dict = self.model.copy()
+        state_dict = self.slots[self.loaded_slot].copy()
         error_msgs = []
 
         # PyTorch's `_load_from_state_dict` does not copy parameters in a module's descendants

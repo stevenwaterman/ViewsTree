@@ -18,3 +18,4 @@ gif
 save config
 save mixed model
 phrase list / templating in prompts
+re-use images that have already been generated this round as the next round's `current` samples in SA

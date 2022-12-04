@@ -10,8 +10,6 @@ import {
   type GenerationSettings,
 } from "../state/settings";
 
-const batchSize = 20;
-
 export class SimulatedAnnealing {
   private readonly generationSettings: GenerationSettings;
   private readonly modelsList: string[];
@@ -90,7 +88,7 @@ export class SimulatedAnnealing {
       }
     }
 
-    this.next(0, 1);
+    this.next(0, 1, 0);
   }
 
   /** Generate a new set of models to use as a candidate based on temperature */
@@ -119,18 +117,35 @@ export class SimulatedAnnealing {
     }
   }
 
+  private getAcceptChance(
+    currentScore: number,
+    candidateScore: number,
+    skipped: number
+  ) {
+    const totalRounds = currentScore + candidateScore + skipped;
+    const currentWinFrac = currentScore / totalRounds;
+    const candidateWinFrac = candidateScore / totalRounds;
+    const winFracDifference = currentWinFrac - candidateWinFrac;
+    const acceptChance = Math.exp(-(20 * winFracDifference) / this.temperature);
+    return acceptChance;
+  }
+
   /** Potentially accept the candidate models based on temperature and preference */
-  private maybeAccept(currentScore: number, candidateScore: number) {
+  private maybeAccept(
+    currentScore: number,
+    candidateScore: number,
+    skipped: number
+  ) {
     if (candidateScore >= currentScore) {
       console.log("Better, accepting");
       return this.accept();
     }
 
-    const totalScore = currentScore + candidateScore;
-    const currentWinFrac = currentScore / totalScore;
-    const candidateWinFrac = candidateScore / totalScore;
-    const winFracDifference = currentWinFrac - candidateWinFrac;
-    const acceptChance = Math.exp(-(20 * winFracDifference) / this.temperature);
+    const acceptChance = this.getAcceptChance(
+      currentScore,
+      candidateScore,
+      skipped
+    );
 
     console.log(
       "Score",
@@ -161,40 +176,33 @@ export class SimulatedAnnealing {
     this.generating = true;
 
     while (true) {
-      let currents: TxtImgNode[] = [];
-
       this.generationSettings.models = this.currentModels;
       this.generationSettings.seed = undefined;
-      for (let i = 0; i < batchSize; i++) {
-        this.currentFetch = fetchTxtImgNode(
-          saveStore.state,
-          this.generationSettings,
-          this.rootNode
-        );
-        const node = await this.currentFetch;
-        if (!this.generating) return;
-        currents.push(node);
-      }
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.rootNode
+      );
+      const currentNode = await this.currentFetch;
+      if (!this.generating) return;
 
       this.generationSettings.models = this.candidateModels;
-      for (const current of currents) {
-        this.generationSettings.seed = current.seed.actual;
-        this.currentFetch = fetchTxtImgNode(
-          saveStore.state,
-          this.generationSettings,
-          this.rootNode
-        );
-        const candidate = await this.currentFetch;
-        if (!this.generating) return;
-        this.sampleStoreInternal.update((samples) => [
-          ...samples,
-          { current: current, candidate: candidate },
-        ]);
-      }
+      this.generationSettings.seed = currentNode.seed.actual;
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.rootNode
+      );
+      const candidateNode = await this.currentFetch;
+      if (!this.generating) return;
+      this.sampleStoreInternal.update((samples) => [
+        ...samples,
+        { current: currentNode, candidate: candidateNode },
+      ]);
     }
   }
 
-  async next(currentScore: number, candidateScore: number) {
+  async next(currentScore: number, candidateScore: number, skipped: number) {
     if (this.iteration > this.steps) return;
 
     this.generating = false;
@@ -202,7 +210,7 @@ export class SimulatedAnnealing {
 
     await this.currentFetch;
 
-    this.maybeAccept(currentScore, candidateScore);
+    this.maybeAccept(currentScore, candidateScore, skipped);
     this.pickCandidate();
     console.log({
       current: this.currentModels,
@@ -215,13 +223,25 @@ export class SimulatedAnnealing {
   }
 
   shouldStop(currentScore: number, candidateScore: number, skipped: number) {
+    const totalRounds = candidateScore + currentScore + skipped;
+
     // If new models are winning by 3, we are confident they will win and therefore will be accepted
-    if (candidateScore - currentScore >= 3) return true;
+    if (totalRounds >= 5 && candidateScore - currentScore >= 3) return true;
 
     // Requirement is higher to stop when old model is winning, because the fraction of votes won is important
     if (currentScore - candidateScore >= 6) return true;
+
+    // That's pretty conclusive now
+    if (
+      totalRounds >= 6 &&
+      this.getAcceptChance(currentScore, candidateScore, skipped) < 0.05
+    )
+      return true;
+
+    // Give up, they're equal
     const draw = 50 / this.temperature;
-    if (candidateScore + currentScore + skipped >= draw) return true;
+    if (totalRounds >= draw) return true;
+
     return false;
   }
 
