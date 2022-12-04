@@ -6,15 +6,15 @@ class MultiUnet():
     def __init__(self, model_folder_path):
         self.model_folder_path = model_folder_path
 
-        self.slot_components = (
-          { 'stable-diffusion-v1-5': 1 },
-          { 'stable-diffusion-v1-5': 1 }
-        )
+        self.slot_components = {
+          0: { 'stable-diffusion-v1-5': 1 },
+          1: { 'stable-diffusion-v1-5': 1 }
+        }
 
-        self.slots = (
-          self.get_model("stable-diffusion-v1-5"),
-          self.get_model("stable-diffusion-v1-5")
-        )
+        self.slots = {
+          0: self.get_model("stable-diffusion-v1-5"),
+          1: self.get_model("stable-diffusion-v1-5")
+        }
 
         self.loaded_slot = 0
 
@@ -28,16 +28,15 @@ class MultiUnet():
             f"{self.model_folder_path}/{model_name}/unet/diffusion_pytorch_model.bin", map_location=torch.device("cuda"))
 
     def calculate_component_diff(self, components, slot):
-        last_components = self.slot_components[slot]
         scaling_factors = []
-        for model in last_components:
-          old_weight = last_components.get(model, 0)
+        for model in self.slot_components[slot]:
+          old_weight = self.slot_components[slot].get(model, 0)
           new_weight = components.get(model, 0)
           if (old_weight > 0 and new_weight > 0):
             scaling_factors.append(new_weight / old_weight)
 
         scaling_factor = max(set(scaling_factors), key=scaling_factors.count, default=1)
-        last_components = {k: v * scaling_factor for k, v in self.slot_components[slot].items()}
+        self.slot_components[slot] = {k: v * scaling_factor for k, v in self.slot_components[slot].items()}
 
         models_diff = components.copy()
         for model in self.slot_components[slot]:
@@ -48,10 +47,10 @@ class MultiUnet():
         return models_diff
 
     def load(self, components):
-        slot_diffs = (
-            self.calculate_component_diff(components, 0),
-            self.calculate_component_diff(components, 1)
-        )
+        slot_diffs = {
+            0: self.calculate_component_diff(components, 0),
+            1: self.calculate_component_diff(components, 1)
+        }
 
         # Currently loaded model is correct
         if (len(slot_diffs[self.loaded_slot]) == 0):
@@ -68,6 +67,16 @@ class MultiUnet():
 
         # Neither loaded slot is correct, need to mutate one
         # Mutate the LRU slot
+
+        # If it would be faster to use the more recently used slot, copy it over the other one
+        print(slot_diffs[self.loaded_slot])
+        print(slot_diffs[1 - self.loaded_slot])
+        if (len(slot_diffs[self.loaded_slot]) < len(slot_diffs[1 - self.loaded_slot])):
+          print(f"Duplicating slot {self.loaded_slot} into both slots")
+          self.slots[1 - self.loaded_slot] = self.slots[self.loaded_slot].copy()
+          self.slot_components[1 - self.loaded_slot] = self.slot_components[self.loaded_slot].copy()
+          slot_diffs[1 - self.loaded_slot] = slot_diffs[self.loaded_slot].copy()
+
         self.loaded_slot = 1 - self.loaded_slot
         component_diff = slot_diffs[self.loaded_slot]
         print(f"Slot {self.loaded_slot}")
