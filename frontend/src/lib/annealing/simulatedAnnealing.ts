@@ -111,8 +111,11 @@ export class SimulatedAnnealing {
       return this.accept();
     }
 
-    const preference = (30 * candidateScore) / (currentScore + candidateScore);
-    const acceptChance = Math.exp(-preference / this.temperature);
+    const totalScore = currentScore + candidateScore;
+    const currentWinFrac = currentScore / totalScore;
+    const candidateWinFrac = candidateScore / totalScore;
+    const winFracDifference = currentWinFrac - candidateWinFrac;
+    const acceptChance = Math.exp(- (20 * winFracDifference) / this.temperature);
 
     console.log(
       "Score",
@@ -122,7 +125,7 @@ export class SimulatedAnnealing {
       "%"
     );
 
-    const accept = Math.random() >= acceptChance;
+    const accept = Math.random() <= acceptChance;
     console.log("Accepted: ", accept);
     if (accept) return this.accept();
   }
