@@ -10,7 +10,7 @@ import {
   type GenerationSettings,
 } from "../state/settings";
 
-const batchSize = 10;
+const batchSize = 20;
 
 export class SimulatedAnnealing {
   private readonly generationSettings: GenerationSettings;
@@ -84,7 +84,7 @@ export class SimulatedAnnealing {
     this.candidateModels = { ...this.generationSettings.models };
     for (const model in this.candidateModels) {
       if (this.modelsList.includes(model)) {
-        this.candidateModels[model] = Math.random();
+        this.candidateModels[model] = Math.random() * 10;
       } else {
         this.candidateModels[model] = 0;
       }
@@ -219,8 +219,8 @@ export class SimulatedAnnealing {
     if (candidateScore - currentScore >= 3) return true;
 
     // Requirement is higher to stop when old model is winning, because the fraction of votes won is important
-    if (currentScore - candidateScore >= 8) return true;
-    const draw = 50 / Math.pow(this.temperature, 0.7);
+    if (currentScore - candidateScore >= 6) return true;
+    const draw = 50 / this.temperature;
     if (candidateScore + currentScore + skipped >= draw) return true;
     return false;
   }
