@@ -103,8 +103,8 @@ export class SimulatedAnnealing {
     this.lruModels.push(model);
 
     let factorPower = randNormal();
-    if (factorPower > 0) factorPower += this.temperature / 0.1;
-    else factorPower -= this.temperature / 0.1;
+    if (factorPower > 0) factorPower += this.temperature / 10;
+    else factorPower -= this.temperature / 10;
     factorPower *= this.temperature;
     const modelFactor = Math.pow(1.2, factorPower);
 
