@@ -224,17 +224,21 @@ export function loadNode<T extends NodeTypeStrings>(
 }
 
 export function sortChildren(a: AnyNode, b: AnyNode): number {
-  if (a.type > b.type) return 1;
-  if (a.type < b.type) return -1;
-
   if ("seed" in a && "seed" in b) {
-    if (a.seed.actual > b.seed.actual) return 1;
-    if (a.seed.actual < b.seed.actual) return -1;
+    if (!a.seed.random || !b.seed.random) {
+      if (a.seed.actual > b.seed.actual) return 1;
+      if (a.seed.actual < b.seed.actual) return -1;
+    }
   }
 
   if ("prompt" in a && "prompt" in b) {
     if (a.prompt > b.prompt) return 1;
     if (a.prompt < b.prompt) return -1;
+  }
+
+  if ("seed" in a && "seed" in b) {
+    if (a.seed.actual > b.seed.actual) return 1;
+    if (a.seed.actual < b.seed.actual) return -1;
   }
 
   if ("strength" in a && "strength" in b) {
@@ -251,6 +255,9 @@ export function sortChildren(a: AnyNode, b: AnyNode): number {
     if (a.steps > b.steps) return 1;
     if (a.steps < b.steps) return -1;
   }
+
+  if (a.type > b.type) return 1;
+  if (a.type < b.type) return -1;
 
   return 0;
 }
