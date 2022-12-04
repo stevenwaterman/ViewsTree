@@ -27,19 +27,29 @@ export class SimulatedAnnealing {
   > = this.sampleStoreInternal;
 
   private _iteration: number = 0;
+  private _iterationStore: Writable<number> = writable(0);
   public get iteration(): number {
     return this._iteration;
   }
   private set iteration(value: number) {
     this._iteration = value;
+    this._iterationStore.set(value);
+  }
+  public get iterationStore(): Readable<number> {
+    return this._iterationStore;
   }
 
   private _temperature: number;
+  private _temperatureStore: Writable<number> = writable(0);
   public get temperature(): number {
     return this._temperature;
   }
   private set temperature(value: number) {
     this._temperature = value;
+    this._temperatureStore.set(value);
+  }
+  public get temperatureStore(): Readable<number> {
+    return this._temperatureStore;
   }
 
   private currentModels: Record<string, number> = {};
@@ -51,23 +61,23 @@ export class SimulatedAnnealing {
     generationSettings: GenerationSettings,
     startTemperature: number,
     endTemperature: number,
-    steps: number
+    stepsPerModel: number
   ) {
     this.generationSettings = { ...generationSettings };
     this.modelsList = Object.entries(this.generationSettings.models)
       .filter((entry) => entry[1] > 0)
       .map((entry) => entry[0]);
 
-    this.steps = steps;
+    this.steps = stepsPerModel * this.modelsList.length;
     this.temperature = startTemperature;
 
     const totalTemperatureChange = startTemperature / endTemperature;
-    this.temperatureFactor = Math.pow(totalTemperatureChange, 1 / steps);
+    this.temperatureFactor = Math.pow(totalTemperatureChange, 1 / this.steps);
 
     this.candidateModels = { ...this.generationSettings.models };
     for (const model in this.candidateModels) {
       if (this.modelsList.includes(model)) {
-        this.candidateModels[model] = 1;
+        this.candidateModels[model] = 10;
       } else {
         this.candidateModels[model] = 0;
       }
@@ -167,6 +177,8 @@ export class SimulatedAnnealing {
   }
 
   async next(currentScore: number, candidateScore: number) {
+    if (this.iteration > this.steps) return;
+
     this.generating = false;
     this.sampleStoreInternal.set([]);
 

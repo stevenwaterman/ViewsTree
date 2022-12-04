@@ -7,24 +7,24 @@
   import { generationSettingsStore } from "../state/settings";
   import { onDestroy } from "svelte";
 
-  let sa = new SimulatedAnnealing($generationSettingsStore, 10, 1, 20);
+  let sa = new SimulatedAnnealing($generationSettingsStore, 10, 1, 5);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
-
-  let iteration: number = sa.iteration;
-  let temperature: number = sa.temperature;
 
   // Keep going until you hit +- score. +vs score means preferring candidate
   let currentScore: number = 0;
   let candidateScore: number = 0;
   let skipped: number = 0;
 
-  let totalScore: number;
-  $: totalScore = currentScore + candidateScore;
+  let temperatureStore: Readable<number>;
+  $: temperatureStore = sa.temperatureStore;
+
+  let iterationStore: Readable<number>;
+  $: iterationStore = sa.iterationStore;
 
   let sampleIdx: number;
-  $: sampleIdx = totalScore + skipped;
+  $: sampleIdx = currentScore + candidateScore + skipped;
 
   function preferCurrent() {
     currentScore++;
@@ -47,8 +47,6 @@
       currentScore = 0;
       candidateScore = 0;
       skipped = 0;
-      iteration = sa.iteration;
-      temperature = sa.temperature;
     }
   }
 
@@ -69,11 +67,11 @@
 
 <svelte:body on:keydown={keydown} on:keyup={keyup} />
 
-<p>Step {sa.iteration}/{sa.steps} - {sa.temperature.toFixed(2)}°</p>
+<p>Step {$iterationStore}/{sa.steps} - {$temperatureStore.toFixed(2)}°</p>
 <p>{currentScore} - {candidateScore}</p>
 
 <div class="grid" class:swap>
-  {#if $samplesStore[totalScore]}
+  {#if $samplesStore[sampleIdx]}
     <!-- svelte-ignore a11y-missing-attribute -->
     <img
       class="current"
