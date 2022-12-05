@@ -47,6 +47,8 @@ class MultiUnet():
         return models_diff
 
     def load(self, components):
+        components = {k: v for k, v in components.items() if v > 0}
+
         slot_diffs = {
             0: self.calculate_component_diff(components, 0),
             1: self.calculate_component_diff(components, 1)
@@ -82,6 +84,7 @@ class MultiUnet():
         print(f"Slot {self.loaded_slot}")
 
         # Faster to start from scratch
+        # TODO this doesn't seem to work
         if (len(components) <= len(component_diff)):
           # Load the biggest model
           model_path = max(component_diff, key=component_diff.get)
