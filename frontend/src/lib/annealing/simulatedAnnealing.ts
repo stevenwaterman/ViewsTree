@@ -224,6 +224,7 @@ export class SimulatedAnnealing {
       this.generationSettings,
       this.trackerNode
     );
+    this.generationSettings.steps = steps;
     const newTrackerNode = await this.currentFetch;
     if (this.accepted) {
       this.trackerNode.children.update((children) => [
@@ -231,7 +232,6 @@ export class SimulatedAnnealing {
         newTrackerNode,
       ]);
       this.trackerNode = newTrackerNode as any;
-      this.generationSettings.steps = steps;
     }
 
     if (!this.generating) return;
