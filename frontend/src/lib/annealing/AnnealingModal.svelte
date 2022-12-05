@@ -79,6 +79,7 @@
 
   function keydown(event: KeyboardEvent) {
     if (!swap && event.code === "Space") {
+      swap = true;
       spacePresses++;
     }
   }
