@@ -76,7 +76,7 @@ export class SimulatedAnnealing {
 
     this.candidateModels = { ...this.generationSettings.models };
 
-    this.next(0, 1, 0);
+    this.next(0, 1);
   }
 
   /** Generate a new set of models to use as a candidate based on temperature */
@@ -139,11 +139,8 @@ export class SimulatedAnnealing {
     }
   }
 
-  private getAcceptChance(
-    currentScore: number,
-    candidateScore: number,
-    totalRounds: number
-  ) {
+  private getAcceptChance(currentScore: number, candidateScore: number) {
+    const totalRounds = currentScore + candidateScore;
     const currentWinFrac = currentScore / totalRounds;
     const candidateWinFrac = candidateScore / totalRounds;
     const winFracDifference = currentWinFrac - candidateWinFrac;
@@ -152,22 +149,14 @@ export class SimulatedAnnealing {
   }
 
   /** Potentially accept the candidate models based on temperature and preference */
-  private maybeAccept(
-    currentScore: number,
-    candidateScore: number,
-    totalRounds: number
-  ): boolean {
+  private maybeAccept(currentScore: number, candidateScore: number): boolean {
     if (candidateScore >= currentScore) {
       console.log("Better, accepting");
       this.accept();
       return true;
     }
 
-    const acceptChance = this.getAcceptChance(
-      currentScore,
-      candidateScore,
-      totalRounds
-    );
+    const acceptChance = this.getAcceptChance(currentScore, candidateScore);
 
     console.log(
       "Score",
@@ -256,27 +245,18 @@ export class SimulatedAnnealing {
     }
   }
 
-  async next(
-    currentScore: number,
-    candidateScore: number,
-    totalRounds: number
-  ) {
+  async next(currentScore: number, candidateScore: number) {
     if (this.iteration > this.steps) return;
 
     this.generating = false;
 
-    const remainingSamples = this.sampleStoreInternal.state.slice(
-      totalRounds + 1
-    );
+    const totalRounds = currentScore + candidateScore;
+    const remainingSamples = this.sampleStoreInternal.state.slice(totalRounds);
     this.sampleStoreInternal.set([]);
 
     await this.currentFetch;
 
-    const accepted = this.maybeAccept(
-      currentScore,
-      candidateScore,
-      totalRounds
-    );
+    const accepted = this.maybeAccept(currentScore, candidateScore);
     this.pickCandidate();
     console.log({
       current: this.currentModels,
@@ -292,33 +272,38 @@ export class SimulatedAnnealing {
     this.temperature /= this.temperatureFactor;
   }
 
-  shouldStop(
-    currentScore: number,
-    candidateScore: number,
-    totalRounds: number
-  ) {
-    const maxRounds = 20 * Math.exp(-this.temperature / 3);
-    if (totalRounds >= maxRounds) return true;
+  shouldStop(currentScore: number, candidateScore: number) {
+    const maxRounds = 20 * Math.exp(-this.temperature / 2);
+    const totalRounds = currentScore + candidateScore;
+    const remainingRounds = maxRounds - totalRounds;
 
-    const winRate = candidateScore / totalRounds;
+    // All rounds complete
+    if (remainingRounds <= 0) return true;
 
-    // Even if current wins every round, candidate still wins
-    if (maxRounds - totalRounds < candidateScore - currentScore) return true;
+    // Even if the candidate loses every remaining round, they'd win
+    const worstCaseAcceptChance = this.getAcceptChance(
+      currentScore + remainingRounds,
+      candidateScore
+    );
+    if (worstCaseAcceptChance >= 1) {
+      console.log("Candidate won early");
+      return true;
+    }
 
-    // Mercy rule, candidate wins
-    const minWinRounds = 0.5 * Math.exp(3 / this.temperature);
-    const winReq = Math.exp(-0.02 * this.temperature) - 0.4;
-    if (totalRounds > minWinRounds && winRate >= winReq) return true;
-
-    // Mergy rule, current wins
-    const minLoseRounds = Math.exp(3 / this.temperature);
-    const loseReq = Math.exp(0.04 * this.temperature) - 0.8;
-    if (totalRounds > minLoseRounds && winRate <= loseReq) return true;
+    // Even fi the candidate wins every remaining round, there's less than a 1% chance of acceptance
+    const bestCaseAcceptChance = this.getAcceptChance(
+      currentScore,
+      candidateScore + remainingRounds
+    );
+    if (bestCaseAcceptChance <= 0.01) {
+      console.log("Current won early");
+      return true;
+    }
 
     return false;
   }
 
-  destroy() {
+  stop() {
     this.generating = false;
   }
 }

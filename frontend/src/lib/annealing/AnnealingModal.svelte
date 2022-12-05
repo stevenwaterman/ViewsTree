@@ -12,10 +12,23 @@
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
 
-  // Keep going until you hit +- score. +vs score means preferring candidate
+  // The more you have to swap back and forth, the closer the 2 pictures are, and the less impressive it is to win
+  let spacePresses: number = 0;
   let currentScore: number = 0;
   let candidateScore: number = 0;
-  let skipped: number = 0;
+
+  let sampleIdx: number = 0;
+
+  let totalScore: number;
+  $: totalScore = currentScore + candidateScore;
+
+  let currentWinRate: number;
+  $: currentWinRate = candidateScore / totalScore;
+
+  let currentWinPercent: string;
+  $: currentWinPercent = isNaN(currentWinRate)
+    ? "0"
+    : ((100 * currentWinRate) / totalScore).toFixed(0);
 
   let temperatureStore: Readable<number>;
   $: temperatureStore = sa.temperatureStore;
@@ -23,52 +36,69 @@
   let iterationStore: Readable<number>;
   $: iterationStore = sa.iterationStore;
 
-  let sampleIdx: number;
-  $: sampleIdx = currentScore + candidateScore + skipped;
+  /**
+   * Starts at 1, tends asymptotically towards 0.5
+   * Add this to the winner, and 1-x to the loser
+   */
+  function winningScore() {
+    return (1 + Math.exp(-spacePresses / 4)) / 2;
+  }
 
   function preferCurrent() {
-    currentScore++;
+    const score = winningScore();
+    currentScore += score;
+    candidateScore += 1 - score;
     maybeNext();
   }
 
   function preferCandidate() {
-    candidateScore++;
+    const score = winningScore();
+    candidateScore += score;
+    currentScore += 1 - score;
     maybeNext();
   }
 
   function skip() {
-    skipped++;
+    currentScore += 0.5;
+    candidateScore += 0.5;
     maybeNext();
   }
 
   function maybeNext() {
-    if (sa.shouldStop(currentScore, candidateScore, sampleIdx)) {
-      sa.next(currentScore, candidateScore, sampleIdx);
+    spacePresses = 0;
+    sampleIdx++;
+    if (sa.shouldStop(currentScore, candidateScore)) {
+      sa.next(currentScore, candidateScore);
       currentScore = 0;
       candidateScore = 0;
-      skipped = 0;
+      sampleIdx = 0;
     }
   }
 
   let swap: boolean = false;
 
   function keydown(event: KeyboardEvent) {
-    if (event.code === "Space") swap = true;
+    if (!swap && event.code === "Space") {
+      candidateScore++;
+      currentScore++;
+    }
   }
 
   function keyup(event: KeyboardEvent) {
-    if (event.code === "Space") swap = false;
+    if (event.code === "Space") {
+      swap = false;
+    }
   }
 
   onDestroy(() => {
-    sa.destroy();
+    sa.stop();
   });
 </script>
 
 <svelte:body on:keydown={keydown} on:keyup={keyup} />
 
 <p>Step {$iterationStore}/{sa.steps} - {$temperatureStore.toFixed(2)}°</p>
-<p>{currentScore} - {candidateScore}</p>
+<p>{currentWinPercent}% of {sampleIdx}</p>
 
 <div class="grid" class:swap>
   {#if $samplesStore[sampleIdx]}
