@@ -1,6 +1,11 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
-import { createRootNode, type RootNode } from "../state/nodeTypes/rootNodes";
+import type { AnyNode } from "../state/nodeTypes/nodes";
+import {
+  createRootNode,
+  rootNodeStore,
+  type RootNode,
+} from "../state/nodeTypes/rootNodes";
 import {
   fetchTxtImgNode,
   type TxtImgNode,
@@ -12,6 +17,10 @@ import {
 import { stateful, type Stateful } from "../utils";
 
 export class SimulatedAnnealing {
+  private trackerNode: RootNode = rootNodeStore.state;
+  private readonly trackerSeed: number =
+    Math.random() * Number.MAX_SAFE_INTEGER;
+
   private readonly generationSettings: GenerationSettings;
   private readonly modelsList: string[];
   private readonly temperatureFactor: number;
@@ -75,6 +84,11 @@ export class SimulatedAnnealing {
     this.temperatureFactor = Math.pow(totalTemperatureChange, 1 / this.steps);
 
     this.candidateModels = { ...this.generationSettings.models };
+    const maxWeight = Math.max(...Object.values(this.candidateModels));
+    const scaleFactor = 10 / maxWeight;
+    for (const model in this.candidateModels) {
+      this.candidateModels[model] *= scaleFactor;
+    }
 
     this.next(0, 1);
   }
@@ -95,35 +109,54 @@ export class SimulatedAnnealing {
       allowedModels[Math.floor(Math.random() * allowedModels.length)];
 
     const oldWeight = this.candidateModels[model];
+    const rand = Math.abs(randNormal());
     const mutation = Math.abs(
-      2.5 * randNormal() * (Math.exp(this.temperature / 5) - 1)
+      2.5 * rand * (Math.exp(this.temperature / 5) - 1)
     );
 
-    let newWeight: number = oldWeight;
-    const maxAddition = 10 - oldWeight;
-    const maxSubtraction = oldWeight;
+    const addWeight = oldWeight + mutation;
+    const subWeight = oldWeight - mutation;
+
+    const canAdd = addWeight <= 10;
+    const canSub = subWeight >= 0;
 
     if (Math.random() >= 0.5) {
-      // Add
-      if (mutation <= maxAddition) {
-        newWeight += mutation;
-      } else if (mutation <= maxSubtraction) {
-        newWeight -= mutation;
+      // add
+      if (canAdd) {
+        this.candidateModels[model] = addWeight;
+      } else if (canSub) {
+        const excess = addWeight - 10;
+        const chance = excess / mutation;
+        if (Math.random() <= chance) {
+          // sub instead
+          this.candidateModels[model] = subWeight;
+        } else {
+          this.candidateModels[model] = 10;
+        }
+      } else if (oldWeight >= 0.5) {
+        this.candidateModels[model] = 0;
       } else {
-        newWeight = 10;
+        this.candidateModels[model] = 10;
       }
     } else {
-      // Subtract
-      if (mutation <= maxSubtraction) {
-        newWeight -= mutation;
-      } else if (mutation >= maxAddition) {
-        newWeight += mutation;
+      // sub
+      if (canSub) {
+        this.candidateModels[model] = subWeight;
+      } else if (canSub) {
+        const excess = Math.abs(subWeight);
+        const chance = excess / mutation;
+        if (Math.random() <= chance) {
+          // add instead
+          this.candidateModels[model] = addWeight;
+        } else {
+          this.candidateModels[model] = 0;
+        }
+      } else if (oldWeight >= 0.5) {
+        this.candidateModels[model] = 0;
       } else {
-        newWeight = 0;
+        this.candidateModels[model] = 10;
       }
     }
-
-    this.candidateModels[model] = newWeight;
     console.log("Mutation: ", model, this.candidateModels[model] - oldWeight);
   }
 
@@ -179,13 +212,18 @@ export class SimulatedAnnealing {
 
     // Fire one current generation to make sure we don't overwrite the current models on the backend
     this.generationSettings.models = this.currentModels;
-    this.generationSettings.seed = undefined;
+    this.generationSettings.seed = this.trackerSeed;
     this.currentFetch = fetchTxtImgNode(
       saveStore.state,
       this.generationSettings,
-      this.rootNode
+      this.trackerNode
     );
-    pendingCurrent.push(await this.currentFetch);
+    const newTrackerNode = await this.currentFetch;
+    this.trackerNode.children.update((children) => [
+      ...children,
+      newTrackerNode,
+    ]);
+    this.trackerNode = newTrackerNode as any;
     if (!this.generating) return;
 
     for (const currentNode of pendingCurrent) {
@@ -224,11 +262,11 @@ export class SimulatedAnnealing {
         this.rootNode
       );
       const candidateNode = await this.currentFetch;
-      if (!this.generating) return;
       this.sampleStoreInternal.update((samples) => [
         ...samples,
         { current: currentNode, candidate: candidateNode },
       ]);
+      if (!this.generating) return;
     }
   }
 
