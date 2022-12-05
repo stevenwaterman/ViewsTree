@@ -9,17 +9,17 @@ import {
   generationSettingsStore,
   type GenerationSettings,
 } from "../state/settings";
+import { stateful, type Stateful } from "../utils";
 
 export class SimulatedAnnealing {
   private readonly generationSettings: GenerationSettings;
   private readonly modelsList: string[];
-  private readonly lruModels: string[];
   private readonly temperatureFactor: number;
   public readonly steps: number;
 
-  private readonly sampleStoreInternal: Writable<
-    { current: TxtImgNode; candidate: TxtImgNode }[]
-  > = writable([]);
+  private readonly sampleStoreInternal: Stateful<
+    Writable<{ current: TxtImgNode; candidate: TxtImgNode }[]>
+  > = stateful(writable([]));
 
   public readonly sampleStore: Readable<
     { current: TxtImgNode; candidate: TxtImgNode }[]
@@ -68,11 +68,6 @@ export class SimulatedAnnealing {
       .filter((entry) => entry[1] > 0)
       .map((entry) => entry[0]);
 
-    this.lruModels = [...this.modelsList]
-      .map((value) => ({ value, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .map(({ value }) => value);
-
     this.steps = stepsPerModel * this.modelsList.length;
     this.temperature = startTemperature;
 
@@ -80,13 +75,6 @@ export class SimulatedAnnealing {
     this.temperatureFactor = Math.pow(totalTemperatureChange, 1 / this.steps);
 
     this.candidateModels = { ...this.generationSettings.models };
-    for (const model in this.candidateModels) {
-      if (this.modelsList.includes(model)) {
-        this.candidateModels[model] = Math.random() * 10;
-      } else {
-        this.candidateModels[model] = 0;
-      }
-    }
 
     this.next(0, 1, 0);
   }
@@ -95,34 +83,67 @@ export class SimulatedAnnealing {
   private pickCandidate() {
     this.candidateModels = { ...this.currentModels };
 
-    const model =
-      this.lruModels[Math.floor(Math.random() * this.lruModels.length * 0.5)];
-    this.lruModels.splice(this.lruModels.indexOf(model), 1);
-    this.lruModels.push(model);
+    const originalModels: string[] = Object.entries(this.candidateModels)
+      .filter(([_, weight]) => weight > 0)
+      .map(([model, _]) => model);
 
-    let factorPower = randNormal();
-    if (factorPower > 0) factorPower += this.temperature / 10;
-    else factorPower -= this.temperature / 10;
-    factorPower *= this.temperature;
-    const modelFactor = Math.pow(1.2, factorPower);
+    const modelMutationChance = Math.exp(this.temperature / 12) - 1;
+    const modelsToMutate = this.modelsList.filter(
+      () => Math.random() < modelMutationChance
+    );
+    if (modelsToMutate.length === 0) {
+      const randomModel =
+        this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
+      modelsToMutate.push(randomModel);
+    }
 
-    this.candidateModels[model] *= modelFactor;
-    console.log("Mutation: ", model, modelFactor);
+    for (const model of modelsToMutate) {
+      const oldWeight = this.candidateModels[model];
+      let mutation = randNormal() * this.temperature;
+      if (oldWeight <= 0) mutation = Math.abs(mutation);
+      else if (oldWeight >= 10) mutation = -Math.abs(mutation);
 
-    const maxWeight = Math.max(...Object.values(this.candidateModels));
-    const scaleFactor = 10 / maxWeight;
+      const newWeight = this.candidateModels[model] + mutation;
+      this.candidateModels[model] = Math.max(0, Math.min(newWeight, 10));
+      console.log("Mutation: ", model, this.candidateModels[model] - oldWeight);
+    }
 
-    for (const model in this.candidateModels) {
-      this.candidateModels[model] *= scaleFactor;
+    const updatedModels: string[] = Object.entries(this.candidateModels)
+      .filter(([_, weight]) => weight > 0)
+      .map(([model, _]) => model);
+
+    if (updatedModels.length === 0) {
+      // All models are going to be disabled, enable one
+      const randomModel =
+        this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
+      this.candidateModels[randomModel] = Math.abs(
+        randNormal() * this.temperature
+      );
+    }
+
+    if (
+      updatedModels.length === 1 &&
+      originalModels.length === 1 &&
+      updatedModels[0] === originalModels[0]
+    ) {
+      // There was only one model and that's the one that got edited
+      // Which would change nothing after normalisation
+      const onlyModel = updatedModels[0];
+      const models = [...this.modelsList].filter(
+        (model) => model !== onlyModel
+      );
+      const randomModel = models[Math.floor(Math.random() * models.length)];
+      this.candidateModels[randomModel] = Math.abs(
+        randNormal() * this.temperature
+      );
     }
   }
 
   private getAcceptChance(
     currentScore: number,
     candidateScore: number,
-    skipped: number
+    totalRounds: number
   ) {
-    const totalRounds = currentScore + candidateScore + skipped;
     const currentWinFrac = currentScore / totalRounds;
     const candidateWinFrac = candidateScore / totalRounds;
     const winFracDifference = currentWinFrac - candidateWinFrac;
@@ -134,17 +155,18 @@ export class SimulatedAnnealing {
   private maybeAccept(
     currentScore: number,
     candidateScore: number,
-    skipped: number
-  ) {
+    totalRounds: number
+  ): boolean {
     if (candidateScore >= currentScore) {
       console.log("Better, accepting");
-      return this.accept();
+      this.accept();
+      return true;
     }
 
     const acceptChance = this.getAcceptChance(
       currentScore,
       candidateScore,
-      skipped
+      totalRounds
     );
 
     console.log(
@@ -157,7 +179,8 @@ export class SimulatedAnnealing {
 
     const accept = Math.random() <= acceptChance;
     console.log("Accepted: ", accept);
-    if (accept) return this.accept();
+    if (accept) this.accept();
+    return accept;
   }
 
   private accept() {
@@ -172,9 +195,40 @@ export class SimulatedAnnealing {
   private currentFetch: Promise<TxtImgNode> | undefined = undefined;
 
   /** Start generating sample images */
-  private async generateSamples() {
+  private async generateSamples(currentSamples: TxtImgNode[]) {
     this.generating = true;
+    this.generationSettings.steps = Math.round(50 / this.temperature);
 
+    let pendingCurrent: TxtImgNode[] = [...currentSamples];
+
+    // Fire one current generation to make sure we don't overwrite the current models on the backend
+    this.generationSettings.models = this.currentModels;
+    this.generationSettings.seed = undefined;
+    this.currentFetch = fetchTxtImgNode(
+      saveStore.state,
+      this.generationSettings,
+      this.rootNode
+    );
+    pendingCurrent.push(await this.currentFetch);
+    if (!this.generating) return;
+
+    for (const currentNode of pendingCurrent) {
+      this.generationSettings.models = this.candidateModels;
+      this.generationSettings.seed = currentNode.seed.actual;
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.rootNode
+      );
+      const candidateNode = await this.currentFetch;
+      if (!this.generating) return;
+      this.sampleStoreInternal.update((samples) => [
+        ...samples,
+        { current: currentNode, candidate: candidateNode },
+      ]);
+    }
+
+    // Used all premade nodes, start generating new ones
     while (true) {
       this.generationSettings.models = this.currentModels;
       this.generationSettings.seed = undefined;
@@ -202,45 +256,64 @@ export class SimulatedAnnealing {
     }
   }
 
-  async next(currentScore: number, candidateScore: number, skipped: number) {
+  async next(
+    currentScore: number,
+    candidateScore: number,
+    totalRounds: number
+  ) {
     if (this.iteration > this.steps) return;
 
     this.generating = false;
+
+    const remainingSamples = this.sampleStoreInternal.state.slice(
+      totalRounds + 1
+    );
     this.sampleStoreInternal.set([]);
 
     await this.currentFetch;
 
-    this.maybeAccept(currentScore, candidateScore, skipped);
+    const accepted = this.maybeAccept(
+      currentScore,
+      candidateScore,
+      totalRounds
+    );
     this.pickCandidate();
     console.log({
       current: this.currentModels,
       candidate: this.candidateModels,
     });
-    this.generateSamples();
+
+    const currentSamples: TxtImgNode[] = remainingSamples.map((sample) =>
+      accepted ? sample.candidate : sample.current
+    );
+    this.generateSamples(currentSamples);
 
     this.iteration++;
     this.temperature /= this.temperatureFactor;
   }
 
-  shouldStop(currentScore: number, candidateScore: number, skipped: number) {
-    const totalRounds = candidateScore + currentScore + skipped;
+  shouldStop(
+    currentScore: number,
+    candidateScore: number,
+    totalRounds: number
+  ) {
+    const maxRounds = 20 * Math.exp(-this.temperature / 3);
+    if (totalRounds >= maxRounds) return true;
 
-    // If new models are winning by 3, we are confident they will win and therefore will be accepted
-    if (totalRounds >= 5 && candidateScore - currentScore >= 3) return true;
+    const winRate = candidateScore / totalRounds;
 
-    // Requirement is higher to stop when old model is winning, because the fraction of votes won is important
-    if (currentScore - candidateScore >= 6) return true;
+    // Even if current wins every round, candidate still wins
+    if (maxRounds - totalRounds < candidateScore - currentScore) return true;
 
-    // That's pretty conclusive now
-    if (
-      totalRounds >= 6 &&
-      this.getAcceptChance(currentScore, candidateScore, skipped) < 0.05
-    )
-      return true;
+    // Mercy rule, candidate wins
+    const minWinRounds = 0.5 * Math.exp(3 / this.temperature);
+    const winReq = Math.exp(-0.02 * this.temperature) - 0.4;
+    if (totalRounds > minWinRounds && winRate >= winReq) return true;
 
-    // Give up, they're equal
-    const draw = 50 / this.temperature;
-    if (totalRounds >= draw) return true;
+    // Mergy rule, current wins
+    const minLoseRounds = Math.exp(3 / this.temperature);
+    const loseReq = Math.exp(0.04 * this.temperature) - 0.8;
+    if (totalRounds > minLoseRounds && winRate <= loseReq) return true;
 
     return false;
   }

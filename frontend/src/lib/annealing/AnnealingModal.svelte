@@ -42,8 +42,8 @@
   }
 
   function maybeNext() {
-    if (sa.shouldStop(currentScore, candidateScore, skipped)) {
-      sa.next(currentScore, candidateScore, skipped);
+    if (sa.shouldStop(currentScore, candidateScore, sampleIdx)) {
+      sa.next(currentScore, candidateScore, sampleIdx);
       currentScore = 0;
       candidateScore = 0;
       skipped = 0;
