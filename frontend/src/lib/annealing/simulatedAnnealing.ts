@@ -26,6 +26,8 @@ export class SimulatedAnnealing {
   private readonly temperatureFactor: number;
   public readonly steps: number;
 
+  private accepted: boolean = true;
+
   private readonly sampleStoreInternal: Stateful<
     Writable<{ current: TxtImgNode; candidate: TxtImgNode }[]>
   > = stateful(writable([]));
@@ -213,17 +215,25 @@ export class SimulatedAnnealing {
     // Fire one current generation to make sure we don't overwrite the current models on the backend
     this.generationSettings.models = this.currentModels;
     this.generationSettings.seed = this.trackerSeed;
+    const steps = this.generationSettings.steps;
+    if (!this.accepted) {
+      this.generationSettings.steps = 1;
+    }
     this.currentFetch = fetchTxtImgNode(
       saveStore.state,
       this.generationSettings,
       this.trackerNode
     );
     const newTrackerNode = await this.currentFetch;
-    this.trackerNode.children.update((children) => [
-      ...children,
-      newTrackerNode,
-    ]);
-    this.trackerNode = newTrackerNode as any;
+    if (this.accepted) {
+      this.trackerNode.children.update((children) => [
+        ...children,
+        newTrackerNode,
+      ]);
+      this.trackerNode = newTrackerNode as any;
+      this.generationSettings.steps = steps;
+    }
+
     if (!this.generating) return;
 
     for (const currentNode of pendingCurrent) {
@@ -262,11 +272,11 @@ export class SimulatedAnnealing {
         this.rootNode
       );
       const candidateNode = await this.currentFetch;
+      if (!this.generating) return;
       this.sampleStoreInternal.update((samples) => [
         ...samples,
         { current: currentNode, candidate: candidateNode },
       ]);
-      if (!this.generating) return;
     }
   }
 
@@ -281,7 +291,7 @@ export class SimulatedAnnealing {
 
     await this.currentFetch;
 
-    const accepted = this.maybeAccept(currentScore, candidateScore);
+    this.accepted = this.maybeAccept(currentScore, candidateScore);
     this.pickCandidate();
     console.log({
       current: this.currentModels,
@@ -289,7 +299,7 @@ export class SimulatedAnnealing {
     });
 
     const currentSamples: TxtImgNode[] = remainingSamples.map((sample) =>
-      accepted ? sample.candidate : sample.current
+      this.accepted ? sample.candidate : sample.current
     );
     this.generateSamples(currentSamples);
 

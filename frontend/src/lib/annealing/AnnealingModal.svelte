@@ -72,6 +72,7 @@
       currentScore = 0;
       candidateScore = 0;
       sampleIdx = 0;
+      swap = false;
     }
   }
 
