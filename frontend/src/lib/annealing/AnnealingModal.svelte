@@ -7,7 +7,7 @@
   import { generationSettingsStore } from "../state/settings";
   import { onDestroy } from "svelte";
 
-  let sa = new SimulatedAnnealing($generationSettingsStore, 5, 0.5, 5);
+  let sa = new SimulatedAnnealing($generationSettingsStore, 5, 1, 20);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
@@ -28,7 +28,7 @@
   let currentWinPercent: string;
   $: currentWinPercent = isNaN(currentWinRate)
     ? "0"
-    : ((100 * currentWinRate) / totalScore).toFixed(0);
+    : (100 * currentWinRate).toFixed(0);
 
   let temperatureStore: Readable<number>;
   $: temperatureStore = sa.temperatureStore;

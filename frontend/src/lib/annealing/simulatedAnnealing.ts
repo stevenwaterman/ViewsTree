@@ -83,60 +83,48 @@ export class SimulatedAnnealing {
   private pickCandidate() {
     this.candidateModels = { ...this.currentModels };
 
-    const originalModels: string[] = Object.entries(this.candidateModels)
-      .filter(([_, weight]) => weight > 0)
-      .map(([model, _]) => model);
-
-    const modelMutationChance = Math.exp(this.temperature / 12) - 1;
-    const modelsToMutate = this.modelsList.filter(
-      () => Math.random() < modelMutationChance
+    const activeModels = Object.entries(this.candidateModels)
+      .filter((model) => model[1] > 0)
+      .map((model) => model[0]);
+    const forbiddenModels = activeModels.length === 1 ? activeModels : [];
+    const allowedModels = this.modelsList.filter(
+      (model) => !forbiddenModels.includes(model)
     );
-    if (modelsToMutate.length === 0) {
-      const randomModel =
-        this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
-      modelsToMutate.push(randomModel);
+
+    const model =
+      allowedModels[Math.floor(Math.random() * allowedModels.length)];
+
+    const oldWeight = this.candidateModels[model];
+    const mutation = Math.abs(
+      2.5 * randNormal() * (Math.exp(this.temperature / 5) - 1)
+    );
+
+    let newWeight: number = oldWeight;
+    const maxAddition = 10 - oldWeight;
+    const maxSubtraction = oldWeight;
+
+    if (Math.random() >= 0.5) {
+      // Add
+      if (mutation <= maxAddition) {
+        newWeight += mutation;
+      } else if (mutation <= maxSubtraction) {
+        newWeight -= mutation;
+      } else {
+        newWeight = 10;
+      }
+    } else {
+      // Subtract
+      if (mutation <= maxSubtraction) {
+        newWeight -= mutation;
+      } else if (mutation >= maxAddition) {
+        newWeight += mutation;
+      } else {
+        newWeight = 0;
+      }
     }
 
-    for (const model of modelsToMutate) {
-      const oldWeight = this.candidateModels[model];
-      let mutation = randNormal() * this.temperature;
-      if (oldWeight <= 0) mutation = Math.abs(mutation);
-      else if (oldWeight >= 10) mutation = -Math.abs(mutation);
-
-      const newWeight = this.candidateModels[model] + mutation;
-      this.candidateModels[model] = Math.max(0, Math.min(newWeight, 10));
-      console.log("Mutation: ", model, this.candidateModels[model] - oldWeight);
-    }
-
-    const updatedModels: string[] = Object.entries(this.candidateModels)
-      .filter(([_, weight]) => weight > 0)
-      .map(([model, _]) => model);
-
-    if (updatedModels.length === 0) {
-      // All models are going to be disabled, enable one
-      const randomModel =
-        this.modelsList[Math.floor(Math.random() * this.modelsList.length)];
-      this.candidateModels[randomModel] = Math.abs(
-        randNormal() * this.temperature
-      );
-    }
-
-    if (
-      updatedModels.length === 1 &&
-      originalModels.length === 1 &&
-      updatedModels[0] === originalModels[0]
-    ) {
-      // There was only one model and that's the one that got edited
-      // Which would change nothing after normalisation
-      const onlyModel = updatedModels[0];
-      const models = [...this.modelsList].filter(
-        (model) => model !== onlyModel
-      );
-      const randomModel = models[Math.floor(Math.random() * models.length)];
-      this.candidateModels[randomModel] = Math.abs(
-        randNormal() * this.temperature
-      );
-    }
+    this.candidateModels[model] = newWeight;
+    console.log("Mutation: ", model, this.candidateModels[model] - oldWeight);
   }
 
   private getAcceptChance(currentScore: number, candidateScore: number) {
@@ -186,7 +174,6 @@ export class SimulatedAnnealing {
   /** Start generating sample images */
   private async generateSamples(currentSamples: TxtImgNode[]) {
     this.generating = true;
-    this.generationSettings.steps = Math.round(50 / this.temperature);
 
     let pendingCurrent: TxtImgNode[] = [...currentSamples];
 
