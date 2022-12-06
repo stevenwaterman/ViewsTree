@@ -7,7 +7,7 @@
   import { generationSettingsStore } from "../state/settings";
   import { onDestroy } from "svelte";
 
-  let sa = new SimulatedAnnealing($generationSettingsStore, 5, 1, 20);
+  let sa = new SimulatedAnnealing($generationSettingsStore, 6, 0.25, 20);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;

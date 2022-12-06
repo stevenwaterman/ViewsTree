@@ -45,7 +45,7 @@
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
-    else if (event.key === "s") modalComponent.open(AnnealingModal);
+    else if (event.key === "m") modalComponent.open(AnnealingModal);
     else if (
       event.key === "p" &&
       $selectedStore.type !== "Root" &&

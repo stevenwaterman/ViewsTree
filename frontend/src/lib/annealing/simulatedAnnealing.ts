@@ -215,22 +215,17 @@ export class SimulatedAnnealing {
     // Fire one current generation to make sure we don't overwrite the current models on the backend
     this.generationSettings.models = this.currentModels;
     this.generationSettings.seed = this.trackerSeed;
-    const steps = this.generationSettings.steps;
-    if (!this.accepted) {
-      this.generationSettings.steps = 1;
-    }
     this.currentFetch = fetchTxtImgNode(
       saveStore.state,
       this.generationSettings,
       this.trackerNode
     );
-    this.generationSettings.steps = steps;
     const newTrackerNode = await this.currentFetch;
+    this.trackerNode.children.update((children) => [
+      ...children,
+      newTrackerNode,
+    ]);
     if (this.accepted) {
-      this.trackerNode.children.update((children) => [
-        ...children,
-        newTrackerNode,
-      ]);
       this.trackerNode = newTrackerNode as any;
     }
 
