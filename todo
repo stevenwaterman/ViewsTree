@@ -19,4 +19,5 @@ save config
 save mixed model
 phrase list / templating in prompts
 do annealing to prompt & scale too
-SA should pick candidates more cleverly, bias towards trying new things
+longer prompts
+don't break when the prompt is too long
