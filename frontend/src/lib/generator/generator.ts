@@ -42,7 +42,10 @@ let queue: GenerationRequest[] = [];
 function fireRequest() {
   if (running) return;
   if (queue.length === 0) return;
-  queue[0].fire();
+  queue[0].fire().finally(() => {
+    running = false;
+    fireRequest();
+  });
 }
 
 function addToQueue<T extends BranchNode>(
@@ -86,9 +89,6 @@ function addToQueue<T extends BranchNode>(
         running: false,
       }));
     }
-
-    running = false;
-    fireRequest();
   };
 
   const modelsPairs = Object.entries(models).filter((entry) => entry[1] !== 0);

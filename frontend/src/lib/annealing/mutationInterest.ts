@@ -84,11 +84,8 @@ export class MutationInterest {
     const newWeight = accepted ? candidateWeight : currentWeight;
 
     const draw = beta(score, 10, 10) / beta(0.5, 10, 10);
-    const winBase = score >= 1 ? 1 : beta(score, 3, 1) / 3;
-    const loseBase = score <= 1 ? 0 : beta(score, 1, 3) / 3;
-
-    const win = Math.max(0, winBase - loseBase);
-    const lose = Math.max(0, loseBase - winBase);
+    const win = score >= 1 ? 1 : beta(score, 3, 1) / 3;
+    const lose = score <= 1 ? 0 : beta(score, 1, 3) / 3;
 
     const drawFactor = Math.pow(2, draw);
     const drawRelevancePeak = (currentWeight + candidateWeight) / 2;
