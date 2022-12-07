@@ -61,6 +61,7 @@
 
 <Modal
   show={$modalComponent}
+  closeOnOuterClick={false}
   styleWindow={{ width: "fit-content", height: "fit-content" }}
 >
   <div class="topGrid">
