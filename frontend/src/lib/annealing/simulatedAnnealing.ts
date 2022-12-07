@@ -340,7 +340,7 @@ export class SimulatedAnnealing {
 
     // Even if the candidate loses every remaining round, they'd win
     const worstCaseAcceptChance = this.getAcceptChance(
-      candidateScore / totalRounds
+      candidateScore / maxRounds
     );
     if (worstCaseAcceptChance >= 1) {
       console.log("Candidate won early");
@@ -349,7 +349,7 @@ export class SimulatedAnnealing {
 
     // Even if the candidate wins every remaining round, there's less than a 1% chance of acceptance
     const bestCaseAcceptChance = this.getAcceptChance(
-      (candidateScore + remainingRounds) / totalRounds
+      (candidateScore + remainingRounds) / maxRounds
     );
     if (bestCaseAcceptChance <= 0.01) {
       console.log("Current won early");

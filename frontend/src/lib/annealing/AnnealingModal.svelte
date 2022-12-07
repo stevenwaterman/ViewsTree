@@ -66,6 +66,9 @@
   }
 
   function maybeNext() {
+    if (swap) {
+      disableSwap = true;
+    }
     spacePresses = 0;
     sampleIdx++;
     if (sa.shouldStop(currentScore, candidateScore)) {
@@ -74,9 +77,6 @@
       candidateScore = 0;
       sampleIdx = 0;
 
-      if (swap) {
-        disableSwap = true;
-      }
       swap = false;
     }
   }
