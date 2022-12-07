@@ -1,16 +1,8 @@
 import { writable, type Readable, type Writable } from "svelte/store";
+import { queueTxtImg } from "../generator/generator";
 import { saveStore } from "../persistence/saves";
-import type { AnyNode, BranchNode } from "../state/nodeTypes/nodes";
-import {
-  createRootNode,
-  rootNodeStore,
-  type RootNode,
-} from "../state/nodeTypes/rootNodes";
-import {
-  fetchTxtImgNode,
-  type TxtImgNode,
-} from "../state/nodeTypes/txtImgNodes";
-import { selectedStore } from "../state/selected";
+import { createRootNode, rootNodeStore, type RootNode } from "../state/nodeTypes/rootNodes";
+import { fetchTxtImgNode, type TxtImgNode } from "../state/nodeTypes/txtImgNodes";
 import {
   generationSettingsStore,
   type GenerationSettings,
@@ -19,6 +11,29 @@ import { stateful, type Stateful } from "../utils";
 import { MutationInterest } from "./mutationInterest";
 
 export class SimulatedAnnealing {
+  private static instance: SimulatedAnnealing | undefined = undefined;
+
+  public static create(
+    generationSettings: GenerationSettings,
+    startTemperature: number,
+    endTemperature: number,
+    stepsPerModel: number
+  ): SimulatedAnnealing {
+    if (this.instance === undefined) {
+      this.instance = new SimulatedAnnealing(
+        generationSettings,
+        startTemperature,
+        endTemperature,
+        stepsPerModel
+      );
+    }
+    return this.instance;
+  }
+
+  public static get(): SimulatedAnnealing {
+    return this.instance!;
+  }
+
   private currentTrackerNode: TxtImgNode = rootNodeStore.state as any;
   private candidateTrackerNode: TxtImgNode;
   private readonly trackerSeed: number;

@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { SimulatedAnnealing } from "./simulatedAnnealing";
   import type { Readable } from "svelte/store";
   import { imageUrl } from "../generator/generator";
   import { saveStore } from "../persistence/saves";
   import type { TxtImgNode } from "../state/nodeTypes/txtImgNodes";
   import { generationSettingsStore } from "../state/settings";
   import { onDestroy } from "svelte";
+  import { SimulatedAnnealing } from "./simulatedAnnealing";
 
-  let sa = new SimulatedAnnealing($generationSettingsStore, 6, 0.25, 20);
+  let sa: SimulatedAnnealing;
+  $: sa = SimulatedAnnealing.create($generationSettingsStore, 6, 0.25, 5);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
