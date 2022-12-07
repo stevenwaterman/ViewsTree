@@ -73,14 +73,19 @@
       currentScore = 0;
       candidateScore = 0;
       sampleIdx = 0;
+
+      if (swap) {
+        disableSwap = true;
+      }
       swap = false;
     }
   }
 
+  let disableSwap: boolean = false;
   let swap: boolean = false;
 
   function keydown(event: KeyboardEvent) {
-    if (!swap && event.code === "Space") {
+    if (!disableSwap && !swap && event.code === "Space") {
       swap = true;
       spacePresses++;
     }
@@ -89,6 +94,7 @@
   function keyup(event: KeyboardEvent) {
     if (event.code === "Space") {
       swap = false;
+      disableSwap = false;
     }
   }
 
