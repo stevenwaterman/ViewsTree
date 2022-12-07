@@ -220,11 +220,11 @@ export class SimulatedAnnealing {
 
       if ((this.currentTrackerNode.type as string) !== "Root") {
         this.sampleStoreInternal.update((samples) => [
+          ...samples,
           {
             current: this.currentTrackerNode,
             candidate: this.candidateTrackerNode,
           },
-          ...samples,
         ]);
       }
     }
