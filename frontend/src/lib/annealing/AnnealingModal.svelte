@@ -8,7 +8,7 @@
   import { SimulatedAnnealing } from "./simulatedAnnealing";
 
   let sa: SimulatedAnnealing;
-  $: sa = SimulatedAnnealing.create($generationSettingsStore, 6, 0.25, 5);
+  $: sa = SimulatedAnnealing.create($generationSettingsStore, 5, 0.25, 8);
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;

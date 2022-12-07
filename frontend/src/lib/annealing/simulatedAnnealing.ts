@@ -1,8 +1,15 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 import { queueTxtImg } from "../generator/generator";
 import { saveStore } from "../persistence/saves";
-import { createRootNode, rootNodeStore, type RootNode } from "../state/nodeTypes/rootNodes";
-import { fetchTxtImgNode, type TxtImgNode } from "../state/nodeTypes/txtImgNodes";
+import {
+  createRootNode,
+  rootNodeStore,
+  type RootNode,
+} from "../state/nodeTypes/rootNodes";
+import {
+  fetchTxtImgNode,
+  type TxtImgNode,
+} from "../state/nodeTypes/txtImgNodes";
 import {
   generationSettingsStore,
   type GenerationSettings,
@@ -167,30 +174,58 @@ export class SimulatedAnnealing {
       (sample) => sample.seed.actual !== this.trackerSeed
     );
 
-    // Fire one current generation to make sure we don't overwrite the current models on the backend
-    this.generationSettings.models = this.currentModels;
-    this.generationSettings.seed = this.trackerSeed;
-    this.currentFetch = fetchTxtImgNode(
-      saveStore.state,
-      this.generationSettings,
-      this.currentTrackerNode as any
-    );
-    this.candidateTrackerNode = await this.currentFetch;
-    this.currentTrackerNode.children.update((children) => [
-      ...children,
-      this.candidateTrackerNode as any,
-    ]);
-    saveStore.save();
-    if (!this.generating) return;
-
-    if ((this.currentTrackerNode.type as string) !== "Root") {
-      this.sampleStoreInternal.update((samples) => [
-        {
-          current: this.currentTrackerNode,
-          candidate: this.candidateTrackerNode,
-        },
-        ...samples,
+    if (this.accepted) {
+      this.generationSettings.models = this.currentModels;
+      this.generationSettings.seed = this.trackerSeed;
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.rootNode
+      );
+      this.candidateTrackerNode = await this.currentFetch;
+      this.currentTrackerNode.children.update((children) => [
+        ...children,
+        this.candidateTrackerNode as any,
       ]);
+      saveStore.save();
+      if (!this.generating) return;
+    } else {
+      // Fire one current generation to make sure we don't overwrite the current models on the backendw
+      this.generationSettings.models = this.currentModels;
+      this.generationSettings.seed = undefined;
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.rootNode
+      );
+      pendingCurrent.push(await this.currentFetch);
+      saveStore.save();
+      if (!this.generating) return;
+
+      this.generationSettings.models = this.candidateModels;
+      this.generationSettings.seed = this.trackerSeed;
+      this.currentFetch = fetchTxtImgNode(
+        saveStore.state,
+        this.generationSettings,
+        this.currentTrackerNode as any
+      );
+      this.candidateTrackerNode = await this.currentFetch;
+      this.currentTrackerNode.children.update((children) => [
+        ...children,
+        this.candidateTrackerNode as any,
+      ]);
+      saveStore.save();
+      if (!this.generating) return;
+
+      if ((this.currentTrackerNode.type as string) !== "Root") {
+        this.sampleStoreInternal.update((samples) => [
+          {
+            current: this.currentTrackerNode,
+            candidate: this.candidateTrackerNode,
+          },
+          ...samples,
+        ]);
+      }
     }
 
     for (const currentNode of pendingCurrent) {
@@ -239,6 +274,8 @@ export class SimulatedAnnealing {
     }
   }
 
+  private accepted: boolean = true;
+
   async next(currentScore: number, candidateScore: number) {
     this.generating = false;
     if (this.iteration > this.steps) return;
@@ -248,7 +285,7 @@ export class SimulatedAnnealing {
     this.sampleStoreInternal.set([]);
 
     const score = candidateScore / (currentScore + candidateScore);
-    const accepted = this.shouldAccept(score);
+    this.accepted = this.shouldAccept(score);
 
     if (this.mutation !== undefined) {
       const model = this.mutation.model;
@@ -257,17 +294,17 @@ export class SimulatedAnnealing {
         this.currentModels[model],
         this.candidateModels[model],
         score,
-        accepted,
+        this.accepted,
         this.temperature
       );
     }
 
     this.mutation = this.mutationInterest.random();
-    this.updateModels(accepted);
+    this.updateModels(this.accepted);
 
     console.log(
       "Accepted:",
-      accepted,
+      this.accepted,
       "Mutation:",
       this.mutation.model,
       this.currentModels[this.mutation.model],
@@ -276,9 +313,9 @@ export class SimulatedAnnealing {
     );
 
     const currentSamples: TxtImgNode[] = remainingSamples.map((sample) =>
-      accepted ? sample.candidate : sample.current
+      this.accepted ? sample.candidate : sample.current
     );
-    if (accepted && this.candidateTrackerNode !== undefined) {
+    if (this.accepted && this.candidateTrackerNode !== undefined) {
       this.currentTrackerNode = this.candidateTrackerNode;
     }
 
