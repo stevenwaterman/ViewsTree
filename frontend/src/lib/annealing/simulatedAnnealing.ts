@@ -187,6 +187,7 @@ export class SimulatedAnnealing {
         ...children,
         this.candidateTrackerNode as any,
       ]);
+      pendingCurrent.push(this.candidateTrackerNode);
       saveStore.save();
       if (!this.generating) return;
     } else {
