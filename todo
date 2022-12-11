@@ -21,3 +21,4 @@ phrase list / templating in prompts
 do annealing to prompt & scale too
 longer prompts
 don't break when the prompt is too long
+be more likely to accept worse

@@ -27,13 +27,9 @@ export class MutationInterest {
     const modelWeights = Object.entries(this.modelInterest);
     const modelIdx: number = weightedRandom(modelWeights, (model) => model[1]);
     const model: string = modelWeights[modelIdx][0];
-    console.log(this.modelInterest, model);
 
     const mutationWeights: number[] = this.mutationInterest[model];
-    const mutationIdx: number = weightedRandom(mutationWeights);
-    const weight = mutationIdx / 10;
-    console.log(mutationWeights, mutationIdx);
-
+    const weight: number = weightedRandom(mutationWeights);
     return { model, weight };
   }
 
@@ -87,45 +83,45 @@ export class MutationInterest {
     const win = score >= 1 ? 1 : beta(score, 3, 1) / 3;
     const lose = score <= 1 ? 0 : beta(score, 1, 3) / 3;
 
-    const drawFactor = Math.pow(2, draw);
+    const drawFactor = Math.pow(/* 2 */ 1, draw); // Disabled, replaced with NN on backend
     const drawRelevancePeak = (currentWeight + candidateWeight) / 2;
-    const drawVariance = temperature * 0.25;
+    const drawVariance = temperature * 2.5;
     const drawImpactCalc = new PartialImpactCalculator(
       drawFactor,
       drawRelevancePeak,
       drawVariance
     );
 
-    const winFactor = Math.pow(3, win);
+    const winFactor = Math.pow(/* 3 */ 1, win); // Disabled, replaced with NN on backend
     const winRelevancePeak = candidateWeight + weightDelta;
-    const winVariance = temperature * 0.5;
+    const winVariance = temperature * 5;
     const winImpactCalc = new PartialImpactCalculator(
       winFactor,
       winRelevancePeak,
       winVariance
     );
 
-    const loseFactor = Math.pow(3, lose);
+    const loseFactor = Math.pow(/* 3 */ 1, lose); // Disabled, replaced with NN on backend
     const loseRelevancePeak = currentWeight - weightDelta;
-    const loseVariance = temperature * 0.5;
+    const loseVariance = temperature * 5;
     const loseImpactCalc = new PartialImpactCalculator(
       loseFactor,
       loseRelevancePeak,
       loseVariance
     );
 
-    const nearCandidateFactor = 0.8;
+    const nearCandidateFactor = 0.01;
     const nearCandidateRelevancePeak = candidateWeight;
-    const nearCandidateVariance = temperature * 0.2;
+    const nearCandidateVariance = temperature * 2;
     const nearCandidateImpactCalc = new PartialImpactCalculator(
       nearCandidateFactor,
       nearCandidateRelevancePeak,
       nearCandidateVariance
     );
 
-    const nearNewFactor = 0.01;
+    const nearNewFactor = 0.7;
     const nearNewRelevancePeak = newWeight;
-    const nearNewVariance = temperature * 0.2;
+    const nearNewVariance = temperature * 2;
     const nearNewImpactCalc = new PartialImpactCalculator(
       nearNewFactor,
       nearNewRelevancePeak,
@@ -134,7 +130,7 @@ export class MutationInterest {
 
     const farFactor = 0.1;
     const farRelevancePeak = newWeight;
-    const farVariance = temperature * 1.5;
+    const farVariance = temperature * 15;
     const farImpactCalc = new PartialImpactCalculator(
       farFactor,
       farRelevancePeak,
@@ -143,9 +139,7 @@ export class MutationInterest {
     );
 
     this.mutationInterest[model] = this.mutationInterest[model].map(
-      (interest, idx) => {
-        const weight = idx / 10;
-
+      (interest, weight) => {
         const drawImpact = drawImpactCalc.on(weight);
         const winImpact = winImpactCalc.on(weight);
         const loseImpact = loseImpactCalc.on(weight);

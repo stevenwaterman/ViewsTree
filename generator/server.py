@@ -2,10 +2,8 @@ import os
 from pipeline import Pipeline
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
-import torch
 from PIL import Image
-
-torch.set_grad_enabled(False)
+from modelMergePredictor import ModelMergeNetwork
 
 if not os.path.exists("../data"):
     os.mkdir("../data")
@@ -185,3 +183,60 @@ def thumb(save_name, run_id):
 @app.route("/models", methods=["GET"])
 def models():
   return pipe.models()
+
+mergeNetwork = None
+@app.route("/prior", methods=["PUT"])
+def prior():
+  json = request.get_json(force=True)
+  models = json.get("models", None)
+
+  if models is None:
+    return "Missing `models`", 400
+
+  global mergeNetwork
+  mergeNetwork = ModelMergeNetwork(models)
+
+  print("created prior")
+  return "success"
+
+
+@app.route("/prior/next", methods=["POST"])
+def prior_next():
+  json = request.get_json(force=True)
+
+  current = json.get("current", None)
+  if current is None:
+    return "Missing `current`", 400
+
+  mutations = json.get("mutations", None)
+  if mutations is None:
+    return "Missing `mutations`", 400
+
+  global mergeNetwork
+  bestMutation = mergeNetwork.bestMutation(current, mutations)
+
+  print("inferred prior")
+  return bestMutation
+
+
+@app.route("/prior/train", methods=["POST"])
+def prior_train():
+  json = request.get_json(force=True)
+
+  current = json.get("current", None)
+  if current is None:
+    return "Missing `current`", 400
+
+  mutation = json.get("mutation", None)
+  if mutation is None:
+    return "Missing `mutation`", 400
+
+  score = json.get("score", None)
+  if score is None:
+    return "Missing `score`", 400
+
+  global mergeNetwork
+  mergeNetwork.train(current, mutation, score)
+
+  print("trained prior")
+  return "success"

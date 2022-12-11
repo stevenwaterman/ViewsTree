@@ -3,12 +3,9 @@
   import { imageUrl } from "../generator/generator";
   import { saveStore } from "../persistence/saves";
   import type { TxtImgNode } from "../state/nodeTypes/txtImgNodes";
-  import { generationSettingsStore } from "../state/settings";
-  import { onDestroy } from "svelte";
-  import { SimulatedAnnealing } from "./simulatedAnnealing";
+  import type { SimulatedAnnealing } from "./simulatedAnnealing";
 
-  let sa: SimulatedAnnealing;
-  $: sa = SimulatedAnnealing.create($generationSettingsStore, 5, 0.25, 8);
+  export let sa: SimulatedAnnealing;
 
   let samplesStore: Readable<{ current: TxtImgNode; candidate: TxtImgNode }[]>;
   $: samplesStore = sa.sampleStore;
@@ -68,6 +65,7 @@
   function maybeNext() {
     if (swap) {
       disableSwap = true;
+      swap = false;
     }
     spacePresses = 0;
     sampleIdx++;
@@ -76,8 +74,6 @@
       currentScore = 0;
       candidateScore = 0;
       sampleIdx = 0;
-
-      swap = false;
     }
   }
 
@@ -97,10 +93,6 @@
       disableSwap = false;
     }
   }
-
-  onDestroy(() => {
-    sa.stop();
-  });
 </script>
 
 <svelte:body on:keydown={keydown} on:keyup={keyup} />

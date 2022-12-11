@@ -20,12 +20,12 @@ import { MutationInterest } from "./mutationInterest";
 export class SimulatedAnnealing {
   private static instance: SimulatedAnnealing | undefined = undefined;
 
-  public static create(
+  public static async create(
     generationSettings: GenerationSettings,
     startTemperature: number,
     endTemperature: number,
     stepsPerModel: number
-  ): SimulatedAnnealing {
+  ): Promise<SimulatedAnnealing> {
     if (this.instance === undefined) {
       this.instance = new SimulatedAnnealing(
         generationSettings,
@@ -33,7 +33,15 @@ export class SimulatedAnnealing {
         endTemperature,
         stepsPerModel
       );
+
+      await fetch(`http://localhost:5001/prior`, {
+        method: "PUT",
+        body: JSON.stringify({ models: this.instance.modelsList }),
+      });
+
+      this.instance.next(0, 1);
     }
+
     return this.instance;
   }
 
@@ -114,7 +122,7 @@ export class SimulatedAnnealing {
 
     this.candidateModels = { ...this.generationSettings.models };
     const maxWeight = Math.max(...Object.values(this.candidateModels));
-    const scaleFactor = 10 / maxWeight;
+    const scaleFactor = 100 / maxWeight;
     for (const model in this.candidateModels) {
       this.candidateModels[model] *= scaleFactor;
     }
@@ -123,8 +131,6 @@ export class SimulatedAnnealing {
       this.candidateModels,
       this.temperature
     );
-
-    this.next(0, 1);
   }
 
   private getAcceptChance(candidateWinFrac: number) {
@@ -147,20 +153,6 @@ export class SimulatedAnnealing {
     console.log("Score", score, (acceptChance * 100).toFixed(0), "%");
 
     return Math.random() <= acceptChance;
-  }
-
-  private updateModels(accepted) {
-    if (accepted) {
-      this.currentModels = { ...this.candidateModels };
-      generationSettingsStore.update((state) => ({
-        ...state,
-        models: this.currentModels,
-      }));
-    } else {
-      this.candidateModels = { ...this.currentModels };
-    }
-
-    this.candidateModels[this.mutation.model] = this.mutation.weight;
   }
 
   private generating: boolean = false;
@@ -298,15 +290,45 @@ export class SimulatedAnnealing {
         this.accepted,
         this.temperature
       );
+
+      await fetch("http://localhost:5001/prior/train", {
+        method: "POST",
+        body: JSON.stringify({
+          current: this.currentModels,
+          mutation: this.mutation,
+          score,
+        }),
+      });
     }
 
-    this.mutation = this.mutationInterest.random();
-    this.updateModels(this.accepted);
+    if (this.accepted) {
+      this.currentModels = { ...this.candidateModels };
+      generationSettingsStore.update((state) => ({
+        ...state,
+        models: this.currentModels,
+      }));
+    } else {
+      this.candidateModels = { ...this.currentModels };
+    }
+
+    const potentialMutations: Array<{ model: string; weight: number }> = [];
+    for (let i = 0; i < 100; i++) {
+      potentialMutations.push(this.mutationInterest.random());
+    }
+    this.mutation = await fetch("http://localhost:5001/prior/next", {
+      method: "POST",
+      body: JSON.stringify({
+        current: this.currentModels,
+        mutations: potentialMutations,
+      }),
+    }).then((res) => res.json());
+
+    this.candidateModels[this.mutation.model] = this.mutation.weight;
 
     console.log(
       "Accepted:",
       this.accepted,
-      "Mutation:",
+      "Next Mutation:",
       this.mutation.model,
       this.currentModels[this.mutation.model],
       "to",

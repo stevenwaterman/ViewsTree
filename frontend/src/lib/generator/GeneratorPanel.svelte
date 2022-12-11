@@ -20,8 +20,7 @@
       label={model}
       id={`model_${model}_slider`}
       min={0}
-      max={10}
-      step={0.1}
+      max={100}
       bind:value={$generationSettingsStore.models[model]}
       disabled={$generationSettingsStore.lockModels}
     />
