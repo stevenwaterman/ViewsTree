@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from random import random
 
+possible_weights = range(101)
 class ModelMergeNetwork(nn.Module):
   def __init__(self, model_names):
     self.model_names = model_names
@@ -20,7 +21,7 @@ class ModelMergeNetwork(nn.Module):
     self.training_data = []
     self.optimizer = torch.optim.Adam(self.parameters(), lr=0.1)
     self.loss_fn = nn.MSELoss()
-    self.init_draws()
+    # self.init_draws()
 
   def init_draws(self):
     optimizer = torch.optim.Adam(self.parameters(), lr=0.05)
@@ -69,6 +70,7 @@ class ModelMergeNetwork(nn.Module):
   def _train(self, inputs, outputs, optimizer):
     pred = self(inputs)
     loss = self.loss_fn(pred, outputs)
+    print(loss.item())
     
     optimizer.zero_grad()
     loss.backward()
@@ -76,30 +78,27 @@ class ModelMergeNetwork(nn.Module):
 
     return loss.item()
 
-  def bestMutation(self, current_models, possible_mutations):
+  def mutationScores(self, current_models):
     current_inputs = []
     for model in self.model_names:
       current_inputs.append(current_models.get(model, 0))
 
-    print(current_models)
-    print(self.model_names)
-
     current_sum = sum(current_inputs)
     scaled_current_inputs = [x / current_sum for x in current_inputs]
 
-    mutations = []
-    for mutation in possible_mutations:
-      model = mutation["model"]
-      weight = mutation["weight"]
-      idx = self.model_names.index(model)
+    mutations = {}
+    for model in self.model_names:
+      mutations[model] = []
+      for weight in possible_weights:
+        idx = self.model_names.index(model)
 
-      candidate_inputs = current_inputs.copy()
-      candidate_inputs[idx] = weight
-      candidate_sum = current_sum - current_inputs[idx] + candidate_inputs[idx]
-      scaled_candidate_inputs = [x / candidate_sum for x in candidate_inputs]
-      inputs = torch.tensor(scaled_current_inputs + scaled_candidate_inputs, dtype=torch.float).to("cuda")
-      pred_score = self(inputs).item()
-      mutations.append({ "model": model, "weight": weight, "score": pred_score })
+        candidate_inputs = current_inputs.copy()
+        candidate_inputs[idx] = weight
+        candidate_sum = current_sum - current_inputs[idx] + candidate_inputs[idx]
+        scaled_candidate_inputs = [x / candidate_sum for x in candidate_inputs]
+        inputs = torch.tensor(scaled_current_inputs + scaled_candidate_inputs, dtype=torch.float).to("cuda")
+        pred_score = self(inputs).item()
+        mutations[model].append(pred_score)
 
-    return max(mutations, key=lambda x: x["score"])
+    return mutations
 

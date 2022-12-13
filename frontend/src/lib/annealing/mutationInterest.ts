@@ -23,6 +23,16 @@ export class MutationInterest {
     }
   }
 
+  getInterest(): Record<string, number[]> {
+    const interest: Record<string, number[]> = {};
+    for (const model in this.modelInterest) {
+      const scaleFactor = this.modelInterest[model];
+      const weightInterest = this.mutationInterest[model];
+      interest[model] = weightInterest.map((x) => x * scaleFactor);
+    }
+    return interest;
+  }
+
   random(): { model: string; weight: number } {
     const modelWeights = Object.entries(this.modelInterest);
     const modelIdx: number = weightedRandom(modelWeights, (model) => model[1]);
@@ -64,7 +74,7 @@ export class MutationInterest {
   private adjustModelInterest(recentModel: string) {
     for (const model in this.modelInterest) {
       if (model === recentModel) this.modelInterest[model] = 1;
-      else this.modelInterest[model]++;
+      else this.modelInterest[model] *= 1.5;
     }
   }
 

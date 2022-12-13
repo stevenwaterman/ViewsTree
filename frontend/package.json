@@ -13,6 +13,7 @@
     "@accuser/svelte-store-array": "^0.4.0",
     "@sveltejs/vite-plugin-svelte": "^1.0.2",
     "@tsconfig/svelte": "^3.0.0",
+    "@types/colormap": "^2.3.1",
     "svelte": "^3.49.0",
     "svelte-check": "^2.8.1",
     "svelte-preprocess": "^4.10.7",
@@ -23,6 +24,7 @@
   "dependencies": {
     "@stdlib/stats-base-dists-beta-pdf": "^0.0.7",
     "@stdlib/stats-base-dists-normal-pdf": "^0.0.7",
+    "colormap": "^2.3.2",
     "panzoom": "^9.4.3",
     "svelte-simple-modal": "^1.4.1"
   }

@@ -3,6 +3,7 @@
   import { imageUrl } from "../generator/generator";
   import { saveStore } from "../persistence/saves";
   import type { TxtImgNode } from "../state/nodeTypes/txtImgNodes";
+  import { generationSettingsStore } from "../state/settings";
   import type { SimulatedAnnealing } from "./simulatedAnnealing";
 
   export let sa: SimulatedAnnealing;
@@ -115,13 +116,30 @@
       src={imageUrl($saveStore, $samplesStore[sampleIdx].candidate)}
       on:click={preferCandidate}
     />
-
-    <button on:click={skip} on:keypress|preventDefault on:keydown|preventDefault
-      >Skip</button
-    >
-  {:else}
-    <p style="grid-column: span 2">Generating images...</p>
   {/if}
+
+  <!-- svelte-ignore a11y-missing-attribute -->
+  <div
+    class="fakeImage current"
+    style={`width: ${$generationSettingsStore.width}px; height: ${$generationSettingsStore.height}px;`}
+  >
+    Generating...
+  </div>
+
+  <!-- svelte-ignore a11y-missing-attribute -->
+  <div
+    class="fakeImage candidate"
+    style={`width: ${$generationSettingsStore.width}px; height: ${$generationSettingsStore.height}px;`}
+  >
+    Generating...
+  </div>
+
+  <button
+    disabled={!$samplesStore[sampleIdx]}
+    on:click={skip}
+    on:keypress|preventDefault
+    on:keydown|preventDefault>Skip</button
+  >
 </div>
 
 <style>
@@ -148,5 +166,32 @@
 
   img {
     cursor: pointer;
+    z-index: 1;
+  }
+
+  .fakeImage {
+    background: repeating-conic-gradient(
+        var(--border) 0% 25%,
+        var(--bgDark) 0% 50%
+      )
+      50% / 32px 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    user-select: none;
+    color: white;
+    font-weight: bold;
+    z-index: 0;
+  }
+
+  .candidate {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .current {
+    grid-row: 1;
+    grid-column: 1;
   }
 </style>

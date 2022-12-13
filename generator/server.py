@@ -200,23 +200,19 @@ def prior():
   return "success"
 
 
-@app.route("/prior/next", methods=["POST"])
-def prior_next():
+@app.route("/prior/scores", methods=["POST"])
+def prior_scores():
   json = request.get_json(force=True)
 
   current = json.get("current", None)
   if current is None:
     return "Missing `current`", 400
 
-  mutations = json.get("mutations", None)
-  if mutations is None:
-    return "Missing `mutations`", 400
-
   global mergeNetwork
-  bestMutation = mergeNetwork.bestMutation(current, mutations)
+  scores = mergeNetwork.mutationScores(current)
 
   print("inferred prior")
-  return bestMutation
+  return scores
 
 
 @app.route("/prior/train", methods=["POST"])

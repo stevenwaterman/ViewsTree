@@ -69,6 +69,20 @@ export class SimulatedAnnealing {
     { current: TxtImgNode; candidate: TxtImgNode }[]
   > = this.sampleStoreInternal;
 
+  private readonly predictedScoresStoreInternal: Writable<
+    Record<string, number[]>
+  > = writable({});
+
+  public readonly predictedScoresStore: Readable<Record<string, number[]>> =
+    this.predictedScoresStoreInternal;
+
+  private readonly mutationInterestStoreInternal: Writable<
+    Record<string, number[]>
+  > = writable({});
+
+  public readonly mutationInterestStore: Readable<Record<string, number[]>> =
+    this.mutationInterestStoreInternal;
+
   private _iteration: number = 0;
   private _iterationStore: Writable<number> = writable(0);
   public get iteration(): number {
@@ -98,6 +112,16 @@ export class SimulatedAnnealing {
   private currentModels: Record<string, number> = {};
   private candidateModels: Record<string, number> = {};
 
+  private currentModelsStoreInternal: Writable<Record<string, number>> =
+    writable({});
+  public currentModelsStore: Readable<Record<string, number>> =
+    this.currentModelsStoreInternal;
+
+  private candidateModelsStoreInternal: Writable<Record<string, number>> =
+    writable({});
+  public candidateModelsStore: Readable<Record<string, number>> =
+    this.candidateModelsStoreInternal;
+
   private rootNode: RootNode = createRootNode();
 
   constructor(
@@ -122,9 +146,13 @@ export class SimulatedAnnealing {
 
     this.candidateModels = { ...this.generationSettings.models };
     const maxWeight = Math.max(...Object.values(this.candidateModels));
-    const scaleFactor = 100 / maxWeight;
-    for (const model in this.candidateModels) {
-      this.candidateModels[model] *= scaleFactor;
+    if (maxWeight > 0) {
+      const scaleFactor = 100 / maxWeight;
+      for (const model in this.candidateModels) {
+        this.candidateModels[model] = Math.round(
+          this.candidateModels[model] * scaleFactor
+        );
+      }
     }
 
     this.mutationInterest = new MutationInterest(
@@ -307,23 +335,50 @@ export class SimulatedAnnealing {
         ...state,
         models: this.currentModels,
       }));
+      this.currentModelsStoreInternal.set(this.currentModels);
     } else {
       this.candidateModels = { ...this.currentModels };
     }
 
+    const predictedScores: Record<string, number[]> = await fetch(
+      "http://localhost:5001/prior/scores",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          current: this.currentModels,
+        }),
+      }
+    ).then((res) => res.json());
+    this.predictedScoresStoreInternal.set(predictedScores);
+
+    const interest = this.mutationInterest.getInterest();
+    this.mutationInterestStoreInternal.set(interest);
+
     const potentialMutations: Array<{ model: string; weight: number }> = [];
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 10; i++) {
       potentialMutations.push(this.mutationInterest.random());
     }
-    this.mutation = await fetch("http://localhost:5001/prior/next", {
-      method: "POST",
-      body: JSON.stringify({
-        current: this.currentModels,
-        mutations: potentialMutations,
-      }),
-    }).then((res) => res.json());
+    const mutation = potentialMutations.reduce<{
+      model: string;
+      weight: number;
+      score: number;
+    } | null>((best, mutation) => {
+      const score = predictedScores[mutation.model][mutation.weight];
+      if (best === null || score > best.score) {
+        return {
+          ...mutation,
+          score,
+        };
+      }
+      return best;
+    }, null);
+    this.mutation = {
+      model: mutation!.model,
+      weight: mutation!.weight,
+    };
 
     this.candidateModels[this.mutation.model] = this.mutation.weight;
+    this.candidateModelsStoreInternal.set(this.candidateModels);
 
     console.log(
       "Accepted:",
