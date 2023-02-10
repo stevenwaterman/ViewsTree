@@ -186,7 +186,7 @@ def process_tokens(remade_batch_tokens, batch_multipliers, tokenizer, transforme
 
   return z
 
-def _encode_prompt(self, prompt, device, num_images_per_prompt, do_classifier_free_guidance, negative_prompt, prompt_embets, negative_prompt_embeds):
+def _encode_prompt(self, prompt, device, num_images_per_prompt, do_classifier_free_guidance, negative_prompt, prompt_embeds, negative_prompt_embeds):
   r"""
   Encodes the prompt into text encoder hidden states.
   Args:
