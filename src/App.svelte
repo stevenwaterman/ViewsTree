@@ -53,7 +53,7 @@
 <Modal
   show={$modalComponent}
   closeOnOuterClick={false}
-  styleWindow={{ width: "fit-content", height: "fit-content" }}
+  styleWindow={{ width: "fit-content", height: "fit-content", background: "var(--bgDark)", padding: "0" }}
 >
   <div class="topGrid">
     <div class="leftGrid">

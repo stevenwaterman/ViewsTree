@@ -4,6 +4,9 @@
   import SeedInput from "./SeedInput.svelte";
   import { selectedStore } from "../state/selected";
   import { comfyStore } from "../state/models";
+  import { modelConfigsStore } from "../state/modelConfigs";
+  import { modalComponent } from "../modalStore";
+  import ModelConfigModal from "./ModelConfigModal.svelte";
 
   function roundTo16(val: number): number {
     return Math.round(val / 16) * 16;
@@ -15,7 +18,7 @@
     if (!isNaN(val)) {
       const rounded = roundTo16(val);
       $generationSettingsStore.width = rounded;
-      target.value = rounded.toString(); // Force input sync
+      target.value = rounded.toString();
     }
   }
 
@@ -25,51 +28,35 @@
     if (!isNaN(val)) {
       const rounded = roundTo16(val);
       $generationSettingsStore.height = rounded;
-      target.value = rounded.toString(); // Force input sync
+      target.value = rounded.toString();
     }
+  }
+
+  function handleConfigChange(e: Event) {
+    const id = (e.target as HTMLSelectElement).value;
+    if (id) {
+        generationSettingsStore.applyModelConfig(id);
+    }
+  }
+
+  function openConfigModal() {
+    const currentId = $generationSettingsStore.modelConfigId;
+    const currentConfig = modelConfigsStore.state.find(c => c.id === currentId);
+    modalComponent.open(ModelConfigModal, { initialConfig: currentConfig });
   }
 </script>
 
 <div class="container">
-  <label for="diffusion_model">Diffusion Model</label>
-  <select id="diffusion_model" bind:value={$generationSettingsStore.checkpoint} on:keydown|stopPropagation>
-    {#each $comfyStore.diffusion_models as model}
-      <option value={model}>{model}</option>
-    {/each}
-    {#if $comfyStore.diffusion_models.length === 0}
-      {#each $comfyStore.checkpoints as checkpoint}
-        <option value={checkpoint}>{checkpoint} (from checkpoints)</option>
-      {/each}
-    {/if}
-  </select>
-
-  <label for="unet_weight_dtype">UNET Weight Dtype</label>
-  <select id="unet_weight_dtype" bind:value={$generationSettingsStore.unet_weight_dtype} on:keydown|stopPropagation>
-    {#each $comfyStore.unet_weight_dtypes as dtype}
-      <option value={dtype}>{dtype}</option>
-    {/each}
-  </select>
-
-  <label for="vae">VAE</label>
-  <select id="vae" bind:value={$generationSettingsStore.vae} on:keydown|stopPropagation>
-    {#each $comfyStore.vaes as vae}
-      <option value={vae}>{vae}</option>
-    {/each}
-  </select>
-
-  <label for="clip">CLIP</label>
-  <select id="clip" bind:value={$generationSettingsStore.clip} on:keydown|stopPropagation>
-    {#each $comfyStore.clips as clip}
-      <option value={clip}>{clip}</option>
-    {/each}
-  </select>
-
-  <label for="clip_type">CLIP Type</label>
-  <select id="clip_type" bind:value={$generationSettingsStore.clip_type} on:keydown|stopPropagation>
-    {#each $comfyStore.clip_types as type}
-      <option value={type}>{type}</option>
-    {/each}
-  </select>
+  <label for="model_config">Model Config</label>
+  <div class="config-row">
+    <select id="model_config" value={$generationSettingsStore.modelConfigId || ""} on:change={handleConfigChange} on:keydown|stopPropagation>
+        <option value="" disabled>Select a config...</option>
+        {#each $modelConfigsStore as config}
+            <option value={config.id}>{config.name}</option>
+        {/each}
+    </select>
+    <button class="small-btn" on:click={openConfigModal}>+</button>
+  </div>
 
   <label for="sampler">Sampler</label>
   <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation>
@@ -172,10 +159,28 @@
   }
 
   select, textarea, input[type="number"] {
-    background: var(--bg);
+    background: var(--bgDark);
     color: var(--text);
     border: 1px solid var(--border);
     padding: 4px;
+  }
+
+  .config-row {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em;
+  }
+
+  .config-row select {
+    flex-grow: 1;
+  }
+
+  .small-btn {
+    width: 2em;
+    cursor: pointer;
+    background: var(--bgDark);
+    color: var(--text);
+    border: 1px solid var(--border);
   }
 
   .size-row {

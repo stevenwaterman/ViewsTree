@@ -1,11 +1,12 @@
 import { writable, type Writable } from "svelte/store";
 import { comfyStore } from "./models";
+import { modelConfigsStore } from "./modelConfigs";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
 import { selectedStore } from "./selected";
 
-export type GenerationSettings = TxtImgRequest & ImgImgRequest;
+export type GenerationSettings = TxtImgRequest & ImgImgRequest & { modelConfigId?: string };
 
 export function randomSeed() {
   return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -44,6 +45,17 @@ function copySettings(
     newSettings.scheduler = node.scheduler;
     newSettings.unet_weight_dtype = node.unet_weight_dtype;
     newSettings.clip_type = node.clip_type;
+    
+    // Attempt to find matching model config ID based on the 5 core parameters
+    const configs = modelConfigsStore.state;
+    const match = configs.find(c => 
+        c.checkpoint === node.checkpoint &&
+        c.vae === node.vae &&
+        c.clip === node.clip &&
+        c.unet_weight_dtype === node.unet_weight_dtype &&
+        c.clip_type === node.clip_type
+    );
+    newSettings.modelConfigId = match?.id;
   }
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
@@ -92,6 +104,21 @@ comfyStore.subscribe((models) => {
 
 export const generationSettingsStore = {
   ...generationSettingsStoreInternal,
+  applyModelConfig: (configId: string) => {
+    const config = modelConfigsStore.state.find(c => c.id === configId);
+    if (config) {
+        generationSettingsStoreInternal.update(s => ({
+            ...s,
+            modelConfigId: configId,
+            checkpoint: config.checkpoint,
+            vae: config.vae,
+            clip: config.clip,
+            unet_weight_dtype: config.unet_weight_dtype,
+            clip_type: config.clip_type,
+            // sampler_name and scheduler are NOT overwritten here anymore
+        }));
+    }
+  },
   copySettings: (node: BranchNode) =>
     generationSettingsStoreInternal.update((current) =>
       copySettings(current, node)

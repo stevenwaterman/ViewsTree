@@ -7,10 +7,9 @@ const modalComponentInner: Writable<ComponentType | undefined> =
 
 function open<Props extends Record<string, any>>(
   component: ComponentType<SvelteComponentTyped<Props>>,
-  ...props: {} extends Props ? [] : [Props]
+  props?: Props
 ) {
-  let actualProps: Props = (props.length === 0 ? {} : props[0]) as Props;
-  modalComponentInner.set(bind(component, actualProps));
+  modalComponentInner.set(bind(component, props || ({} as Props)));
 }
 
 export const modalComponent = {

@@ -8,7 +8,7 @@ This directory manages communication with the ComfyUI server.
 - **Generation Logic:** `comfyGenerator.ts` handles the queue and workflow construction.
 
 ## Current Implementation Status
-- **Txt2Img:** Fully implemented. Dynamically constructs a ComfyUI workflow (Checkpoint Loader -> CLIP Encode -> KSampler -> Decode -> Save).
+- **Txt2Img:** Fully implemented. Dynamically constructs a ComfyUI workflow (Checkpoint Loader -> Text Encoder Encode -> KSampler -> Decode -> Save).
 - **Img2Img / Inpaint:** Currently stubbed, awaiting implementation of image upload and differential diffusion workflows.
 - **Asset Handling:** Uses `client.getPathImage()` based on node metadata to fetch results directly from ComfyUI.
 
