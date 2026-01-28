@@ -54,14 +54,12 @@
   }
 
   function handleWheelWidth(e: WheelEvent) {
-    if ($selectedStore.isBranch) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? -16 : 16;
     $generationSettingsStore.width = Math.max(16, $generationSettingsStore.width + delta);
   }
 
   function handleWheelHeight(e: WheelEvent) {
-    if ($selectedStore.isBranch) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? -16 : 16;
     $generationSettingsStore.height = Math.max(16, $generationSettingsStore.height + delta);
@@ -138,7 +136,6 @@
       on:change={handleWidthChange}
       on:blur={handleWidthChange}
       on:wheel={handleWheelWidth}
-      disabled={$selectedStore.isBranch}
       on:keydown|stopPropagation
       step="16"
     />
@@ -149,7 +146,6 @@
       on:change={handleHeightChange}
       on:blur={handleHeightChange}
       on:wheel={handleWheelHeight}
-      disabled={$selectedStore.isBranch}
       on:keydown|stopPropagation
       step="16"
     />

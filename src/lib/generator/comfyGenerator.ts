@@ -280,9 +280,19 @@ export async function queueImgImg(
         class_type: "VAELoader",
       },
       "13": getLoaderNode(parent.comfyImage),
+      "20": {
+        inputs: {
+            image: ["13", 0],
+            upscale_method: "lanczos",
+            width: clonedRequest.width,
+            height: clonedRequest.height,
+            crop: "disabled"
+        },
+        class_type: "ImageScale"
+      },
       "14": {
         inputs: {
-          pixels: ["13", 0],
+          pixels: ["20", 0],
           vae: ["12", 0]
         },
         class_type: "VAEEncode"
@@ -378,6 +388,16 @@ export async function queueInpaint(
         class_type: "VAELoader",
       },
       "13": getLoaderNode(imageNode.comfyImage),
+      "20": {
+        inputs: {
+            image: ["13", 0],
+            upscale_method: "lanczos",
+            width: clonedRequest.width,
+            height: clonedRequest.height,
+            crop: "disabled"
+        },
+        class_type: "ImageScale"
+      },
       "16": {
         inputs: {
           image: maskNode.comfyImage.filename,
@@ -385,9 +405,19 @@ export async function queueInpaint(
         },
         class_type: "LoadImageMask"
       },
+      "21": {
+        inputs: {
+            mask: ["16", 0],
+            upscale_method: "lanczos",
+            width: clonedRequest.width,
+            height: clonedRequest.height,
+            crop: "disabled"
+        },
+        class_type: "MaskUpscale"
+      },
       "19": {
         inputs: {
-            mask: ["16", 0]
+            mask: ["21", 0]
         },
         class_type: "InvertMask"
       },
@@ -402,7 +432,7 @@ export async function queueInpaint(
           positive: ["6", 0],
           negative: ["7", 0],
           vae: ["12", 0],
-          pixels: ["13", 0],
+          pixels: ["20", 0],
           mask: ["19", 0],
           noise_mask: true
         },

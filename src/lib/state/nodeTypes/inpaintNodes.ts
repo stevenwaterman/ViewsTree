@@ -19,6 +19,8 @@ export type InpaintRequest = ComfySettings & {
   steps: number;
   scale: number;
   strength: number;
+  width: number;
+  height: number;
   seed?: number;
 };
 
@@ -28,6 +30,8 @@ export type InpaintResult = ComfySettings & {
   negativePrompt: string;
   steps: number;
   scale: number;
+  width: number;
+  height: number;
   seed: {
     random: boolean;
     actual: number;
