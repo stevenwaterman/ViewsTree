@@ -1,10 +1,6 @@
 import type { Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
 import {
-  fetchImgCycleNode,
-  type ImgCycleRequest,
-} from "../state/nodeTypes/imgCycleNodes";
-import {
   fetchImgImgNode,
   type ImgImgRequest,
 } from "../state/nodeTypes/imgImgNodes";
@@ -140,17 +136,6 @@ export function queueImgImg(
   request = copyRequest(request);
   return addToQueue(parent.pendingRequests, request.models, () =>
     fetchImgImgNode(saveName, request, parent)
-  );
-}
-
-export function queueImgCycle(
-  saveName: string,
-  request: ImgCycleRequest,
-  parent: BranchNode
-) {
-  request = copyRequest(request);
-  return addToQueue(parent.pendingRequests, request.models, () =>
-    fetchImgCycleNode(saveName, request, parent)
   );
 }
 

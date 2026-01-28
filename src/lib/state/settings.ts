@@ -1,6 +1,5 @@
 import { writable, type Writable } from "svelte/store";
 import { modelsStore } from "./models";
-import type { ImgCycleRequest } from "./nodeTypes/imgCycleNodes";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
@@ -8,8 +7,7 @@ import type { UploadNode } from "./nodeTypes/uploadNode";
 import { selectedStore } from "./selected";
 
 export type GenerationSettings = TxtImgRequest &
-  ImgImgRequest &
-  ImgCycleRequest & { lockModels: boolean };
+  ImgImgRequest & { lockModels: boolean };
 
 export function randomSeed() {
   return Math.random() * Number.MAX_SAFE_INTEGER;
@@ -19,7 +17,6 @@ function getDefaultGenerationSettings(): GenerationSettings {
   return {
     lockModels: false,
     models: { "stable-diffusion-v1-5": 1 },
-    sourcePrompt: "",
     prompt: "",
     negativePrompt: "",
     width: 512,
@@ -44,9 +41,6 @@ function copySettings(
       newSettings.models[model] = weight;
     });
   }
-
-  if (node.type === "ImgCycle") newSettings.sourcePrompt = node.sourcePrompt;
-  else if ("prompt" in node) newSettings.sourcePrompt = node.prompt;
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
   if ("negativePrompt" in node)
@@ -90,14 +84,6 @@ export const generationSettingsStore = {
       generationSettingsStoreInternal.update((current) => ({
         ...current,
         seed: node.seed.actual,
-      }));
-    }
-  },
-  copyPromptAsSource: (node: Exclude<BranchNode, UploadNode>) => {
-    if ("prompt" in node) {
-      generationSettingsStoreInternal.update((current) => ({
-        ...current,
-        sourcePrompt: node.prompt,
       }));
     }
   },

@@ -6,7 +6,6 @@
   import { generationSettingsStore } from "./lib/state/settings";
   import {
     cancelRequest,
-    queueImgCycle,
     queueImgImg,
     queueInpaint,
     queueTxtImg,
@@ -35,13 +34,7 @@
       } else {
         queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
       }
-    } else if (
-      event.key === "c" &&
-      !event.ctrlKey &&
-      $selectedStore.isBranch &&
-      $selectedStore.type !== "Mask"
-    )
-      queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
+    }
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
     else if (

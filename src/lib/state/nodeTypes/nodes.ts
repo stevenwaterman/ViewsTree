@@ -12,7 +12,6 @@ import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
 import { loadUploadNode, type UploadNode } from "./uploadNode";
 import type { GenerationRequest } from "src/lib/generator/generator";
 import { loadRootNode, type RootNode } from "./rootNodes";
-import { loadImgCycleNode, type ImgCycleNode } from "./imgCycleNodes";
 import { loadMaskNode, type MaskNode } from "./maskNodes";
 import { loadInpaintNode, type InpaintNode } from "./inpaintNodes";
 import { modelsStore } from "../models";
@@ -22,7 +21,6 @@ export type NodeTypeStrings =
   | "TxtImg"
   | "Upload"
   | "ImgImg"
-  | "ImgCycle"
   | "Mask"
   | "Inpaint";
 
@@ -31,7 +29,6 @@ const isBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   TxtImg: true,
   Upload: true,
   ImgImg: true,
-  ImgCycle: true,
   Mask: true,
   Inpaint: true,
 } as const);
@@ -41,7 +38,6 @@ const isPrimaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   TxtImg: true,
   Upload: true,
   ImgImg: false,
-  ImgCycle: false,
   Mask: false,
   Inpaint: false,
 } as const);
@@ -51,7 +47,6 @@ const isSecondaryBranch = tassert<Record<NodeTypeStrings, boolean>>()({
   TxtImg: false,
   Upload: false,
   ImgImg: true,
-  ImgCycle: true,
   Mask: true,
   Inpaint: true,
 } as const);
@@ -63,7 +58,6 @@ export type NodeTypes = TAssert<
     TxtImg: TxtImgNode;
     Upload: UploadNode;
     ImgImg: ImgImgNode;
-    ImgCycle: ImgCycleNode;
     Mask: MaskNode;
     Inpaint: InpaintNode;
   }
@@ -76,7 +70,6 @@ type NodeCategories = TAssert<
     TxtImg: "Primary";
     Upload: "Primary";
     ImgImg: "Secondary";
-    ImgCycle: "Secondary";
     Mask: "Secondary";
     Inpaint: "Secondary";
   }
@@ -144,7 +137,6 @@ export function getNodeIsTypes<T extends NodeTypeStrings>(
 export type PrimaryBranchNode = TxtImgNode | UploadNode;
 export type SecondaryBranchNode =
   | ImgImgNode
-  | ImgCycleNode
   | MaskNode
   | InpaintNode;
 export type BranchNode = PrimaryBranchNode | SecondaryBranchNode;
@@ -206,12 +198,6 @@ export function loadNode<T extends NodeTypeStrings>(
     return loadImgImgNode(
       serial as Serialised<"ImgImg">,
       parent as ParentOf<"ImgImg">
-    ) as NodeTypes[T];
-
-  if (type === "ImgCycle")
-    return loadImgCycleNode(
-      serial as Serialised<"ImgCycle">,
-      parent as ParentOf<"ImgCycle">
     ) as NodeTypes[T];
 
   if (type === "Mask")

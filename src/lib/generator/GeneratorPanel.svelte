@@ -26,15 +26,6 @@
     />
   {/each}
 
-  <label for="prompt">Source Prompt</label>
-  <textarea
-    id="source_prompt"
-    bind:value={$generationSettingsStore.sourcePrompt}
-    rows={6}
-    on:keydown|stopPropagation
-    disabled={!$selectedStore.isBranch}
-  />
-
   <label for="prompt">Prompt</label>
   <textarea
     id="prompt"
