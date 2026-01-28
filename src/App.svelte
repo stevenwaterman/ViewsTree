@@ -19,7 +19,6 @@
   import SaveMenu from "./lib/persistence/SaveMenu.svelte";
   import { rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
   import Painter from "./lib/paint/Painter.svelte";
-  import AnnealingModalWrapper from "./lib/annealing/AnnealingModalWrapper.svelte";
 
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
@@ -45,7 +44,6 @@
       queueImgCycle($saveStore, $generationSettingsStore, $selectedStore);
     else if (event.key === "Backspace") cancelRequest($selectedStore);
     else if (event.key === "a") modalComponent.open(FileSelectorModal);
-    else if (event.key === "m") modalComponent.open(AnnealingModalWrapper);
     else if (
       event.key === "p" &&
       $selectedStore.type !== "Root" &&
