@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { imageUrl } from "../generator/generator";
+  import { imageUrl } from "../generator/comfyGenerator";
   import Magnifier from "./Magnifier.svelte";
   import { selectedStore } from "../state/selected";
   import { generationSettingsStore } from "../state/settings";

@@ -10,7 +10,7 @@ import { derived, writable, type Readable, type Writable } from "svelte/store";
 import { loadImgImgNode, type ImgImgNode } from "./imgImgNodes";
 import { loadTxtImgNode, type TxtImgNode } from "./txtImgNodes";
 import { loadUploadNode, type UploadNode } from "./uploadNode";
-import type { GenerationRequest } from "src/lib/generator/generator";
+import type { GenerationRequest } from "../../generator/comfyGenerator";
 import { loadRootNode, type RootNode } from "./rootNodes";
 import { loadMaskNode, type MaskNode } from "./maskNodes";
 import { loadInpaintNode, type InpaintNode } from "./inpaintNodes";
@@ -110,6 +110,14 @@ type NodeIsTypes<T extends NodeTypeStrings> = {
   isSecondaryBranch: typeof isSecondaryBranch[T];
 };
 
+export type ComfySettings = {
+  checkpoint: string;
+  vae: string;
+  clip: string;
+  sampler_name: string;
+  scheduler: string;
+};
+
 export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
   id: NodeId[NodeCategories[T]];
   parent: NodeParent[NodeCategories[T]];
@@ -121,6 +129,11 @@ export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
   leafCount: Readable<number>;
   lastSelectedId: Stateful<Writable<string | undefined>>;
   serialise: () => Serialised<T>;
+  comfyImage?: {
+    filename: string;
+    subfolder: string;
+    type: string;
+  };
 };
 
 export function getNodeIsTypes<T extends NodeTypeStrings>(
@@ -215,29 +228,8 @@ export function loadNode<T extends NodeTypeStrings>(
   throw "Forgot a case";
 }
 
-export function modelsHash(models: Record<string, number>): string {
-  const modelEntries = Object.entries(models).filter(
-    ([_, weight]) => weight !== 0
-  );
-  if (modelEntries.length === 0) return "";
-  modelEntries.sort((a, b) => {
-    if (a[0] > b[0]) return 1;
-    if (a[0] < b[0]) return -1;
-    if (a[1] > b[1]) return 1;
-    if (a[1] < b[1]) return -1;
-    return 0;
-  });
-
-  const totalWeight = modelEntries.reduce(
-    (acc, [_, weight]) => acc + weight,
-    0
-  );
-  const fractional = modelEntries.map(
-    ([model, weight]) => `${model}_${(weight / totalWeight).toFixed(5)}`
-  );
-  const original = modelEntries.map(([_, weight]) => `${weight}`);
-  fractional.push(...original);
-  return fractional.join(",");
+export function modelsHash(settings: ComfySettings): string {
+  return `${settings.checkpoint}:${settings.vae}:${settings.clip}:${settings.sampler_name}:${settings.scheduler}`;
 }
 
 export function sortChildren(a: AnyNode, b: AnyNode): number {

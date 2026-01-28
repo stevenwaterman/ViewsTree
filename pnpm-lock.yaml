@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@saintno/comfyui-sdk':
+        specifier: ^0.2.49
+        version: 0.2.49(typescript@4.9.5)
       '@stdlib/stats-base-dists-beta-pdf':
         specifier: ^0.0.7
         version: 0.0.7
@@ -175,6 +178,11 @@ packages:
   '@parcel/watcher@2.5.6':
     resolution: {integrity: sha512-tmmZ3lQxAe/k/+rNnXQRawJ4NjxO2hqiOLTHvWchtGZULp4RyFeh6aU4XdOYBFe2KE1oShQTv4AblOs2iOrNnQ==}
     engines: {node: '>= 10.0.0'}
+
+  '@saintno/comfyui-sdk@0.2.49':
+    resolution: {integrity: sha512-HSD+pjE+i/yHsYY5bdjEqNXHIjOEcACoJPh9m5Zwge7OGgBSR4K7hWLrQ0ABt/cH1bcKiwhJJtLW3Ppp8TAqHQ==}
+    peerDependencies:
+      typescript: ^5.0.0
 
   '@stdlib/array-base-filled@0.0.2':
     resolution: {integrity: sha512-X/beQFsIJy2KfLfkxm/F+hMr8esrxbHwPLu+9jBBvN5iGAAb+AMRVunXWdMV02DT12Q/M0vPcMGT1Yd3nJjEaw==}
@@ -1464,6 +1472,18 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
+  ws@8.19.0:
+    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
 snapshots:
 
   '@accuser/svelte-store-array@0.4.1': {}
@@ -1555,6 +1575,14 @@ snapshots:
       '@parcel/watcher-win32-ia32': 2.5.6
       '@parcel/watcher-win32-x64': 2.5.6
     optional: true
+
+  '@saintno/comfyui-sdk@0.2.49(typescript@4.9.5)':
+    dependencies:
+      typescript: 4.9.5
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@stdlib/array-base-filled@0.0.2': {}
 
@@ -2984,3 +3012,5 @@ snapshots:
   wheel@1.0.0: {}
 
   wrappy@1.0.2: {}
+
+  ws@8.19.0: {}

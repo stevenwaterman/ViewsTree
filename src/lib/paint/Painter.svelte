@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { imageUrl, sendMask } from "../generator/generator";
+  import { imageUrl, sendMask } from "../generator/comfyGenerator";
   import { modalComponent } from "../modalStore";
   import { saveStore } from "../persistence/saves";
   import type { BranchNode } from "../state/nodeTypes/nodes";

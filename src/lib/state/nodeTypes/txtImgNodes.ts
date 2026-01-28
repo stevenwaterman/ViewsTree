@@ -7,13 +7,13 @@ import {
   modelsHash,
   sortChildren,
   type BaseNode,
+  type ComfySettings,
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
 import type { RootNode } from "./rootNodes";
 
-export type TxtImgRequest = {
-  models: Record<string, number>;
+export type TxtImgRequest = ComfySettings & {
   prompt: string;
   negativePrompt: string;
   width: number;
@@ -23,9 +23,8 @@ export type TxtImgRequest = {
   seed?: number;
 };
 
-export type TxtImgResult = {
+export type TxtImgResult = ComfySettings & {
   id: string;
-  models: Record<string, number>;
   prompt: string;
   negativePrompt: string;
   width: number;
@@ -36,11 +35,20 @@ export type TxtImgResult = {
     random: boolean;
     actual: number;
   };
+  comfyImage: {
+    filename: string;
+    subfolder: string;
+    type: string;
+  };
 };
 
-export type TxtImgNode = TxtImgResult & BaseNode<"TxtImg"> & { modelsHash: string };
+export type TxtImgNode = TxtImgResult &
+  BaseNode<"TxtImg"> & { modelsHash: string };
 
-function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
+export function createTxtImgNode(
+  result: TxtImgResult,
+  parent: RootNode
+): TxtImgNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     sorted(writable([]), sortChildren)
   );
@@ -55,7 +63,7 @@ function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
     childLeafCount,
     leafCount,
     lastSelectedId: stateful(writable(undefined)),
-    modelsHash: modelsHash(result.models),
+    modelsHash: modelsHash(result),
     serialise: () => ({
       ...result,
       id: node.id,
@@ -67,44 +75,11 @@ function createTxtImgNode(result: TxtImgResult, parent: RootNode): TxtImgNode {
   return node;
 }
 
-export async function fetchTxtImgNode(
-  saveName: string,
-  request: TxtImgRequest,
-  parent: RootNode
-): Promise<TxtImgNode> {
-  return await fetch(`http://localhost:5001/${saveName}/txtimg`, {
-    method: "POST",
-    body: JSON.stringify(request),
-  })
-    .then((response) => {
-      if (response.status === 429) throw "Server busy";
-      else return response;
-    })
-    .then((response) => response.json())
-    .then((data) => {
-      const result: TxtImgResult = {
-        id: data["run_id"],
-        models: data["models"],
-        prompt: data["prompt"],
-        negativePrompt: data["negative_prompt"],
-        width: data["width"],
-        height: data["height"],
-        steps: data["steps"],
-        scale: data["scale"],
-        seed: {
-          random: data["seed"] === null,
-          actual: data["actual_seed"],
-        },
-      };
-      return createTxtImgNode(result, parent);
-    });
-}
-
 export function loadTxtImgNode(
   data: Serialised<"TxtImg">,
   parent: RootNode
 ): TxtImgNode {
-  const node = createTxtImgNode(data, parent);
+  const node = createTxtImgNode(data as any, parent);
   const children = data.children.map((child) => loadNode(child, node));
   node.children.set(children);
   parent.children.update((children) => [...children, node]);

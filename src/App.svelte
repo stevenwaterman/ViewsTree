@@ -9,7 +9,7 @@
     queueImgImg,
     queueInpaint,
     queueTxtImg,
-  } from "./lib/generator/generator";
+  } from "./lib/generator/comfyGenerator";
   import FileSelectorModal from "./lib/upload/FileSelectorModal.svelte";
   import Modal from "svelte-simple-modal";
   import { modalComponent } from "./lib/modalStore";

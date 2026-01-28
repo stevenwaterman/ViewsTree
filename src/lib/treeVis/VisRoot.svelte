@@ -7,7 +7,7 @@
   import VisBranch from "./VisBranch.svelte";
   import { scale } from "svelte/transition";
   import { saveStore } from "../persistence/saves";
-  import type { GenerationRequest } from "../generator/generator";
+  import type { GenerationRequest } from "../generator/comfyGenerator";
 
   export let treeContainer: HTMLDivElement;
 

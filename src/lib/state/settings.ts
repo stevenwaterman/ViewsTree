@@ -1,27 +1,30 @@
 import { writable, type Writable } from "svelte/store";
-import { modelsStore } from "./models";
+import { comfyStore } from "./models";
 import type { ImgImgRequest } from "./nodeTypes/imgImgNodes";
 import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
-import type { UploadNode } from "./nodeTypes/uploadNode";
 import { selectedStore } from "./selected";
 
 export type GenerationSettings = TxtImgRequest &
   ImgImgRequest & { lockModels: boolean };
 
 export function randomSeed() {
-  return Math.random() * Number.MAX_SAFE_INTEGER;
+  return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 }
 
 function getDefaultGenerationSettings(): GenerationSettings {
   return {
     lockModels: false,
-    models: { "stable-diffusion-v1-5": 1 },
+    checkpoint: "",
+    vae: "",
+    clip: "",
+    sampler_name: "euler",
+    scheduler: "normal",
     prompt: "",
     negativePrompt: "",
     width: 512,
     height: 512,
-    steps: 50,
+    steps: 20,
     scale: 7,
     strength: 0.7,
     colorCorrection: false,
@@ -34,12 +37,12 @@ function copySettings(
 ): GenerationSettings {
   const newSettings: GenerationSettings = { ...current };
 
-  if ("models" in node && !current.lockModels) {
-    newSettings.models = {};
-    modelsStore.state.forEach((model) => {
-      const weight: number = node.models[model] ?? 0;
-      newSettings.models[model] = weight;
-    });
+  if ("checkpoint" in node && !current.lockModels) {
+    newSettings.checkpoint = node.checkpoint;
+    newSettings.vae = node.vae;
+    newSettings.clip = node.clip;
+    newSettings.sampler_name = node.sampler_name;
+    newSettings.scheduler = node.scheduler;
   }
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
@@ -63,13 +66,19 @@ function copySettings(
 const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(
   getDefaultGenerationSettings()
 );
-modelsStore.subscribe((models) => {
-  generationSettingsStoreInternal.update((generationSettings) => {
-    const newSettings = { ...generationSettings, models: {} };
-    models.forEach((model) => {
-      newSettings.models[model] = generationSettings.models[model] ?? 0;
-    });
-    return newSettings;
+
+comfyStore.subscribe((models) => {
+  generationSettingsStoreInternal.update((settings) => {
+    const next = { ...settings };
+    if (!next.checkpoint && models.checkpoints.length > 0)
+      next.checkpoint = models.checkpoints[0];
+    if (!next.vae && models.vaes.length > 0) next.vae = models.vaes[0];
+    if (!next.clip && models.clips.length > 0) next.clip = models.clips[0];
+    if (!next.sampler_name && models.samplers.length > 0)
+      next.sampler_name = models.samplers[0];
+    if (!next.scheduler && models.schedulers.length > 0)
+      next.scheduler = models.schedulers[0];
+    return next;
   });
 });
 
@@ -88,6 +97,7 @@ export const generationSettingsStore = {
     }
   },
 };
+
 selectedStore.subscribe((selected) => {
   if (selected.isBranch) generationSettingsStore.copySettings(selected);
 });

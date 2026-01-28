@@ -1,5 +1,5 @@
 import { sorted, stateful, type Stateful } from "../../utils";
-import { type Writable, type Readable, writable } from "svelte/store";
+import { type Writable, writable } from "svelte/store";
 import {
   getChildLeafCountStore,
   getNodeIsTypes,
@@ -9,7 +9,6 @@ import {
   type SecondaryBranchNode,
   type Serialised,
 } from "./nodes";
-import type { GenerationRequest } from "../../generator/generator";
 import type { RootNode } from "./rootNodes";
 
 export type UploadRequest = {
@@ -23,11 +22,19 @@ export type UploadResult = {
   id: string;
   width: number;
   height: number;
+  comfyImage: {
+    filename: string;
+    subfolder: string;
+    type: string;
+  };
 };
 
 export type UploadNode = UploadResult & BaseNode<"Upload">;
 
-function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
+export function createUploadNode(
+  result: UploadResult,
+  parent: RootNode
+): UploadNode {
   const children: Stateful<Writable<SecondaryBranchNode[]>> = stateful(
     sorted(writable([]), sortChildren)
   );
@@ -53,35 +60,11 @@ function createUploadNode(result: UploadResult, parent: RootNode): UploadNode {
   return node;
 }
 
-export async function fetchUploadNode(
-  saveName: string,
-  request: UploadRequest,
-  parent: RootNode
-): Promise<UploadNode> {
-  return await fetch(`http://localhost:5001/${saveName}/upload`, {
-    method: "POST",
-    body: JSON.stringify(request),
-  })
-    .then((response) => {
-      if (response.status === 429) throw "Server busy";
-      else return response;
-    })
-    .then((response) => response.json())
-    .then((data) => {
-      const result: UploadResult = {
-        id: data["run_id"],
-        width: data["width"],
-        height: data["height"],
-      };
-      return createUploadNode(result, parent);
-    });
-}
-
 export function loadUploadNode(
   data: Serialised<"Upload">,
   parent: RootNode
 ): UploadNode {
-  const node = createUploadNode(data, parent);
+  const node = createUploadNode(data as any, parent);
   const children = data.children.map((child) => loadNode(child, node));
   node.children.set(children);
   parent.children.update((children) => [...children, node]);

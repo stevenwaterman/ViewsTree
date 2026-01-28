@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { thumbnailUrl, type GenerationRequest } from "../generator/generator";
+  import { thumbnailUrl, type GenerationRequest } from "../generator/comfyGenerator";
   import {
     getPlacements,
     placementHeight,
