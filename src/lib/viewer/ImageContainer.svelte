@@ -23,7 +23,7 @@
           style={`${style}; mask-image: url(${imageUrl(
             $saveStore,
             selected
-          )}); mask-mode: luminance;`}
+          )}); mask-mode: luminance; mask-size: 100% 100%; mask-repeat: no-repeat;`}
           src={imageUrl($saveStore, selected.parent)}
         />
       {:else}

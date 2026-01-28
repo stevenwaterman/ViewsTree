@@ -401,23 +401,30 @@ export async function queueInpaint(
       "16": {
         inputs: {
           image: maskNode.comfyImage.filename,
-          channel: "red"
+          upload: "image"
         },
-        class_type: "LoadImageMask"
+        class_type: "LoadImage"
       },
       "21": {
         inputs: {
-            mask: ["16", 0],
+            image: ["16", 0],
             upscale_method: "lanczos",
             width: clonedRequest.width,
             height: clonedRequest.height,
             crop: "disabled"
         },
-        class_type: "MaskUpscale"
+        class_type: "ImageScale"
+      },
+      "22": {
+        inputs: {
+            image: ["21", 0],
+            channel: "red"
+        },
+        class_type: "ImageToMask"
       },
       "19": {
         inputs: {
-            mask: ["21", 0]
+            mask: ["22", 0]
         },
         class_type: "InvertMask"
       },
