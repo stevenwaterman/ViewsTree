@@ -41,7 +41,7 @@ def thumbnail(img):
     print("resizing", width, max_width, height,
           max_height, scale, new_width, new_height)
 
-    return img.resize((new_width, new_height), Image.ANTIALIAS)
+    return img.resize((new_width, new_height), Image.LANCZOS)
 
 
 def random_seed():
@@ -73,11 +73,11 @@ class Pipeline():
         self.model_folder = "./models"
 
         main_model_path = f"{self.model_folder}/stable-diffusion-v1-5"
-        self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
-        self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
-        self.text_encoder = CLIPTextModel.from_pretrained(f"{main_model_path}/text_encoder")
-        self.eulerScheduler = EulerAncestralDiscreteScheduler.from_pretrained(main_model_path, subfolder="scheduler")
-        self.ddimScheduler = DDIMScheduler.from_pretrained(main_model_path, subfolder="scheduler")
+        # self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
+        # self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
+        # self.text_encoder = CLIPTextModel.from_pretrained(f"{main_model_path}/text_encoder")
+        # self.eulerScheduler = EulerAncestralDiscreteScheduler.from_pretrained(main_model_path, subfolder="scheduler")
+        # self.ddimScheduler = DDIMScheduler.from_pretrained(main_model_path, subfolder="scheduler")
 
         self.unet = MultiUnet(self.model_folder)
 
@@ -335,7 +335,7 @@ class Pipeline():
             crop["right"],
             crop["bottom"]
         ))
-        resizedImage = croppedImage.resize((width, height), Image.ANTIALIAS)
+        resizedImage = croppedImage.resize((width, height), Image.LANCZOS)
 
         resizedImage.save(f'{file_path}.png')
         thumb = thumbnail(resizedImage)

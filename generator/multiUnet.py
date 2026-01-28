@@ -12,15 +12,15 @@ class MultiUnet():
         }
 
         self.slots = {
-          0: self.get_model("stable-diffusion-v1-5"),
-          1: self.get_model("stable-diffusion-v1-5")
+          # 0: self.get_model("stable-diffusion-v1-5"),
+          # 1: self.get_model("stable-diffusion-v1-5")
         }
 
         self.loaded_slot = 0
 
-        unet_config = UNet2DConditionModel.load_config(f"{self.model_folder_path}/stable-diffusion-v1-5/unet")
-        self.unet = UNet2DConditionModel.from_config(unet_config).to("cuda")
-        self.load_model_into_unet()
+        # unet_config = UNet2DConditionModel.load_config(f"{self.model_folder_path}/stable-diffusion-v1-5/unet")
+        # self.unet = UNet2DConditionModel.from_config(unet_config).to("cuda")
+        # self.load_model_into_unet()
         
 
     def get_model(self, model_name):
