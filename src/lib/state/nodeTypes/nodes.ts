@@ -116,6 +116,8 @@ export type ComfySettings = {
   clip: string;
   sampler_name: string;
   scheduler: string;
+  unet_weight_dtype: string;
+  clip_type: string;
 };
 
 export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {

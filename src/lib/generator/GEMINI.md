@@ -1,14 +1,17 @@
-# Backend & Generation (Legacy)
+# Backend & Generation (ComfyUI)
 
-This directory manages the communication with the image generation backend.
+This directory manages communication with the ComfyUI server.
 
-## Legacy System (HF Diffusers)
-- **Queue Management:** `generator.ts` maintains a client-side queue and attempts to optimize model loading by grouping requests by `modelsHash`.
-- **Endpoints:** Uses `POST` requests to a local server (port 5001) with JSON payloads.
-- **Image Retrieval:** Fetches images and thumbnails via direct URLs using node IDs.
+## ComfyUI Integration
+- **Client:** `comfyClient.ts` initializes the `ComfyApi` connecting to `http://localhost:8188`. 
+- **CORS:** Requires ComfyUI to be started with `--enable-cors-header http://localhost:5000`.
+- **Generation Logic:** `comfyGenerator.ts` handles the queue and workflow construction.
 
-## ComfyUI Transition (Planned)
-The system is being reworked to use ComfyUI. This will involve:
-- **Workflow Mapping:** Converting the tree node parameters into ComfyUI's JSON workflow format.
-- **WebSockets:** Using ComfyUI's websocket for real-time progress updates and status monitoring.
-- **Asset Handling:** Moving from ID-based URL fetching to ComfyUI's output handling.
+## Current Implementation Status
+- **Txt2Img:** Fully implemented. Dynamically constructs a ComfyUI workflow (Checkpoint Loader -> CLIP Encode -> KSampler -> Decode -> Save).
+- **Img2Img / Inpaint:** Currently stubbed, awaiting implementation of image upload and differential diffusion workflows.
+- **Asset Handling:** Uses `client.getPathImage()` based on node metadata to fetch results directly from ComfyUI.
+
+## Polling & Queue
+- Uses a polling mechanism on the history endpoint to detect when a `prompt_id` has finished processing.
+- Maintains a client-side queue to manage multiple pending requests across the tree.

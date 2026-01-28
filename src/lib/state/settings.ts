@@ -20,6 +20,8 @@ function getDefaultGenerationSettings(): GenerationSettings {
     clip: "",
     sampler_name: "euler",
     scheduler: "normal",
+    unet_weight_dtype: "default",
+    clip_type: "stable_diffusion",
     prompt: "",
     negativePrompt: "",
     width: 512,
@@ -43,6 +45,8 @@ function copySettings(
     newSettings.clip = node.clip;
     newSettings.sampler_name = node.sampler_name;
     newSettings.scheduler = node.scheduler;
+    newSettings.unet_weight_dtype = node.unet_weight_dtype;
+    newSettings.clip_type = node.clip_type;
   }
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
@@ -70,14 +74,23 @@ const generationSettingsStoreInternal: Writable<GenerationSettings> = writable(
 comfyStore.subscribe((models) => {
   generationSettingsStoreInternal.update((settings) => {
     const next = { ...settings };
-    if (!next.checkpoint && models.checkpoints.length > 0)
-      next.checkpoint = models.checkpoints[0];
+    if (!next.checkpoint) {
+        if (models.diffusion_models.length > 0) next.checkpoint = models.diffusion_models[0];
+        else if (models.checkpoints.length > 0) next.checkpoint = models.checkpoints[0];
+    }
     if (!next.vae && models.vaes.length > 0) next.vae = models.vaes[0];
     if (!next.clip && models.clips.length > 0) next.clip = models.clips[0];
     if (!next.sampler_name && models.samplers.length > 0)
       next.sampler_name = models.samplers[0];
     if (!next.scheduler && models.schedulers.length > 0)
       next.scheduler = models.schedulers[0];
+    
+    if (next.unet_weight_dtype === "default" && models.unet_weight_dtypes.length > 0 && !models.unet_weight_dtypes.includes("default"))
+        next.unet_weight_dtype = models.unet_weight_dtypes[0];
+    
+    if (next.clip_type === "stable_diffusion" && models.clip_types.length > 0 && !models.clip_types.includes("stable_diffusion"))
+        next.clip_type = models.clip_types[0];
+
     return next;
   });
 });

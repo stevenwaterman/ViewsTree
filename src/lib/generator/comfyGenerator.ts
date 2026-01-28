@@ -26,8 +26,14 @@ let queue: GenerationRequest[] = [];
 function fireRequest() {
   if (running) return;
   if (queue.length === 0) return;
-  queue[0].fire().finally(() => {
+  
+  const next = queue[0];
+  next.fire().finally(() => {
     running = false;
+    // Always remove from queue after fire attempt
+    if (queue[0] === next) {
+        queue.shift();
+    }
     fireRequest();
   });
 }
@@ -40,7 +46,7 @@ function addToQueue<T extends BranchNode>(
   modelsHashValue: string,
   reqFn: () => Promise<T>
 ): Promise<T> {
-  return new Promise<T>((resolve) => {
+  return new Promise<T>((resolve, reject) => {
     let hasStarted = false;
     let cancelled = false;
     const cancel = () => {
@@ -52,6 +58,7 @@ function addToQueue<T extends BranchNode>(
         requests: requests.filter((req) => req !== generationRequest),
         running,
       }));
+      reject("Cancelled");
     };
 
     const fire = async () => {
@@ -67,22 +74,16 @@ function addToQueue<T extends BranchNode>(
         try {
           const node = await reqFn();
           (node.parent.children as Writable<any[]>).update((children) => [...children, node]);
-          queue = queue.filter((req) => req !== generationRequest);
           saveStore.save();
-
-          pendingRequests.update(({ requests }) => ({
-            requests: requests.filter((req) => req !== generationRequest),
-            running: false,
-          }));
           resolve(node);
         } catch (e) {
           console.error("Generation failed", e);
-          pendingRequests.update(({ requests }) => ({
-            requests: requests.filter((req) => req !== generationRequest),
-            running: false,
-          }));
-          running = false;
-          fireRequest();
+          reject(e);
+        } finally {
+            pendingRequests.update(({ requests }) => ({
+                requests: requests.filter((req) => req !== generationRequest),
+                running: false,
+            }));
         }
       }
     };
@@ -120,18 +121,32 @@ export async function queueTxtImg(
           sampler_name: request.sampler_name,
           scheduler: request.scheduler,
           denoise: 1,
-          model: ["4", 0],
+          model: ["10", 0],
           positive: ["6", 0],
           negative: ["7", 0],
           latent_image: ["5", 0],
         },
         class_type: "KSampler",
       },
-      "4": {
+      "10": {
         inputs: {
-          ckpt_name: request.checkpoint,
+          unet_name: request.checkpoint,
+          weight_dtype: request.unet_weight_dtype,
         },
-        class_type: "CheckpointLoaderSimple",
+        class_type: "UNETLoader",
+      },
+      "11": {
+        inputs: {
+          clip_name: request.clip,
+          type: request.clip_type,
+        },
+        class_type: "CLIPLoader",
+      },
+      "12": {
+        inputs: {
+          vae_name: request.vae,
+        },
+        class_type: "VAELoader",
       },
       "5": {
         inputs: {
@@ -144,21 +159,21 @@ export async function queueTxtImg(
       "6": {
         inputs: {
           text: request.prompt,
-          clip: ["4", 1],
+          clip: ["11", 0],
         },
         class_type: "CLIPTextEncode",
       },
       "7": {
         inputs: {
           text: request.negativePrompt,
-          clip: ["4", 1],
+          clip: ["11", 0],
         },
         class_type: "CLIPTextEncode",
       },
       "8": {
         inputs: {
           samples: ["3", 0],
-          vae: ["4", 2],
+          vae: ["12", 0],
         },
         class_type: "VAEDecode",
       },

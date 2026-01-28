@@ -8,7 +8,7 @@ The core of ViewsTree is its hierarchical node system, managed through Svelte st
 - **SecondaryBranchNodes:** Children of other branch nodes (`ImgImg`, `Mask`, `Inpaint`).
 
 ## Key Concepts
-- **Reactivity:** Each node contains its own stores (children, pending requests, leaf counts). Updating a node's children automatically triggers UI updates in the tree visualization.
-- **Node Definitions:** Defined in `src/lib/state/nodeTypes/`. Each type has a specific `load` and `serialise` logic.
-- **Selection:** `selectedStore.ts` tracks the currently focused node, which is then used by the `ViewPanel` and `GeneratorPanel`.
-- **Serialization:** Nodes are serialized to a nested JSON structure for saving/loading.
+- **ComfySettings:** Replaced the legacy weighted model system with explicit `checkpoint`, `vae`, `clip`, `sampler_name`, and `scheduler` selections.
+- **Node Metadata:** Nodes now store `comfyImage` objects (filename, subfolder, type) to correctly retrieve assets from the ComfyUI output directory.
+- **Selection:** `selectedStore.ts` tracks the focused node, automatically updating the `GeneratorPanel` with the node's original parameters.
+- **Serialization:** Full tree state, including ComfyUI image references, is serialized to JSON for persistence.

@@ -6,14 +6,15 @@ ViewsTree is an AI image generation frontend that organizes generations into a h
 - **Framework:** Svelte 3
 - **Build Tool:** Vite
 - **Language:** TypeScript
+- **Backend Integration:** ComfyUI via `@saintno/comfyui-sdk`
 - **Key Libraries:**
     - `panzoom`: Enables navigation (pan/zoom) of the large tree visualization.
-    - `svelte-simple-modal`: Used for various UI modals (Save/Load, Settings, etc.).
+    - `svelte-simple-modal`: Used for various UI modals.
 
 ## Core Subdirectories
-- `src/lib/state/`: Core data models and hierarchical node definitions.
+- `src/lib/state/`: Core data models, ComfyUI settings, and hierarchical node definitions.
 - `src/lib/treeVis/`: Components and logic for rendering the tree.
-- `src/lib/generator/`: Request queue management and backend communication (Legacy).
+- `src/lib/generator/`: ComfyUI client and generation logic (`comfyGenerator.ts`).
 - `src/lib/viewer/`: UI for viewing selected images and their parameters.
 - `src/lib/paint/`: Inpainting and masking tools.
 - `src/lib/persistence/`: Save/Load logic and serialization.

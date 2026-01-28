@@ -15,10 +15,22 @@
     on:keydown|stopPropagation
   />
 
-  <label for="checkpoint">Checkpoint</label>
-  <select id="checkpoint" bind:value={$generationSettingsStore.checkpoint} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
-    {#each $comfyStore.checkpoints as checkpoint}
-      <option value={checkpoint}>{checkpoint}</option>
+  <label for="diffusion_model">Diffusion Model</label>
+  <select id="diffusion_model" bind:value={$generationSettingsStore.checkpoint} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+    {#each $comfyStore.diffusion_models as model}
+      <option value={model}>{model}</option>
+    {/each}
+    {#if $comfyStore.diffusion_models.length === 0}
+      {#each $comfyStore.checkpoints as checkpoint}
+        <option value={checkpoint}>{checkpoint} (from checkpoints)</option>
+      {/each}
+    {/if}
+  </select>
+
+  <label for="unet_weight_dtype">UNET Weight Dtype</label>
+  <select id="unet_weight_dtype" bind:value={$generationSettingsStore.unet_weight_dtype} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+    {#each $comfyStore.unet_weight_dtypes as dtype}
+      <option value={dtype}>{dtype}</option>
     {/each}
   </select>
 
@@ -33,6 +45,13 @@
   <select id="clip" bind:value={$generationSettingsStore.clip} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
     {#each $comfyStore.clips as clip}
       <option value={clip}>{clip}</option>
+    {/each}
+  </select>
+
+  <label for="clip_type">CLIP Type</label>
+  <select id="clip_type" bind:value={$generationSettingsStore.clip_type} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+    {#each $comfyStore.clip_types as type}
+      <option value={type}>{type}</option>
     {/each}
   </select>
 
