@@ -35,6 +35,9 @@
     value = next;
     dispatch("change", value);
   }
+
+  // Check if the extra slot is being used
+  $: hasExtra = $$slots.extra;
 </script>
 
 {#if showLabel}
@@ -55,9 +58,11 @@
     bind:this={input}
     on:keydown|preventDefault
   />
-  <div class="value-row">
+  <div class="value-row" class:has-extra={hasExtra}>
     <span>{integer ? value.toFixed(0) : value.toFixed(2)}</span>
-    <slot name="extra" />
+    {#if hasExtra}
+        <slot name="extra" />
+    {/if}
   </div>
 </div>
 
@@ -78,13 +83,18 @@
     flex-direction: row;
     align-items: center;
     gap: 0.5em;
-    min-width: 5.5em;
     justify-content: flex-end;
+  }
+
+  /* Add padding if there's no extra button, to align with those that have one */
+  .value-row:not(.has-extra) {
+    padding-right: 2.5em; /* button width (2em) + gap (0.5em) */
   }
 
   span {
     text-align: right;
     user-select: none;
+    width: 3em;
   }
 
   input {
