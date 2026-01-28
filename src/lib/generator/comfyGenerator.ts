@@ -5,6 +5,18 @@ import {
   type ImgImgRequest,
 } from "../state/nodeTypes/imgImgNodes";
 import {
+  createInpaintNode,
+  type InpaintRequest,
+} from "../state/nodeTypes/inpaintNodes";
+import {
+  createMaskNode,
+  type MaskRequest,
+} from "../state/nodeTypes/maskNodes";
+import {
+  createUploadNode,
+  type UploadRequest,
+} from "../state/nodeTypes/uploadNode";
+import {
   modelsHash,
   type AnyNode,
   type BranchNode,
@@ -22,6 +34,29 @@ export type GenerationRequest = {
   fire: () => Promise<void>;
   cancel: () => void;
 };
+
+function getComfyFilename(imageInfo: { filename: string; subfolder: string }): string {
+    return imageInfo.subfolder 
+        ? `${imageInfo.subfolder}/${imageInfo.filename}`
+        : imageInfo.filename;
+}
+
+/**
+ * Returns a node definition for loading an image based on its type.
+ */
+function getLoaderNode(imageInfo: { filename: string; subfolder: string; type: string }) {
+    if (imageInfo.type === 'output') {
+        return {
+            inputs: { image: `${getComfyFilename(imageInfo)} [output]` },
+            class_type: "LoadImageOutput"
+        };
+    } else {
+        return {
+            inputs: { image: imageInfo.filename, upload: "image" },
+            class_type: "LoadImage"
+        };
+    }
+}
 
 async function runGeneration<T extends BranchNode>(
   pendingRequests: Writable<{
@@ -204,26 +239,6 @@ export async function queueImgImg(
         throw new Error("Parent node has no image info for Img2Img");
     }
 
-    // Logic for deciding which node to use based on image type
-    let loaderNode: any;
-    if (parent.comfyImage.type === 'output') {
-        loaderNode = {
-            inputs: {
-                image: parent.comfyImage.filename
-            },
-            class_type: "LoadImageOutput"
-        };
-    } else {
-        // Fallback to standard LoadImage for input files (Uploads)
-        loaderNode = {
-            inputs: {
-                image: parent.comfyImage.filename,
-                upload: "image"
-            },
-            class_type: "LoadImage"
-        };
-    }
-
     const workflow = {
       "3": {
         inputs: {
@@ -260,7 +275,7 @@ export async function queueImgImg(
         },
         class_type: "VAELoader",
       },
-      "13": loaderNode,
+      "13": getLoaderNode(parent.comfyImage),
       "14": {
         inputs: {
           pixels: ["13", 0],
@@ -292,7 +307,7 @@ export async function queueImgImg(
       "9": {
         inputs: {
           filename_prefix: "ViewsTree_Img2Img",
-          images: ["8", 0],
+          images: ["13", 0],
         },
         class_type: "SaveImage",
       },
@@ -317,10 +332,180 @@ export async function queueImgImg(
   });
 }
 
-/**
- * Uses WebSockets to wait for a specific node to finish execution.
- * Fallback to history if WebSocket misses the event (e.g. cached).
- */
+export async function queueInpaint(
+  _saveName: string,
+  request: InpaintRequest,
+  parent: BranchNode
+) {
+  const clonedRequest = JSON.parse(JSON.stringify(request));
+  const hash = modelsHash(clonedRequest);
+  
+  return runGeneration(parent.pendingRequests, hash, async (abortController) => {
+    const client = getComfyClient();
+    const seed = clonedRequest.seed ?? randomSeed();
+
+    const maskNode = parent as any;
+    if (maskNode.type !== 'Mask') throw new Error("Parent of Inpaint must be a Mask node");
+    
+    const imageNode = maskNode.parent;
+    if (!imageNode.comfyImage) throw new Error("Grandparent node has no image info for Inpaint");
+
+    const workflow = {
+      "10": {
+        inputs: {
+          unet_name: clonedRequest.checkpoint,
+          weight_dtype: clonedRequest.unet_weight_dtype,
+        },
+        class_type: "UNETLoader",
+      },
+      "11": {
+        inputs: {
+          clip_name: clonedRequest.clip,
+          type: clonedRequest.clip_type,
+        },
+        class_type: "CLIPLoader",
+      },
+      "12": {
+        inputs: {
+          vae_name: clonedRequest.vae,
+        },
+        class_type: "VAELoader",
+      },
+      "13": getLoaderNode(imageNode.comfyImage),
+      "16": {
+        inputs: {
+          image: maskNode.comfyImage.filename,
+          channel: "red"
+        },
+        class_type: "LoadImageMask"
+      },
+      "15": {
+        inputs: {
+          model: ["10", 0]
+        },
+        class_type: "DifferentialDiffusion"
+      },
+      "18": {
+        inputs: {
+          positive: ["6", 0],
+          negative: ["7", 0],
+          vae: ["12", 0],
+          pixels: ["13", 0],
+          mask: ["16", 0],
+          noise_mask: true
+        },
+        class_type: "InpaintModelConditioning"
+      },
+      "6": {
+        inputs: {
+          text: clonedRequest.prompt,
+          clip: ["11", 0],
+        },
+        class_type: "CLIPTextEncode",
+      },
+      "7": {
+        inputs: {
+          text: clonedRequest.negativePrompt,
+          clip: ["11", 0],
+        },
+        class_type: "CLIPTextEncode",
+      },
+      "3": {
+        inputs: {
+          seed: seed,
+          steps: clonedRequest.steps,
+          cfg: clonedRequest.scale,
+          sampler_name: clonedRequest.sampler_name,
+          scheduler: clonedRequest.scheduler,
+          denoise: clonedRequest.strength,
+          model: ["15", 0],
+          positive: ["18", 0],
+          negative: ["18", 1],
+          latent_image: ["18", 2],
+        },
+        class_type: "KSampler",
+      },
+      "8": {
+        inputs: {
+          samples: ["3", 0],
+          vae: ["12", 0],
+        },
+        class_type: "VAEDecode",
+      },
+      "9": {
+        inputs: {
+          filename_prefix: "ViewsTree_Inpaint",
+          images: ["8", 0],
+        },
+        class_type: "SaveImage",
+      },
+    };
+
+    const promptRes = await client.queuePrompt(null, workflow);
+    const output = await waitForNodeOutput(promptRes.prompt_id, "9", abortController);
+    const imageInfo = output.images[0];
+
+    return createInpaintNode(
+      {
+        ...clonedRequest,
+        id: promptRes.prompt_id,
+        seed: {
+          random: clonedRequest.seed === undefined,
+          actual: seed,
+        },
+        comfyImage: imageInfo,
+      },
+      parent
+    );
+  });
+}
+
+export async function sendMask(
+  _saveName: string,
+  request: MaskRequest,
+  parent: BranchNode
+): Promise<void> {
+    const client = getComfyClient();
+    const response = await fetch(request.image);
+    const blob = await response.blob();
+    
+    const uploadRes = await client.uploadImage(blob, `mask_${Date.now()}.png`);
+    if (!uploadRes) throw new Error("Failed to upload mask");
+
+    const maskNode = createMaskNode({
+        id: `mask_${uploadRes.info.filename}`,
+        width: request.width,
+        height: request.height,
+        comfyImage: uploadRes.info
+    }, parent);
+
+    parent.children.update(children => [...children, maskNode]);
+    saveStore.save();
+}
+
+export async function sendUpload(
+  _saveName: string,
+  request: UploadRequest,
+  rootNode: RootNode
+): Promise<void> {
+    const client = getComfyClient();
+    const response = await fetch(request.image);
+    const blob = await response.blob();
+    
+    const uploadRes = await client.uploadImage(blob, `upload_${Date.now()}.png`);
+    if (!uploadRes) throw new Error("Failed to upload image");
+
+    const uploadNode = createUploadNode({
+        id: `upload_${uploadRes.info.filename}`,
+        width: request.width,
+        height: request.height,
+        comfyImage: uploadRes.info
+    }, rootNode);
+
+    rootNode.children.update(children => [...children, uploadNode]);
+    saveStore.save();
+}
+
 async function waitForNodeOutput(promptId: string, nodeId: string, abortController: AbortController): Promise<any> {
   const client = getComfyClient();
   
@@ -342,10 +527,8 @@ async function waitForNodeOutput(promptId: string, nodeId: string, abortControll
         }
     };
 
-    // If it's already cached, we might get an 'execution_cached' event
     const onExecutionCached = (ev: any) => {
         if (ev.detail.prompt_id === promptId && ev.detail.nodes.includes(nodeId)) {
-            // If cached, 'executed' won't fire for this node, so we check history
             cleanup();
             client.getHistory(promptId).then(history => {
                 if (history && history.outputs[nodeId]) {
@@ -372,7 +555,7 @@ async function waitForNodeOutput(promptId: string, nodeId: string, abortControll
             cleanup();
             resolve(history.outputs[nodeId]);
         }
-    }, 30000); // 30s safety net
+    }, 30000); 
     cleanups.push(() => clearTimeout(timeout));
   });
 }
@@ -404,29 +587,4 @@ export function copyRequest<T extends Partial<GenerationSettings>>(
   request: T
 ): T {
   return JSON.parse(JSON.stringify(request));
-}
-
-export function queueInpaint(
-  _saveName: string,
-  _request: any,
-  _parent: BranchNode
-) {
-  console.warn("queueInpaint not yet implemented for ComfyUI");
-  return Promise.reject("Not implemented");
-}
-
-export async function sendUpload(
-  _saveName: string,
-  _request: any,
-  _rootNode: RootNode
-): Promise<void> {
-  console.warn("sendUpload not yet implemented for ComfyUI");
-}
-
-export async function sendMask(
-  _saveName: string,
-  _request: any,
-  _parent: BranchNode
-): Promise<void> {
-  console.warn("sendMask not yet implemented for ComfyUI");
 }
