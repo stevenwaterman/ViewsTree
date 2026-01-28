@@ -11,6 +11,7 @@ export type ComfyModels = {
   schedulers: string[];
   unet_weight_dtypes: string[];
   clip_types: string[];
+  loras: string[];
 };
 
 const initialModels: ComfyModels = {
@@ -22,6 +23,7 @@ const initialModels: ComfyModels = {
   schedulers: [],
   unet_weight_dtypes: [],
   clip_types: [],
+  loras: [],
 };
 
 const internalComfyStore: Writable<ComfyModels> = writable(initialModels);
@@ -33,10 +35,11 @@ export const comfyStore: Stateful<Readable<ComfyModels>> & {
   reload: async () => {
     const client = getComfyClient();
     try {
-      const [checkpoints, samplerInfo, nodeDefs] = await Promise.all([
+      const [checkpoints, samplerInfo, nodeDefs, loras] = await Promise.all([
         client.getCheckpoints(),
         client.getSamplerInfo(),
         client.getNodeDefs(),
+        client.getLoras(),
       ]);
 
       const vaes = (nodeDefs?.["VAELoader"]?.input?.required?.["vae_name"]?.[0] as string[]) || [];
@@ -74,6 +77,7 @@ export const comfyStore: Stateful<Readable<ComfyModels>> & {
         schedulers,
         unet_weight_dtypes,
         clip_types,
+        loras,
       });
     } catch (e) {
       console.error("Failed to load models from ComfyUI", e);

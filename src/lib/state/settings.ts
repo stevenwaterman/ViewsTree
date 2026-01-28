@@ -25,6 +25,7 @@ function getDefaultGenerationSettings(): GenerationSettings {
     unet_weight_dtype: "default",
     clip_type: "stable_diffusion",
     supportsCfg: true,
+    loras: [],
     prompt: "",
     negativePrompt: "",
     width: 512,
@@ -49,6 +50,7 @@ function copySettings(
     newSettings.scheduler = node.scheduler;
     newSettings.unet_weight_dtype = node.unet_weight_dtype;
     newSettings.clip_type = node.clip_type;
+    newSettings.loras = node.loras ? JSON.parse(JSON.stringify(node.loras)) : [];
     
     // Attempt to find matching model config ID based on the 5 core parameters
     const configs = modelConfigsStore.state;
@@ -124,6 +126,29 @@ export const generationSettingsStore = {
             scale: config.supportsCfg ? s.scale : 1
         }));
     }
+  },
+  addLora: (name: string) => {
+    generationSettingsStoreInternal.update(s => {
+        if (s.loras.find(l => l.name === name)) return s;
+        return {
+            ...s,
+            loras: [...s.loras, { name, strength: 1.0 }]
+        };
+    });
+  },
+  removeLora: (name: string) => {
+    generationSettingsStoreInternal.update(s => ({
+        ...s,
+        loras: s.loras.filter(l => l.name !== name)
+    }));
+  },
+  updateLoraStrength: (name: string, strength: number) => {
+    generationSettingsStoreInternal.update(s => {
+        return {
+            ...s,
+            loras: s.loras.map(l => l.name === name ? { ...l, strength } : l)
+        };
+    });
   },
   copySettings: (node: BranchNode) =>
     generationSettingsStoreInternal.update((current) =>

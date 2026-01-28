@@ -2,14 +2,15 @@ import type { Writable } from "svelte/store";
 import { saveStore } from "../persistence/saves";
 import {
   createImgImgNode,
-  type ImgImgRequest,
+  type ImgImgResult,
 } from "../state/nodeTypes/imgImgNodes";
 import {
   createInpaintNode,
-  type InpaintRequest,
+  type InpaintResult,
 } from "../state/nodeTypes/inpaintNodes";
 import {
   createMaskNode,
+  type MaskResult,
   type MaskRequest,
 } from "../state/nodeTypes/maskNodes";
 import {
@@ -24,7 +25,7 @@ import {
 import type { RootNode } from "../state/nodeTypes/rootNodes";
 import {
   createTxtImgNode,
-  type TxtImgRequest,
+  type TxtImgResult,
 } from "../state/nodeTypes/txtImgNodes";
 import { type GenerationSettings, randomSeed } from "../state/settings";
 import { getComfyClient } from "./comfyClient";
@@ -56,6 +57,45 @@ function getLoaderNode(imageInfo: { filename: string; subfolder: string; type: s
             class_type: "LoadImage"
         };
     }
+}
+
+/**
+ * Adds LoRA loaders to the workflow, chaining them together.
+ * Returns the IDs of the final model and clip outputs.
+ */
+function addLorasToWorkflow(
+    workflow: any, 
+    loras: { name: string; strength: number }[], 
+    baseModelId: string, 
+    baseClipId: string
+): { model: [string, number], clip: [string, number] } {
+    let lastModelId = baseModelId;
+    let lastClipId = baseClipId;
+    let lastModelOut = 0;
+    let lastClipOut = 0;
+
+    loras.forEach((lora, index) => {
+        const nodeId = `lora_${index}`;
+        workflow[nodeId] = {
+            inputs: {
+                lora_name: lora.name,
+                strength_model: lora.strength,
+                strength_clip: lora.strength,
+                model: [lastModelId, lastModelOut],
+                clip: [lastClipId, lastClipOut]
+            },
+            class_type: "LoraLoader"
+        };
+        lastModelId = nodeId;
+        lastClipId = nodeId;
+        lastModelOut = 0;
+        lastClipOut = 1;
+    });
+
+    return { 
+        model: [lastModelId, lastModelOut], 
+        clip: [lastClipId, lastClipOut] 
+    };
 }
 
 async function runGeneration<T extends BranchNode>(
@@ -120,7 +160,7 @@ async function runGeneration<T extends BranchNode>(
 
 export async function queueTxtImg(
   _saveName: string,
-  request: TxtImgRequest & { supportsCfg?: boolean },
+  request: GenerationSettings,
   parent: RootNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -132,22 +172,7 @@ export async function queueTxtImg(
     const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
     const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
-    const workflow = {
-      "3": {
-        inputs: {
-          seed: seed,
-          steps: clonedRequest.steps,
-          cfg: scale,
-          sampler_name: clonedRequest.sampler_name,
-          scheduler: clonedRequest.scheduler,
-          denoise: 1,
-          model: ["10", 0],
-          positive: ["6", 0],
-          negative: ["7", 0],
-          latent_image: ["5", 0],
-        },
-        class_type: "KSampler",
-      },
+    const workflow: any = {
       "10": {
         inputs: {
           unet_name: clonedRequest.checkpoint,
@@ -176,20 +201,6 @@ export async function queueTxtImg(
         },
         class_type: "EmptyLatentImage",
       },
-      "6": {
-        inputs: {
-          text: clonedRequest.prompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
-      "7": {
-        inputs: {
-          text: negativePrompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
       "8": {
         inputs: {
           samples: ["3", 0],
@@ -204,6 +215,38 @@ export async function queueTxtImg(
         },
         class_type: "SaveImage",
       },
+    };
+
+    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
+
+    workflow["6"] = {
+      inputs: {
+        text: clonedRequest.prompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["7"] = {
+      inputs: {
+        text: negativePrompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["3"] = {
+      inputs: {
+        seed: seed,
+        steps: clonedRequest.steps,
+        cfg: scale,
+        sampler_name: clonedRequest.sampler_name,
+        scheduler: clonedRequest.scheduler,
+        denoise: 1,
+        model: model,
+        positive: ["6", 0],
+        negative: ["7", 0],
+        latent_image: ["5", 0],
+      },
+      class_type: "KSampler",
     };
 
     const promptRes = await client.queuePrompt(null, workflow);
@@ -227,7 +270,7 @@ export async function queueTxtImg(
 
 export async function queueImgImg(
   _saveName: string,
-  request: ImgImgRequest & { supportsCfg?: boolean },
+  request: GenerationSettings,
   parent: BranchNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -243,22 +286,7 @@ export async function queueImgImg(
         throw new Error("Parent node has no image info for Img2Img");
     }
 
-    const workflow = {
-      "3": {
-        inputs: {
-          seed: seed,
-          steps: clonedRequest.steps,
-          cfg: scale,
-          sampler_name: clonedRequest.sampler_name,
-          scheduler: clonedRequest.scheduler,
-          denoise: clonedRequest.strength,
-          model: ["10", 0],
-          positive: ["6", 0],
-          negative: ["7", 0],
-          latent_image: ["14", 0],
-        },
-        class_type: "KSampler",
-      },
+    const workflow: any = {
       "10": {
         inputs: {
           unet_name: clonedRequest.checkpoint,
@@ -297,20 +325,6 @@ export async function queueImgImg(
         },
         class_type: "VAEEncode"
       },
-      "6": {
-        inputs: {
-          text: clonedRequest.prompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
-      "7": {
-        inputs: {
-          text: negativePrompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
       "8": {
         inputs: {
           samples: ["3", 0],
@@ -325,6 +339,38 @@ export async function queueImgImg(
         },
         class_type: "SaveImage",
       },
+    };
+
+    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
+
+    workflow["6"] = {
+      inputs: {
+        text: clonedRequest.prompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["7"] = {
+      inputs: {
+        text: negativePrompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["3"] = {
+      inputs: {
+        seed: seed,
+        steps: clonedRequest.steps,
+        cfg: scale,
+        sampler_name: clonedRequest.sampler_name,
+        scheduler: clonedRequest.scheduler,
+        denoise: clonedRequest.strength,
+        model: model,
+        positive: ["6", 0],
+        negative: ["7", 0],
+        latent_image: ["14", 0],
+      },
+      class_type: "KSampler",
     };
 
     const promptRes = await client.queuePrompt(null, workflow);
@@ -348,7 +394,7 @@ export async function queueImgImg(
 
 export async function queueInpaint(
   _saveName: string,
-  request: InpaintRequest & { supportsCfg?: boolean },
+  request: GenerationSettings,
   parent: BranchNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -366,7 +412,7 @@ export async function queueInpaint(
     const imageNode = maskNode.parent;
     if (!imageNode.comfyImage) throw new Error("Grandparent node has no image info for Inpaint");
 
-    const workflow = {
+    const workflow: any = {
       "10": {
         inputs: {
           unet_name: clonedRequest.checkpoint,
@@ -428,52 +474,6 @@ export async function queueInpaint(
         },
         class_type: "InvertMask"
       },
-      "15": {
-        inputs: {
-          model: ["10", 0]
-        },
-        class_type: "DifferentialDiffusion"
-      },
-      "18": {
-        inputs: {
-          positive: ["6", 0],
-          negative: ["7", 0],
-          vae: ["12", 0],
-          pixels: ["20", 0],
-          mask: ["19", 0],
-          noise_mask: true
-        },
-        class_type: "InpaintModelConditioning"
-      },
-      "6": {
-        inputs: {
-          text: clonedRequest.prompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
-      "7": {
-        inputs: {
-          text: negativePrompt,
-          clip: ["11", 0],
-        },
-        class_type: "CLIPTextEncode",
-      },
-      "3": {
-        inputs: {
-          seed: seed,
-          steps: clonedRequest.steps,
-          cfg: scale,
-          sampler_name: clonedRequest.sampler_name,
-          scheduler: clonedRequest.scheduler,
-          denoise: clonedRequest.strength,
-          model: ["15", 0],
-          positive: ["18", 0],
-          negative: ["18", 1],
-          latent_image: ["18", 2],
-        },
-        class_type: "KSampler",
-      },
       "8": {
         inputs: {
           samples: ["3", 0],
@@ -488,6 +488,55 @@ export async function queueInpaint(
         },
         class_type: "SaveImage",
       },
+    };
+
+    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
+
+    workflow["15"] = {
+      inputs: {
+        model: model
+      },
+      class_type: "DifferentialDiffusion"
+    };
+    workflow["6"] = {
+      inputs: {
+        text: clonedRequest.prompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["7"] = {
+      inputs: {
+        text: negativePrompt,
+        clip: clip,
+      },
+      class_type: "CLIPTextEncode",
+    };
+    workflow["18"] = {
+      inputs: {
+        positive: ["6", 0],
+        negative: ["7", 0],
+        vae: ["12", 0],
+        pixels: ["20", 0],
+        mask: ["19", 0],
+        noise_mask: true
+      },
+      class_type: "InpaintModelConditioning"
+    };
+    workflow["3"] = {
+      inputs: {
+        seed: seed,
+        steps: clonedRequest.steps,
+        cfg: scale,
+        sampler_name: clonedRequest.sampler_name,
+        scheduler: clonedRequest.scheduler,
+        denoise: clonedRequest.strength,
+        model: ["15", 0],
+        positive: ["18", 0],
+        negative: ["18", 1],
+        latent_image: ["18", 2],
+      },
+      class_type: "KSampler",
     };
 
     const promptRes = await client.queuePrompt(null, workflow);

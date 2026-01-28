@@ -75,6 +75,22 @@
         select.dispatchEvent(new Event('change'));
     }
   }
+
+  let selectedLora = "";
+  function addLora() {
+    if (selectedLora) {
+        generationSettingsStore.addLora(selectedLora);
+        selectedLora = "";
+    }
+  }
+
+  function stripExtension(filename: string): string {
+    return filename.replace(/\.[^/.]+$/, "");
+  }
+
+  $: filteredLoras = $comfyStore.loras.filter(
+    lora => !$generationSettingsStore.loras.some(l => l.name === lora)
+  );
 </script>
 
 <div class="container">
@@ -95,6 +111,35 @@
     <button class="small-btn" on:click={openConfigModal} title="Create new from current">+</button>
     <button class="small-btn" on:click={deleteConfig} title="Delete selected" disabled={!$generationSettingsStore.modelConfigId}>🗑</button>
   </div>
+
+  <label for="lora_select">Add LoRA</label>
+  <div class="config-row">
+    <select id="lora_select" bind:value={selectedLora} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
+        {#if filteredLoras.length > 0}
+            <option value="">Select LoRA...</option>
+            {#each filteredLoras as lora}
+                <option value={lora}>{stripExtension(lora)}</option>
+            {/each}
+        {:else}
+            <option value="" disabled>All LoRAs added</option>
+        {/if}
+    </select>
+    <button class="small-btn" on:click={addLora} disabled={!selectedLora}>+</button>
+  </div>
+
+  {#each $generationSettingsStore.loras as lora (lora.name)}
+    <span class="lora-name" title={lora.name}>{stripExtension(lora.name)}</span>
+    <Slider
+        label="Strength"
+        showLabel={false}
+        min={0}
+        max={2}
+        step={0.05}
+        bind:value={lora.strength}
+    >
+        <button slot="extra" class="small-btn" on:click={() => generationSettingsStore.removeLora(lora.name)}>🗑</button>
+    </Slider>
+  {/each}
 
   <label for="sampler">Sampler</label>
   <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
@@ -157,6 +202,7 @@
     min={1}
     max={100}
     step={1}
+    integer={true}
     bind:value={$generationSettingsStore.steps}
   />
   
@@ -241,5 +287,15 @@
 
   .size-row input {
     width: 5em;
+  }
+
+  .lora-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 15em;
+    align-self: center;
+    color: var(--text);
+    font-size: 0.9em;
   }
 </style>

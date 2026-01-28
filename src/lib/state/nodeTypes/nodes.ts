@@ -118,6 +118,7 @@ export type ComfySettings = {
   scheduler: string;
   unet_weight_dtype: string;
   clip_type: string;
+  loras: { name: string; strength: number }[];
 };
 
 export type BaseNode<T extends NodeTypeStrings> = NodeIsTypes<T> & {
@@ -231,7 +232,8 @@ export function loadNode<T extends NodeTypeStrings>(
 }
 
 export function modelsHash(settings: ComfySettings): string {
-  return `${settings.checkpoint}:${settings.vae}:${settings.clip}:${settings.sampler_name}:${settings.scheduler}`;
+  const loraPart = settings.loras.map(l => `${l.name}:${l.strength.toFixed(2)}`).join(",");
+  return `${settings.checkpoint}:${settings.vae}:${settings.clip}:${settings.sampler_name}:${settings.scheduler}:${loraPart}`;
 }
 
 export function sortChildren(a: AnyNode, b: AnyNode): number {
