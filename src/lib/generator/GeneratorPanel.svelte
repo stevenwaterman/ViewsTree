@@ -217,15 +217,16 @@
     />
   {/if}
 
-  <Slider
-    label="Strength"
-    id="strength_slider"
-    min={0}
-    max={1}
-    step={0.05}
-    bind:value={$generationSettingsStore.strength}
-    disabled={$selectedStore.type === "Root"}
-  />
+  {#if $selectedStore.type !== "Root"}
+    <Slider
+      label="Strength"
+      id="strength_slider"
+      min={0}
+      max={1}
+      step={0.05}
+      bind:value={$generationSettingsStore.strength}
+    />
+  {/if}
 
   <SeedInput />
 </div>
