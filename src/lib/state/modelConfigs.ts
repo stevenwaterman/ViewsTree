@@ -10,6 +10,9 @@ export type ModelConfig = {
   unet_weight_dtype: string;
   clip_type: string;
   supportsCfg: boolean;
+  defaultSteps: number;
+  defaultSampler: string;
+  defaultScheduler: string;
 };
 
 const STORAGE_KEY = "viewstree_model_configs";

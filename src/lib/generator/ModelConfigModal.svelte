@@ -2,6 +2,7 @@
   import { comfyStore } from "../state/models";
   import { modelConfigsStore, type ModelConfig } from "../state/modelConfigs";
   import { modalComponent } from "../modalStore";
+  import { generationSettingsStore } from "../state/settings";
 
   export let initialConfig: Partial<ModelConfig> = {};
 
@@ -12,6 +13,10 @@
   let clip = initialConfig.clip || "";
   let clip_type = initialConfig.clip_type || "stable_diffusion";
   let supportsCfg = initialConfig.supportsCfg !== undefined ? initialConfig.supportsCfg : true;
+  
+  let defaultSteps = initialConfig.defaultSteps || $generationSettingsStore.steps;
+  let defaultSampler = initialConfig.defaultSampler || $generationSettingsStore.sampler_name;
+  let defaultScheduler = initialConfig.defaultScheduler || $generationSettingsStore.scheduler;
 
   $: isDuplicate = $modelConfigsStore.some(c => c.name.toLowerCase() === name.trim().toLowerCase());
 
@@ -31,7 +36,10 @@
       vae,
       clip,
       clip_type,
-      supportsCfg
+      supportsCfg,
+      defaultSteps,
+      defaultSampler,
+      defaultScheduler
     });
     modalComponent.close();
   }
@@ -120,6 +128,31 @@
     <input id="supports_cfg" type="checkbox" bind:checked={supportsCfg} />
   </div>
 
+  <hr />
+
+  <div class="field">
+    <label for="default_steps">Default Steps</label>
+    <input id="default_steps" type="number" bind:value={defaultSteps} on:keydown={handleKeydown} />
+  </div>
+
+  <div class="field">
+    <label for="default_sampler">Default Sampler</label>
+    <select id="default_sampler" bind:value={defaultSampler} on:keydown={handleKeydown}>
+      {#each $comfyStore.samplers as sampler}
+        <option value={sampler}>{sampler}</option>
+      {/each}
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="default_scheduler">Default Scheduler</label>
+    <select id="default_scheduler" bind:value={defaultScheduler} on:keydown={handleKeydown}>
+      {#each $comfyStore.schedulers as scheduler}
+        <option value={scheduler}>{scheduler}</option>
+      {/each}
+    </select>
+  </div>
+
   <div class="actions">
     <button on:click={() => modalComponent.close()}>Cancel</button>
     <button class="primary" on:click={save} disabled={!name || isDuplicate}>Save Config</button>
@@ -179,6 +212,12 @@
 
   input[type="checkbox"] {
     width: fit-content;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.5em 0;
   }
 
   .actions {

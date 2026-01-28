@@ -123,7 +123,11 @@ export const generationSettingsStore = {
             unet_weight_dtype: config.unet_weight_dtype,
             clip_type: config.clip_type,
             supportsCfg: config.supportsCfg,
-            scale: config.supportsCfg ? s.scale : 1
+            scale: config.supportsCfg ? s.scale : 1,
+            // Apply defaults from config
+            steps: config.defaultSteps ?? s.steps,
+            sampler_name: config.defaultSampler ?? s.sampler_name,
+            scheduler: config.defaultScheduler ?? s.scheduler
         }));
     }
   },
