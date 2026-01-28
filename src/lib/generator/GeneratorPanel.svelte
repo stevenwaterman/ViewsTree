@@ -4,6 +4,30 @@
   import SeedInput from "./SeedInput.svelte";
   import { selectedStore } from "../state/selected";
   import { comfyStore } from "../state/models";
+
+  function roundTo16(val: number): number {
+    return Math.round(val / 16) * 16;
+  }
+
+  function handleWidthChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const val = parseInt(target.value);
+    if (!isNaN(val)) {
+      const rounded = roundTo16(val);
+      $generationSettingsStore.width = rounded;
+      target.value = rounded.toString(); // Force input sync
+    }
+  }
+
+  function handleHeightChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const val = parseInt(target.value);
+    if (!isNaN(val)) {
+      const rounded = roundTo16(val);
+      $generationSettingsStore.height = rounded;
+      target.value = rounded.toString(); // Force input sync
+    }
+  }
 </script>
 
 <div class="container">
@@ -77,24 +101,29 @@
     on:keydown|stopPropagation
   />
 
-  <Slider
-    label="Width"
-    id="width_slider"
-    min={64}
-    max={2048}
-    step={64}
-    bind:value={$generationSettingsStore.width}
-    disabled={$selectedStore.isBranch}
-  />
-  <Slider
-    label="Height"
-    id="height_slider"
-    min={64}
-    max={2048}
-    step={64}
-    bind:value={$generationSettingsStore.height}
-    disabled={$selectedStore.isBranch}
-  />
+  <label>Size</label>
+  <div class="size-row">
+    <input 
+      type="number" 
+      value={$generationSettingsStore.width} 
+      on:change={handleWidthChange}
+      on:blur={handleWidthChange}
+      disabled={$selectedStore.isBranch}
+      on:keydown|stopPropagation
+      step="16"
+    />
+    <span>x</span>
+    <input 
+      type="number" 
+      value={$generationSettingsStore.height} 
+      on:change={handleHeightChange}
+      on:blur={handleHeightChange}
+      disabled={$selectedStore.isBranch}
+      on:keydown|stopPropagation
+      step="16"
+    />
+  </div>
+
   <Slider
     label="Steps"
     id="steps_slider"
@@ -142,10 +171,21 @@
     align-self: center;
   }
 
-  select, textarea {
+  select, textarea, input[type="number"] {
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border);
     padding: 4px;
+  }
+
+  .size-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  .size-row input {
+    width: 5em;
   }
 </style>
