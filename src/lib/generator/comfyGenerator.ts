@@ -397,7 +397,7 @@ export async function queueInpaint(
           negative: ["7", 0],
           vae: ["12", 0],
           pixels: ["13", 0],
-          mask: ["19", 0], // Using Inverted Mask
+          mask: ["19", 0],
           noise_mask: true
         },
         class_type: "InpaintModelConditioning"
@@ -495,10 +495,11 @@ export async function sendUpload(
   rootNode: RootNode
 ): Promise<void> {
     const client = getComfyClient();
-    const response = await fetch(request.image);
-    const blob = await response.blob();
     
-    const uploadRes = await client.uploadImage(blob, `upload_${Date.now()}.png`);
+    // Perform cropping on the client side before uploading
+    const croppedBlob = await cropImage(request.image, request.crop, request.width, request.height);
+    
+    const uploadRes = await client.uploadImage(croppedBlob, `upload_${Date.now()}.png`);
     if (!uploadRes) throw new Error("Failed to upload image");
 
     const uploadNode = createUploadNode({
@@ -510,6 +511,45 @@ export async function sendUpload(
 
     rootNode.children.update(children => [...children, uploadNode]);
     saveStore.save();
+}
+
+async function cropImage(
+    dataUrl: string, 
+    crop: { top: number; right: number; bottom: number; left: number },
+    targetWidth: number,
+    targetHeight: number
+): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error("Could not get canvas context"));
+                return;
+            }
+            
+            const sourceX = crop.left;
+            const sourceY = crop.top;
+            const sourceWidth = crop.right - crop.left;
+            const sourceHeight = crop.bottom - crop.top;
+            
+            ctx.drawImage(
+                img, 
+                sourceX, sourceY, sourceWidth, sourceHeight, 
+                0, 0, targetWidth, targetHeight
+            );
+            
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Canvas to blob failed"));
+            }, 'image/png');
+        };
+        img.onerror = () => reject(new Error("Failed to load image for cropping"));
+        img.src = dataUrl;
+    });
 }
 
 async function waitForNodeOutput(promptId: string, nodeId: string, abortController: AbortController): Promise<any> {
