@@ -12,6 +12,27 @@
     grid-template-columns: 1fr auto;
     column-gap: 1em;
   }
+
+  input[type="number"], button {
+    background: var(--bgDark);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px;
+  }
+
+  button {
+    cursor: pointer;
+    width: 2em;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 </style>
 
 <label for="seed">Seed</label>

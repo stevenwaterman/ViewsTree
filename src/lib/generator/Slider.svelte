@@ -1,9 +1,9 @@
 <script lang="ts">
   export let label: string;
   export let id: string = label;
-  export let min: number | undefined = undefined;
-  export let max: number | undefined = undefined;
-  export let step: number | undefined = undefined;
+  export let min: number = 0;
+  export let max: number = 100;
+  export let step: number = 1;
   export let disabled: boolean = false;
 
   export let value: number;
@@ -13,10 +13,22 @@
   function focus() {
     input.focus();
   }
+
+  function onWheel(e: WheelEvent) {
+    if (disabled) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -step : step;
+    let next = value + delta;
+    if (min !== undefined) next = Math.max(min, next);
+    if (max !== undefined) next = Math.min(max, next);
+    value = next;
+  }
 </script>
 
+<!-- svelte-ignore a11y-mouse-events-have-key-events -->
 <label for={id} on:mouseenter={focus}>{label}</label>
-<div class="row" on:mouseenter={focus}>
+<!-- svelte-ignore a11y-mouse-events-have-key-events -->
+<div class="row" on:mouseenter={focus} on:wheel={onWheel}>
   <input
     {id}
     type="range"

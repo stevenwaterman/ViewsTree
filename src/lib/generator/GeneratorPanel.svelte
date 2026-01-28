@@ -52,12 +52,43 @@
         $generationSettingsStore.modelConfigId = undefined;
     }
   }
+
+  function handleWheelWidth(e: WheelEvent) {
+    if ($selectedStore.isBranch) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -16 : 16;
+    $generationSettingsStore.width = Math.max(16, $generationSettingsStore.width + delta);
+  }
+
+  function handleWheelHeight(e: WheelEvent) {
+    if ($selectedStore.isBranch) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -16 : 16;
+    $generationSettingsStore.height = Math.max(16, $generationSettingsStore.height + delta);
+  }
+
+  function handleWheelSelect(e: WheelEvent) {
+    const select = e.currentTarget as HTMLSelectElement;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 1 : -1;
+    const newIndex = Math.max(0, Math.min(select.options.length - 1, select.selectedIndex + delta));
+    if (newIndex !== select.selectedIndex) {
+        select.selectedIndex = newIndex;
+        select.dispatchEvent(new Event('change'));
+    }
+  }
 </script>
 
 <div class="container">
   <label for="model_config">Model Config</label>
   <div class="config-row">
-    <select id="model_config" value={$generationSettingsStore.modelConfigId || ""} on:change={handleConfigChange} on:keydown|stopPropagation>
+    <select 
+        id="model_config" 
+        value={$generationSettingsStore.modelConfigId || ""} 
+        on:change={handleConfigChange} 
+        on:keydown|stopPropagation
+        on:wheel={handleWheelSelect}
+    >
         <option value="" disabled>Select a config...</option>
         {#each $modelConfigsStore as config}
             <option value={config.id}>{config.name}</option>
@@ -68,14 +99,14 @@
   </div>
 
   <label for="sampler">Sampler</label>
-  <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation>
+  <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
     {#each $comfyStore.samplers as sampler}
       <option value={sampler}>{sampler}</option>
     {/each}
   </select>
 
   <label for="scheduler">Scheduler</label>
-  <select id="scheduler" bind:value={$generationSettingsStore.scheduler} on:keydown|stopPropagation>
+  <select id="scheduler" bind:value={$generationSettingsStore.scheduler} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
     {#each $comfyStore.schedulers as scheduler}
       <option value={scheduler}>{scheduler}</option>
     {/each}
@@ -106,6 +137,7 @@
       value={$generationSettingsStore.width} 
       on:change={handleWidthChange}
       on:blur={handleWidthChange}
+      on:wheel={handleWheelWidth}
       disabled={$selectedStore.isBranch}
       on:keydown|stopPropagation
       step="16"
@@ -116,6 +148,7 @@
       value={$generationSettingsStore.height} 
       on:change={handleHeightChange}
       on:blur={handleHeightChange}
+      on:wheel={handleWheelHeight}
       disabled={$selectedStore.isBranch}
       on:keydown|stopPropagation
       step="16"
