@@ -307,7 +307,7 @@ export async function queueImgImg(
       "9": {
         inputs: {
           filename_prefix: "ViewsTree_Img2Img",
-          images: ["13", 0],
+          images: ["8", 0],
         },
         class_type: "SaveImage",
       },
@@ -379,6 +379,12 @@ export async function queueInpaint(
         },
         class_type: "LoadImageMask"
       },
+      "19": {
+        inputs: {
+            mask: ["16", 0]
+        },
+        class_type: "InvertMask"
+      },
       "15": {
         inputs: {
           model: ["10", 0]
@@ -391,7 +397,7 @@ export async function queueInpaint(
           negative: ["7", 0],
           vae: ["12", 0],
           pixels: ["13", 0],
-          mask: ["16", 0],
+          mask: ["19", 0], // Using Inverted Mask
           noise_mask: true
         },
         class_type: "InpaintModelConditioning"
