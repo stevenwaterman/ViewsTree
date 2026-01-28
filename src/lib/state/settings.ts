@@ -6,7 +6,10 @@ import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
 import { selectedStore } from "./selected";
 
-export type GenerationSettings = TxtImgRequest & ImgImgRequest & { modelConfigId?: string };
+export type GenerationSettings = TxtImgRequest & ImgImgRequest & { 
+    modelConfigId?: string;
+    supportsCfg: boolean;
+};
 
 export function randomSeed() {
   return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -21,6 +24,7 @@ function getDefaultGenerationSettings(): GenerationSettings {
     scheduler: "normal",
     unet_weight_dtype: "default",
     clip_type: "stable_diffusion",
+    supportsCfg: true,
     prompt: "",
     negativePrompt: "",
     width: 512,
@@ -56,6 +60,7 @@ function copySettings(
         c.clip_type === node.clip_type
     );
     newSettings.modelConfigId = match?.id;
+    newSettings.supportsCfg = match?.supportsCfg ?? true;
   }
 
   if ("prompt" in node) newSettings.prompt = node.prompt;
@@ -115,7 +120,8 @@ export const generationSettingsStore = {
             clip: config.clip,
             unet_weight_dtype: config.unet_weight_dtype,
             clip_type: config.clip_type,
-            // sampler_name and scheduler are NOT overwritten here anymore
+            supportsCfg: config.supportsCfg,
+            scale: config.supportsCfg ? s.scale : 1
         }));
     }
   },

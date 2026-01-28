@@ -120,7 +120,7 @@ async function runGeneration<T extends BranchNode>(
 
 export async function queueTxtImg(
   _saveName: string,
-  request: TxtImgRequest,
+  request: TxtImgRequest & { supportsCfg?: boolean },
   parent: RootNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -129,13 +129,15 @@ export async function queueTxtImg(
   return runGeneration(parent.pendingRequests, hash, async (abortController) => {
     const client = getComfyClient();
     const seed = clonedRequest.seed ?? randomSeed();
+    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
     const workflow = {
       "3": {
         inputs: {
           seed: seed,
           steps: clonedRequest.steps,
-          cfg: clonedRequest.scale,
+          cfg: scale,
           sampler_name: clonedRequest.sampler_name,
           scheduler: clonedRequest.scheduler,
           denoise: 1,
@@ -183,7 +185,7 @@ export async function queueTxtImg(
       },
       "7": {
         inputs: {
-          text: clonedRequest.negativePrompt,
+          text: negativePrompt,
           clip: ["11", 0],
         },
         class_type: "CLIPTextEncode",
@@ -225,7 +227,7 @@ export async function queueTxtImg(
 
 export async function queueImgImg(
   _saveName: string,
-  request: ImgImgRequest,
+  request: ImgImgRequest & { supportsCfg?: boolean },
   parent: BranchNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -234,6 +236,8 @@ export async function queueImgImg(
   return runGeneration(parent.pendingRequests, hash, async (abortController) => {
     const client = getComfyClient();
     const seed = clonedRequest.seed ?? randomSeed();
+    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
     if (!parent.comfyImage) {
         throw new Error("Parent node has no image info for Img2Img");
@@ -244,7 +248,7 @@ export async function queueImgImg(
         inputs: {
           seed: seed,
           steps: clonedRequest.steps,
-          cfg: clonedRequest.scale,
+          cfg: scale,
           sampler_name: clonedRequest.sampler_name,
           scheduler: clonedRequest.scheduler,
           denoise: clonedRequest.strength,
@@ -292,7 +296,7 @@ export async function queueImgImg(
       },
       "7": {
         inputs: {
-          text: clonedRequest.negativePrompt,
+          text: negativePrompt,
           clip: ["11", 0],
         },
         class_type: "CLIPTextEncode",
@@ -334,7 +338,7 @@ export async function queueImgImg(
 
 export async function queueInpaint(
   _saveName: string,
-  request: InpaintRequest,
+  request: InpaintRequest & { supportsCfg?: boolean },
   parent: BranchNode
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
@@ -343,6 +347,8 @@ export async function queueInpaint(
   return runGeneration(parent.pendingRequests, hash, async (abortController) => {
     const client = getComfyClient();
     const seed = clonedRequest.seed ?? randomSeed();
+    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
     const maskNode = parent as any;
     if (maskNode.type !== 'Mask') throw new Error("Parent of Inpaint must be a Mask node");
@@ -411,7 +417,7 @@ export async function queueInpaint(
       },
       "7": {
         inputs: {
-          text: clonedRequest.negativePrompt,
+          text: negativePrompt,
           clip: ["11", 0],
         },
         class_type: "CLIPTextEncode",
@@ -420,7 +426,7 @@ export async function queueInpaint(
         inputs: {
           seed: seed,
           steps: clonedRequest.steps,
-          cfg: clonedRequest.scale,
+          cfg: scale,
           sampler_name: clonedRequest.sampler_name,
           scheduler: clonedRequest.scheduler,
           denoise: clonedRequest.strength,
@@ -495,8 +501,6 @@ export async function sendUpload(
   rootNode: RootNode
 ): Promise<void> {
     const client = getComfyClient();
-    
-    // Perform cropping on the client side before uploading
     const croppedBlob = await cropImage(request.image, request.crop, request.width, request.height);
     
     const uploadRes = await client.uploadImage(croppedBlob, `upload_${Date.now()}.png`);
@@ -530,18 +534,11 @@ async function cropImage(
                 reject(new Error("Could not get canvas context"));
                 return;
             }
-            
             const sourceX = crop.left;
             const sourceY = crop.top;
             const sourceWidth = crop.right - crop.left;
             const sourceHeight = crop.bottom - crop.top;
-            
-            ctx.drawImage(
-                img, 
-                sourceX, sourceY, sourceWidth, sourceHeight, 
-                0, 0, targetWidth, targetHeight
-            );
-            
+            ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
             canvas.toBlob((blob) => {
                 if (blob) resolve(blob);
                 else reject(new Error("Canvas to blob failed"));

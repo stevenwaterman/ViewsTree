@@ -42,7 +42,23 @@
   function openConfigModal() {
     const currentId = $generationSettingsStore.modelConfigId;
     const currentConfig = modelConfigsStore.state.find(c => c.id === currentId);
-    modalComponent.open(ModelConfigModal, { initialConfig: currentConfig });
+    modalComponent.open(ModelConfigModal, { initialConfig: currentConfig, mode: "create" });
+  }
+
+  function openEditModal() {
+    const currentId = $generationSettingsStore.modelConfigId;
+    const currentConfig = modelConfigsStore.state.find(c => c.id === currentId);
+    if (currentConfig) {
+        modalComponent.open(ModelConfigModal, { initialConfig: currentConfig, mode: "edit" });
+    }
+  }
+
+  function deleteConfig() {
+    const currentId = $generationSettingsStore.modelConfigId;
+    if (currentId && confirm("Delete this model config?")) {
+        modelConfigsStore.removeConfig(currentId);
+        $generationSettingsStore.modelConfigId = undefined;
+    }
   }
 </script>
 
@@ -55,7 +71,11 @@
             <option value={config.id}>{config.name}</option>
         {/each}
     </select>
-    <button class="small-btn" on:click={openConfigModal}>+</button>
+    <button class="small-btn" on:click={openConfigModal} title="Create new from current">+</button>
+    {#if $generationSettingsStore.modelConfigId}
+        <button class="small-btn" on:click={openEditModal} title="Edit current">✎</button>
+        <button class="small-btn" on:click={deleteConfig} title="Delete current">🗑</button>
+    {/if}
   </div>
 
   <label for="sampler">Sampler</label>
@@ -80,13 +100,15 @@
     on:keydown|stopPropagation
   />
 
-  <label for="negativePrompt">Negative Prompt</label>
-  <textarea
-    id="negativePrompt"
-    bind:value={$generationSettingsStore.negativePrompt}
-    rows={6}
-    on:keydown|stopPropagation
-  />
+  {#if $generationSettingsStore.supportsCfg}
+    <label for="negativePrompt">Negative Prompt</label>
+    <textarea
+        id="negativePrompt"
+        bind:value={$generationSettingsStore.negativePrompt}
+        rows={6}
+        on:keydown|stopPropagation
+    />
+  {/if}
 
   <label>Size</label>
   <div class="size-row">
@@ -119,14 +141,18 @@
     step={1}
     bind:value={$generationSettingsStore.steps}
   />
-  <Slider
-    label="Scale"
-    id="scale_slider"
-    min={1}
-    max={25}
-    step={0.5}
-    bind:value={$generationSettingsStore.scale}
-  />
+  
+  {#if $generationSettingsStore.supportsCfg}
+    <Slider
+        label="Scale"
+        id="scale_slider"
+        min={1}
+        max={25}
+        step={0.5}
+        bind:value={$generationSettingsStore.scale}
+    />
+  {/if}
+
   <Slider
     label="Strength"
     id="strength_slider"

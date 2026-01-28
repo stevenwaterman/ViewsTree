@@ -9,6 +9,7 @@ export type ModelConfig = {
   clip: string;
   unet_weight_dtype: string;
   clip_type: string;
+  supportsCfg: boolean;
 };
 
 const STORAGE_KEY = "viewstree_model_configs";
@@ -38,6 +39,13 @@ export const modelConfigsStore = {
     };
     internalConfigsStore.update((configs) => {
       const next = [...configs, newConfig];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  },
+  updateConfig: (id: string, configData: Omit<ModelConfig, "id">) => {
+    internalConfigsStore.update((configs) => {
+      const next = configs.map(c => c.id === id ? { ...configData, id } : c);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });

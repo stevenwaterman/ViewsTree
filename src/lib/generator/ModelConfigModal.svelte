@@ -4,13 +4,15 @@
   import { modalComponent } from "../modalStore";
 
   export let initialConfig: Partial<ModelConfig> = {};
+  export let mode: "create" | "edit" = "create";
 
-  let name = "";
+  let name = mode === "edit" ? (initialConfig.name || "") : "";
   let checkpoint = initialConfig.checkpoint || "";
   let unet_weight_dtype = initialConfig.unet_weight_dtype || "default";
   let vae = initialConfig.vae || "";
   let clip = initialConfig.clip || "";
   let clip_type = initialConfig.clip_type || "stable_diffusion";
+  let supportsCfg = initialConfig.supportsCfg !== undefined ? initialConfig.supportsCfg : true;
 
   // Initialize with first available options if possible and not already provided
   $: if (!checkpoint && $comfyStore.diffusion_models.length > 0) checkpoint = $comfyStore.diffusion_models[0];
@@ -21,20 +23,27 @@
 
   function save() {
     if (!name) return;
-    modelConfigsStore.addConfig({
+    const configData = {
       name,
       checkpoint,
       unet_weight_dtype,
       vae,
       clip,
-      clip_type
-    });
+      clip_type,
+      supportsCfg
+    };
+
+    if (mode === "edit" && initialConfig.id) {
+        modelConfigsStore.updateConfig(initialConfig.id, configData);
+    } else {
+        modelConfigsStore.addConfig(configData);
+    }
     modalComponent.close();
   }
 </script>
 
 <div class="modal-content">
-  <h2>Create Model Config</h2>
+  <h2>{mode === "edit" ? "Edit" : "Create"} Model Config</h2>
   
   <div class="field">
     <label for="config_name">Config Name</label>
@@ -91,6 +100,11 @@
     </select>
   </div>
 
+  <div class="field">
+    <label for="supports_cfg">Supports CFG (Scale)</label>
+    <input id="supports_cfg" type="checkbox" bind:checked={supportsCfg} />
+  </div>
+
   <div class="actions">
     <button on:click={() => modalComponent.close()}>Cancel</button>
     <button class="primary" on:click={save} disabled={!name}>Save Config</button>
@@ -129,6 +143,10 @@
     color: var(--text);
     border: 1px solid var(--border);
     padding: 6px;
+  }
+
+  input[type="checkbox"] {
+    width: fit-content;
   }
 
   .actions {
