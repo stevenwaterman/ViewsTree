@@ -141,19 +141,7 @@
     </Slider>
   {/each}
 
-  <label for="sampler">Sampler</label>
-  <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
-    {#each $comfyStore.samplers as sampler}
-      <option value={sampler}>{sampler}</option>
-    {/each}
-  </select>
-
-  <label for="scheduler">Scheduler</label>
-  <select id="scheduler" bind:value={$generationSettingsStore.scheduler} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
-    {#each $comfyStore.schedulers as scheduler}
-      <option value={scheduler}>{scheduler}</option>
-    {/each}
-  </select>
+  <div class="gap" />
 
   <label for="prompt">Prompt</label>
   <textarea
@@ -206,6 +194,20 @@
     bind:value={$generationSettingsStore.steps}
   />
   
+  <label for="sampler">Sampler</label>
+  <select id="sampler" bind:value={$generationSettingsStore.sampler_name} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
+    {#each $comfyStore.samplers as sampler}
+      <option value={sampler}>{sampler}</option>
+    {/each}
+  </select>
+
+  <label for="scheduler">Scheduler</label>
+  <select id="scheduler" bind:value={$generationSettingsStore.scheduler} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
+    {#each $comfyStore.schedulers as scheduler}
+      <option value={scheduler}>{scheduler}</option>
+    {/each}
+  </select>
+
   {#if $generationSettingsStore.supportsCfg}
     <Slider
         label="Scale"
@@ -234,40 +236,54 @@
 <style>
   .container {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 8em minmax(20em, 1fr);
     column-gap: 1em;
     row-gap: 0.5em;
     padding: 1em;
 
     height: fit-content;
-    width: fit-content;
+    width: auto;
     overflow-y: auto;
+  }
+
+  .gap {
+    grid-column: span 2;
+    height: 1em;
   }
 
   label {
     user-select: none;
     align-self: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   select, textarea, input[type="number"] {
-    background: var(--bgDark);
+    background: var(--bgLight);
     color: var(--text);
     border: 1px solid var(--border);
     padding: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
   }
 
   .config-row {
     display: flex;
     flex-direction: row;
     gap: 0.5em;
+    min-width: 0;
   }
 
   .config-row select {
     flex-grow: 1;
+    min-width: 0;
   }
 
   .small-btn {
     width: 2em;
+    flex-shrink: 0;
     cursor: pointer;
     background: var(--bgDark);
     color: var(--text);
@@ -294,7 +310,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 15em;
+    max-width: 100%;
     align-self: center;
     color: var(--text);
     font-size: 0.9em;

@@ -1,13 +1,5 @@
 <script lang="ts">
-  import { generationSettingsStore } from "../state/settings";
-
   let element: HTMLDivElement;
-
-  let width: number;
-  $: width = $generationSettingsStore.width;
-
-  let height: number;
-  $: height = $generationSettingsStore.height;
 
   let zoomLevel: number = 2;
   let mouseX: number = 0.5;
@@ -25,8 +17,8 @@
 
   function onMouseMove(event: MouseEvent) {
     const box = element.getBoundingClientRect();
-    mouseX = (event.clientX - box.left) / width;
-    mouseY = (event.clientY - box.top) / height;
+    mouseX = (event.clientX - box.left) / box.width;
+    mouseY = (event.clientY - box.top) / box.height;
   }
 
   function onMouseEnter(event: MouseEvent) {
@@ -49,9 +41,9 @@
   }%) translateY(${50 - zoomY * 100}%);`;
 </script>
 
+<!-- svelte-ignore a11y-mouse-events-have-key-events -->
 <div
   class="magnifier"
-  style={`width: ${width}px;`}
   bind:this={element}
   on:mousemove={onMouseMove}
   on:mouseenter={onMouseEnter}
@@ -66,9 +58,12 @@
 <style>
   .magnifier {
     overflow: hidden;
+    width: 100%;
+    height: 100%;
   }
 
   .inner {
-    width: fit-content;
+    width: 100%;
+    height: 100%;
   }
 </style>

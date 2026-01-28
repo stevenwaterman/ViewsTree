@@ -8,12 +8,10 @@
 
 <style>
   .container {
-    display: grid;
-    grid-template-columns: auto;
-    grid-template-rows: auto 1fr;
-    justify-content: center;
-    align-items: center;
     width: 100%;
     height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

@@ -9,18 +9,18 @@
   let selected: AnyNode;
   $: selected = $selectedStore;
 
-  let style: string;
-  $: style = `width: ${$generationSettingsStore.width}px; height: ${$generationSettingsStore.height}px;`;
+  $: aspect = $generationSettingsStore.width / $generationSettingsStore.height || 1;
+  $: style = `aspect-ratio: ${aspect}; width: 100%; height: 100%; max-width: 100%; max-height: 100%;`;
 </script>
 
 <Magnifier>
-  <div class="imageContainer" {style}>
+  <div class="imageContainer" style={style}>
     {#if selected.isBranch}
       {#if selected.type === "Mask"}
         <!-- svelte-ignore a11y-missing-attribute -->
         <img
           class="child image"
-          style={`${style}; mask-image: url(${imageUrl(
+          style={`mask-image: url(${imageUrl(
             $saveStore,
             selected
           )}); mask-mode: luminance; mask-size: 100% 100%; mask-repeat: no-repeat;`}
@@ -28,27 +28,33 @@
         />
       {:else}
         <!-- svelte-ignore a11y-missing-attribute -->
-        <img class="child image" {style} src={imageUrl($saveStore, selected)} />
+        <img class="child image" src={imageUrl($saveStore, selected)} />
       {/if}
     {/if}
 
-    <div class="background image" {style} />
+    <div class="background image" />
   </div>
 </Magnifier>
 
 <style>
   .imageContainer {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .image {
     position: absolute;
     left: 0;
     top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .background {
-    z-index: 0;
+    z-index: -1;
     background: repeating-conic-gradient(
         var(--border) 0% 25%,
         var(--bgDark) 0% 50%
