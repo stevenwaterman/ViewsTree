@@ -4,15 +4,16 @@
   import { modalComponent } from "../modalStore";
 
   export let initialConfig: Partial<ModelConfig> = {};
-  export let mode: "create" | "edit" = "create";
 
-  let name = mode === "edit" ? (initialConfig.name || "") : "";
+  let name = "";
   let checkpoint = initialConfig.checkpoint || "";
   let unet_weight_dtype = initialConfig.unet_weight_dtype || "default";
   let vae = initialConfig.vae || "";
   let clip = initialConfig.clip || "";
   let clip_type = initialConfig.clip_type || "stable_diffusion";
   let supportsCfg = initialConfig.supportsCfg !== undefined ? initialConfig.supportsCfg : true;
+
+  $: isDuplicate = $modelConfigsStore.some(c => c.name.toLowerCase() === name.trim().toLowerCase());
 
   // Initialize with first available options if possible and not already provided
   $: if (!checkpoint && $comfyStore.diffusion_models.length > 0) checkpoint = $comfyStore.diffusion_models[0];
@@ -22,43 +23,57 @@
   $: if (clip_type === "stable_diffusion" && $comfyStore.clip_types.length > 0 && !$comfyStore.clip_types.includes("stable_diffusion")) clip_type = $comfyStore.clip_types[0];
 
   function save() {
-    if (!name) return;
-    const configData = {
-      name,
+    if (!name || isDuplicate) return;
+    modelConfigsStore.addConfig({
+      name: name.trim(),
       checkpoint,
       unet_weight_dtype,
       vae,
       clip,
       clip_type,
       supportsCfg
-    };
-
-    if (mode === "edit" && initialConfig.id) {
-        modelConfigsStore.updateConfig(initialConfig.id, configData);
-    } else {
-        modelConfigsStore.addConfig(configData);
-    }
+    });
     modalComponent.close();
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+        modalComponent.close();
+    } else {
+        e.stopPropagation();
+    }
   }
 </script>
 
 <div class="modal-content">
-  <h2>{mode === "edit" ? "Edit" : "Create"} Model Config</h2>
+  <h2>Create Model Config</h2>
   
   <div class="field">
     <label for="config_name">Config Name</label>
-    <input id="config_name" type="text" bind:value={name} placeholder="e.g. Z-Image Turbo" on:keydown|stopPropagation />
+    <div class="input-stack">
+        <input 
+            id="config_name" 
+            type="text" 
+            bind:value={name} 
+            placeholder="e.g. Z-Image Turbo" 
+            on:keydown={handleKeydown} 
+            class:error={isDuplicate && name.length > 0}
+        />
+        {#if isDuplicate && name.length > 0}
+            <span class="error-text">Name already exists</span>
+        {/if}
+    </div>
   </div>
 
   <div class="field">
     <label for="diffusion_model">Diffusion Model</label>
-    <select id="diffusion_model" bind:value={checkpoint} on:keydown|stopPropagation>
+    <select id="diffusion_model" bind:value={checkpoint} on:keydown={handleKeydown}>
       {#each $comfyStore.diffusion_models as model}
         <option value={model}>{model}</option>
       {/each}
       {#if $comfyStore.diffusion_models.length === 0}
         {#each $comfyStore.checkpoints as cp}
-          <option value={cp}>{cp}</option>
+          <option value={cp}>{cp} (fallback)</option>
         {/each}
       {/if}
     </select>
@@ -66,7 +81,7 @@
 
   <div class="field">
     <label for="unet_weight_dtype">UNET Weight Dtype</label>
-    <select id="unet_weight_dtype" bind:value={unet_weight_dtype} on:keydown|stopPropagation>
+    <select id="unet_weight_dtype" bind:value={unet_weight_dtype} on:keydown={handleKeydown}>
       {#each $comfyStore.unet_weight_dtypes as dtype}
         <option value={dtype}>{dtype}</option>
       {/each}
@@ -75,7 +90,7 @@
 
   <div class="field">
     <label for="vae">VAE</label>
-    <select id="vae" bind:value={vae} on:keydown|stopPropagation>
+    <select id="vae" bind:value={vae} on:keydown={handleKeydown}>
       {#each $comfyStore.vaes as v}
         <option value={v}>{v}</option>
       {/each}
@@ -84,7 +99,7 @@
 
   <div class="field">
     <label for="clip">Text Encoder</label>
-    <select id="clip" bind:value={clip} on:keydown|stopPropagation>
+    <select id="clip" bind:value={clip} on:keydown={handleKeydown}>
       {#each $comfyStore.clips as c}
         <option value={c}>{c}</option>
       {/each}
@@ -93,7 +108,7 @@
 
   <div class="field">
     <label for="clip_type">Text Encoder Type</label>
-    <select id="clip_type" bind:value={clip_type} on:keydown|stopPropagation>
+    <select id="clip_type" bind:value={clip_type} on:keydown={handleKeydown}>
       {#each $comfyStore.clip_types as type}
         <option value={type}>{type}</option>
       {/each}
@@ -107,7 +122,7 @@
 
   <div class="actions">
     <button on:click={() => modalComponent.close()}>Cancel</button>
-    <button class="primary" on:click={save} disabled={!name}>Save Config</button>
+    <button class="primary" on:click={save} disabled={!name || isDuplicate}>Save Config</button>
   </div>
 </div>
 
@@ -130,12 +145,19 @@
   .field {
     display: grid;
     grid-template-columns: 1fr 2fr;
-    align-items: center;
+    align-items: flex-start;
     gap: 1em;
+  }
+
+  .input-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
   }
 
   label {
     user-select: none;
+    margin-top: 6px;
   }
 
   input, select {
@@ -143,6 +165,16 @@
     color: var(--text);
     border: 1px solid var(--border);
     padding: 6px;
+  }
+
+  input.error {
+    border-color: #f07178;
+    background: #2d2020;
+  }
+
+  .error-text {
+    color: #f07178;
+    font-size: 0.8em;
   }
 
   input[type="checkbox"] {

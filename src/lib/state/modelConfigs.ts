@@ -33,19 +33,16 @@ export const modelConfigsStore = {
   subscribe: statefulStore.subscribe,
   get state() { return statefulStore.state; },
   addConfig: (configData: Omit<ModelConfig, "id">) => {
-    const newConfig: ModelConfig = {
-      ...configData,
-      id: Date.now().toString(),
-    };
     internalConfigsStore.update((configs) => {
+      if (configs.find(c => c.name === configData.name)) {
+        console.warn(`Model config with name "${configData.name}" already exists.`);
+        return configs;
+      }
+      const newConfig: ModelConfig = {
+        ...configData,
+        id: Date.now().toString(),
+      };
       const next = [...configs, newConfig];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  },
-  updateConfig: (id: string, configData: Omit<ModelConfig, "id">) => {
-    internalConfigsStore.update((configs) => {
-      const next = configs.map(c => c.id === id ? { ...configData, id } : c);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });

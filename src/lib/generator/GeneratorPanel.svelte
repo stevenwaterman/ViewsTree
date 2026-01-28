@@ -42,15 +42,7 @@
   function openConfigModal() {
     const currentId = $generationSettingsStore.modelConfigId;
     const currentConfig = modelConfigsStore.state.find(c => c.id === currentId);
-    modalComponent.open(ModelConfigModal, { initialConfig: currentConfig, mode: "create" });
-  }
-
-  function openEditModal() {
-    const currentId = $generationSettingsStore.modelConfigId;
-    const currentConfig = modelConfigsStore.state.find(c => c.id === currentId);
-    if (currentConfig) {
-        modalComponent.open(ModelConfigModal, { initialConfig: currentConfig, mode: "edit" });
-    }
+    modalComponent.open(ModelConfigModal, { initialConfig: currentConfig });
   }
 
   function deleteConfig() {
@@ -72,10 +64,7 @@
         {/each}
     </select>
     <button class="small-btn" on:click={openConfigModal} title="Create new from current">+</button>
-    {#if $generationSettingsStore.modelConfigId}
-        <button class="small-btn" on:click={openEditModal} title="Edit current">✎</button>
-        <button class="small-btn" on:click={deleteConfig} title="Delete current">🗑</button>
-    {/if}
+    <button class="small-btn" on:click={deleteConfig} title="Delete selected" disabled={!$generationSettingsStore.modelConfigId}>🗑</button>
   </div>
 
   <label for="sampler">Sampler</label>
@@ -207,6 +196,11 @@
     background: var(--bgDark);
     color: var(--text);
     border: 1px solid var(--border);
+  }
+
+  .small-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 
   .size-row {
