@@ -1,12 +1,7 @@
-# Tree Visualization
+# Tree Layout Logic
 
-This directory handles the visual rendering of the hierarchical node tree.
-
-## Rendering Logic
-- **`TreeVis.svelte`:** The main entry point, using `panzoom` for navigation.
-- **`VisRoot.svelte`, `VisBranch.svelte`:** Recursive components that render the nodes.
-- **`placement.ts`:** Calculates the horizontal offsets for nodes based on their sub-tree leaf counts. It centers branches above their children to create a balanced layout.
-
-## Styling
-- Node dimensions and margins are defined as constants in `placement.ts`.
-- CSS variables (e.g., `--textEmphasis`, `--border`) are used for consistent theming.
+## Horizontal Placement (`placement.ts`)
+The layout isn't a simple grid. It centers branches above their children:
+- **Calculation:** Every node's horizontal offset is derived from the total `leafCount` of its sub-tree.
+- **Visuals:** This ensures a balanced, non-overlapping visualization even as branches grow asymmetrical.
+- **Coordinates:** Nodes are placed in a fixed-step vertical grid but a variable-width horizontal grid.

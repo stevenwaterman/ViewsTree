@@ -1,17 +1,19 @@
-# Backend & Generation (ComfyUI)
+# ComfyUI Integration
 
-This directory manages communication with the ComfyUI server.
+## Critical Technical Quirks
 
-## ComfyUI Integration
-- **Client:** `comfyClient.ts` initializes the `ComfyApi` connecting to `http://localhost:8188`. 
-- **CORS:** Requires ComfyUI to be started with `--enable-cors-header http://localhost:5000`.
-- **Generation Logic:** `comfyGenerator.ts` handles the queue and workflow construction.
+### 1. The ` [output]` Suffix
+ComfyUI API requires a specific string suffix to load images from its own `output` directory:
+- **Rule:** Filenames for `type: "output"` images must be passed as `"filename.png [output]"`.
+- **Note:** This is handled automatically by the `getLoaderNode` helper.
 
-## Current Implementation Status
-- **Txt2Img:** Fully implemented. Dynamically constructs a ComfyUI workflow (Checkpoint Loader -> Text Encoder Encode -> KSampler -> Decode -> Save).
-- **Img2Img / Inpaint:** Currently stubbed, awaiting implementation of image upload and differential diffusion workflows.
-- **Asset Handling:** Uses `client.getPathImage()` based on node metadata to fetch results directly from ComfyUI.
+### 2. WebSocket & History Fallback
+Generation results are event-driven:
+- **`executed`:** Standard result path.
+- **`execution_cached`:** Occurs if ComfyUI reuses a result. In this state, the system **must** query `client.getHistory(prompt_id)` to retrieve the asset metadata.
 
-## Polling & Queue
-- Uses a polling mechanism on the history endpoint to detect when a `prompt_id` has finished processing.
-- Maintains a client-side queue to manage multiple pending requests across the tree.
+### 3. Client-side Cropping
+Images are cropped/scaled on the client via `<canvas>` before being uploaded to ComfyUI. This ensures the server only processes the exact pixels required for the target resolution.
+
+### 4. LoRA Chaining
+LoRAs are chained sequentially between the Loader and the Sampler. Each `LoraLoader` node threads both the `model` and `clip` outputs into the next one in the array.

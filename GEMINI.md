@@ -1,20 +1,21 @@
 # ViewsTree Overview
 
-ViewsTree is an AI image generation frontend that organizes generations into a hierarchical tree structure. This allows users to track the lineage of their images, seeing exactly how a particular result was derived (e.g., Txt2Img -> Img2Img -> Inpaint).
+## Critical Setup: ComfyUI
+The backend MUST be started with CORS enabled for the frontend origin to allow API calls:
+```bash
+python main.py --enable-cors-header http://localhost:5000
+```
 
-## Technical Stack
-- **Framework:** Svelte 3
-- **Build Tool:** Vite
-- **Language:** TypeScript
-- **Backend Integration:** ComfyUI via `@saintno/comfyui-sdk`
-- **Key Libraries:**
-    - `panzoom`: Enables navigation (pan/zoom) of the large tree visualization.
-    - `svelte-simple-modal`: Used for various UI modals.
+## Keyboard Shortcuts (Non-Discoverable)
+- **Arrows (Up/Down/Left/Right):** Navigate tree lineage.
+- **'r':** Queue generation from selected node.
+- **'Backspace':** Interrupt current request.
+- **'Delete':** Remove selected node and its sub-tree.
+- **'a':** Open Upload/Crop modal.
+- **'p':** Open Inpaint/Painter modal.
+- **'l':** Debug log current tree JSON.
 
-## Core Subdirectories
-- `src/lib/state/`: Core data models, ComfyUI settings, and hierarchical node definitions.
-- `src/lib/treeVis/`: Components and logic for rendering the tree.
-- `src/lib/generator/`: ComfyUI client and generation logic (`comfyGenerator.ts`).
-- `src/lib/viewer/`: UI for viewing selected images and their parameters.
-- `src/lib/paint/`: Inpainting and masking tools.
-- `src/lib/persistence/`: Save/Load logic and serialization.
+## UI Architecture
+- **Floating Panels:** Both Settings (Top-Left) and Preview (Top-Right) are fixed/floating.
+- **Background Tree:** The tree visualization occupies the entire background layer.
+- **Scroll UX:** All number inputs and dropdowns support scroll-wheel increments.

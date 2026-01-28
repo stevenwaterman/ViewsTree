@@ -1,14 +1,14 @@
-# State Management & Tree Structure
+# State & Selection
 
-The core of ViewsTree is its hierarchical node system, managed through Svelte stores.
+## Key Logic
 
-## Node Hierarchy
-- **RootNode:** The base of the tree (one per save).
-- **PrimaryBranchNodes:** Direct children of Root (`TxtImg`, `Upload`).
-- **SecondaryBranchNodes:** Children of other branch nodes (`ImgImg`, `Mask`, `Inpaint`).
+### ModelsHash
+Every node stores a `modelsHash` derived from its specific generation settings (checkpoint, VAE, LoRAs, etc.).
+- **Purpose:** Used to detect if global settings have changed relative to a node's original parameters.
 
-## Key Concepts
-- **ComfySettings:** Replaced the legacy weighted model system with explicit `checkpoint`, `vae`, `text_encoder`, `sampler_name`, and `scheduler` selections.
-- **Node Metadata:** Nodes now store `comfyImage` objects (filename, subfolder, type) to correctly retrieve assets from the ComfyUI output directory.
-- **Selection:** `selectedStore.ts` tracks the focused node, automatically updating the `GeneratorPanel` with the node's original parameters.
-- **Serialization:** Full tree state, including ComfyUI image references, is serialized to JSON for persistence.
+### Deep Cloning (LoRAs)
+When selecting a node, its LoRAs are **deep-cloned** (`JSON.parse(JSON.stringify)`).
+- **Why:** To prevent the Settings Panel (which binds to the store) from accidentally mutating the immutable historical data of the node itself.
+
+### Dynamic UI (`supportsCfg`)
+The `supportsCfg` flag in a Model Config dynamically hides/shows the `Scale` slider and `Negative Prompt` textarea in the UI and locks `scale` to 1 in the workflow.
