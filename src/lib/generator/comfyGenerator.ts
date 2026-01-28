@@ -204,13 +204,24 @@ export async function queueImgImg(
         throw new Error("Parent node has no image info for Img2Img");
     }
 
-    let inputFilename = parent.comfyImage.filename;
-    if (parent.comfyImage.type !== 'input') {
-        const imageBlob = await client.getImage(parent.comfyImage);
-        const uploadRes = await client.uploadImage(imageBlob, parent.comfyImage.filename);
-        if (uploadRes) {
-            inputFilename = uploadRes.info.filename;
-        }
+    // Logic for deciding which node to use based on image type
+    let loaderNode: any;
+    if (parent.comfyImage.type === 'output') {
+        loaderNode = {
+            inputs: {
+                image: parent.comfyImage.filename
+            },
+            class_type: "LoadImageOutput"
+        };
+    } else {
+        // Fallback to standard LoadImage for input files (Uploads)
+        loaderNode = {
+            inputs: {
+                image: parent.comfyImage.filename,
+                upload: "image"
+            },
+            class_type: "LoadImage"
+        };
     }
 
     const workflow = {
@@ -249,13 +260,7 @@ export async function queueImgImg(
         },
         class_type: "VAELoader",
       },
-      "13": {
-        inputs: {
-          image: inputFilename,
-          upload: "image"
-        },
-        class_type: "LoadImage"
-      },
+      "13": loaderNode,
       "14": {
         inputs: {
           pixels: ["13", 0],
@@ -361,7 +366,6 @@ async function waitForNodeOutput(promptId: string, nodeId: string, abortControll
       reject(new Error("Cancelled"));
     });
 
-    // Safety timeout/polling fallback in case WebSocket fails or misses
     const timeout = setTimeout(async () => {
         const history = await client.getHistory(promptId);
         if (history && history.outputs[nodeId]) {
