@@ -27,7 +27,6 @@ function getDefaultGenerationSettings(): GenerationSettings {
     steps: 20,
     scale: 7,
     strength: 0.7,
-    colorCorrection: false,
   };
 }
 
@@ -56,8 +55,6 @@ function copySettings(
   if ("steps" in node) newSettings.steps = node.steps;
   if ("scale" in node) newSettings.scale = node.scale;
   if ("strength" in node) newSettings.strength = node.strength;
-  if ("colorCorrection" in node)
-    newSettings.colorCorrection = node.colorCorrection;
 
   if ("seed" in node)
     newSettings.seed = node.seed.random ? undefined : node.seed.actual;

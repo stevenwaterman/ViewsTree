@@ -20,7 +20,6 @@ export type InpaintRequest = ComfySettings & {
   scale: number;
   strength: number;
   seed?: number;
-  colorCorrection: boolean;
 };
 
 export type InpaintResult = ComfySettings & {
@@ -34,7 +33,6 @@ export type InpaintResult = ComfySettings & {
     actual: number;
   };
   strength: number;
-  colorCorrection: boolean;
   comfyImage: {
     filename: string;
     subfolder: string;

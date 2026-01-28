@@ -20,7 +20,6 @@ export type ImgImgRequest = ComfySettings & {
   scale: number;
   strength: number;
   seed?: number;
-  colorCorrection: boolean;
 };
 
 export type ImgImgResult = ComfySettings & {
@@ -34,7 +33,6 @@ export type ImgImgResult = ComfySettings & {
     actual: number;
   };
   strength: number;
-  colorCorrection: boolean;
   comfyImage: {
     filename: string;
     subfolder: string;

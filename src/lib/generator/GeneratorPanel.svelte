@@ -121,15 +121,6 @@
     disabled={$selectedStore.type === "Root"}
   />
 
-  <label for="color_correction">Color Correction</label>
-  <input
-    type="checkbox"
-    id="color_correction"
-    bind:checked={$generationSettingsStore.colorCorrection}
-    disabled={$selectedStore.type === "Root"}
-    on:keydown|stopPropagation
-  />
-
   <SeedInput />
 </div>
 
