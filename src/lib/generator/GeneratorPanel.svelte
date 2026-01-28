@@ -7,16 +7,8 @@
 </script>
 
 <div class="container">
-  <label for="lock_models">Lock Models</label>
-  <input
-    type="checkbox"
-    id="lock_models"
-    bind:checked={$generationSettingsStore.lockModels}
-    on:keydown|stopPropagation
-  />
-
   <label for="diffusion_model">Diffusion Model</label>
-  <select id="diffusion_model" bind:value={$generationSettingsStore.checkpoint} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+  <select id="diffusion_model" bind:value={$generationSettingsStore.checkpoint} on:keydown|stopPropagation>
     {#each $comfyStore.diffusion_models as model}
       <option value={model}>{model}</option>
     {/each}
@@ -28,28 +20,28 @@
   </select>
 
   <label for="unet_weight_dtype">UNET Weight Dtype</label>
-  <select id="unet_weight_dtype" bind:value={$generationSettingsStore.unet_weight_dtype} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+  <select id="unet_weight_dtype" bind:value={$generationSettingsStore.unet_weight_dtype} on:keydown|stopPropagation>
     {#each $comfyStore.unet_weight_dtypes as dtype}
       <option value={dtype}>{dtype}</option>
     {/each}
   </select>
 
   <label for="vae">VAE</label>
-  <select id="vae" bind:value={$generationSettingsStore.vae} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+  <select id="vae" bind:value={$generationSettingsStore.vae} on:keydown|stopPropagation>
     {#each $comfyStore.vaes as vae}
       <option value={vae}>{vae}</option>
     {/each}
   </select>
 
   <label for="clip">CLIP</label>
-  <select id="clip" bind:value={$generationSettingsStore.clip} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+  <select id="clip" bind:value={$generationSettingsStore.clip} on:keydown|stopPropagation>
     {#each $comfyStore.clips as clip}
       <option value={clip}>{clip}</option>
     {/each}
   </select>
 
   <label for="clip_type">CLIP Type</label>
-  <select id="clip_type" bind:value={$generationSettingsStore.clip_type} disabled={$generationSettingsStore.lockModels} on:keydown|stopPropagation>
+  <select id="clip_type" bind:value={$generationSettingsStore.clip_type} on:keydown|stopPropagation>
     {#each $comfyStore.clip_types as type}
       <option value={type}>{type}</option>
     {/each}

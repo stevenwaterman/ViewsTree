@@ -5,8 +5,7 @@ import type { BranchNode } from "./nodeTypes/nodes";
 import type { TxtImgRequest } from "./nodeTypes/txtImgNodes";
 import { selectedStore } from "./selected";
 
-export type GenerationSettings = TxtImgRequest &
-  ImgImgRequest & { lockModels: boolean };
+export type GenerationSettings = TxtImgRequest & ImgImgRequest;
 
 export function randomSeed() {
   return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -14,7 +13,6 @@ export function randomSeed() {
 
 function getDefaultGenerationSettings(): GenerationSettings {
   return {
-    lockModels: false,
     checkpoint: "",
     vae: "",
     clip: "",
@@ -39,7 +37,7 @@ function copySettings(
 ): GenerationSettings {
   const newSettings: GenerationSettings = { ...current };
 
-  if ("checkpoint" in node && !current.lockModels) {
+  if ("checkpoint" in node) {
     newSettings.checkpoint = node.checkpoint;
     newSettings.vae = node.vae;
     newSettings.clip = node.clip;
