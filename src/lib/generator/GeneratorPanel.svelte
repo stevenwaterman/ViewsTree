@@ -97,6 +97,7 @@
   <label for="model_config">Model Config</label>
   <div class="config-row">
     <select 
+        class="skinny_select"
         id="model_config" 
         value={$generationSettingsStore.modelConfigId || ""} 
         on:change={handleConfigChange} 
@@ -114,7 +115,7 @@
 
   <label for="lora_select">Add LoRA</label>
   <div class="config-row">
-    <select id="lora_select" bind:value={selectedLora} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
+    <select id="lora_select" class="skinny_select" bind:value={selectedLora} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
         {#if filteredLoras.length > 0}
             <option value="">Select LoRA...</option>
             {#each filteredLoras as lora}
@@ -246,6 +247,10 @@
     overflow-y: auto;
   }
 
+  .skinny_select {
+    width: 0;
+  }
+
   .gap {
     grid-column: span 2;
     height: 1em;
@@ -267,6 +272,10 @@
     width: 100%;
     box-sizing: border-box;
     min-width: 0;
+  }
+
+  textarea {
+    min-width: 100%;
   }
 
   .config-row {
