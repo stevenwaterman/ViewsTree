@@ -1,23 +1,24 @@
 import base64
 import io
 import re
-
-from colors import apply_color_correction
-from encoder import _encode_prompt
-from multiUnet import MultiUnet
 import torch
-
-from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, CycleDiffusionPipeline, StableDiffusionInpaintPipelineLegacy, AutoencoderKL, UNet2DConditionModel
-from transformers import CLIPTextModel, CLIPTokenizer
-from PIL import Image, ImageOps, ImageFilter, ImageChops
 import uuid
 import numpy as np
 import os
 import random
 
+from PIL import Image, ImageOps, ImageFilter, ImageChops
+from diffusers import (
+    StableDiffusionPipeline, 
+    StableDiffusionImg2ImgPipeline, 
+    StableDiffusionInpaintPipeline,
+    EulerAncestralDiscreteScheduler,
+    DDIMScheduler
+)
+from colors import apply_color_correction
+
 def preprocess(image):
     w, h = image.size
-    # resize to integer multiple of 32
     w, h = map(lambda x: x - x % 32, (w, h))
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
@@ -26,60 +27,50 @@ def preprocess(image):
     image = 2.0 * image - 1.0
     return image
 
-
 def thumbnail(img):
     max_width = 128
     max_height = 128
-
-    width = img.size[0]
-    height = img.size[1]
-
+    width, height = img.size
     scale = min(max_width / width, max_height / height)
-
     new_width = round(width * scale)
     new_height = round(height * scale)
-    print("resizing", width, max_width, height,
-          max_height, scale, new_width, new_height)
-
     return img.resize((new_width, new_height), Image.LANCZOS)
-
 
 def random_seed():
     return random.randint(0, 2147483647)
 
-
-StableDiffusionPipeline._encode_prompt = _encode_prompt
-StableDiffusionImg2ImgPipeline._encode_prompt = _encode_prompt
-CycleDiffusionPipeline._encode_prompt = _encode_prompt
-
 def lockout(func):
-  def inner(self, *args, **kwargs):
-    if (self.busy):
-      return None
-    
-    self.busy = True
-
-    try:
-      return func(self, *args, **kwargs)
-    finally:
-      self.busy = False
-
-  return inner
+    def inner(self, *args, **kwargs):
+        if self.busy:
+            return None
+        self.busy = True
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self.busy = False
+    return inner
 
 class Pipeline():
     def __init__(self):
         self.busy = False
-
-        self.model_folder = "./models"
-
-        main_model_path = f"{self.model_folder}/stable-diffusion-v1-5"
-        # self.vae = AutoencoderKL.from_pretrained(main_model_path, subfolder="vae")
-        # self.tokenizer = CLIPTokenizer.from_pretrained(main_model_path, subfolder="tokenizer")
-        # self.text_encoder = CLIPTextModel.from_pretrained(f"{main_model_path}/text_encoder")
-        # self.eulerScheduler = EulerAncestralDiscreteScheduler.from_pretrained(main_model_path, subfolder="scheduler")
-        # self.ddimScheduler = DDIMScheduler.from_pretrained(main_model_path, subfolder="scheduler")
-
-        self.unet = MultiUnet(self.model_folder)
+        self.model_path = "./models/v1-5-pruned-emaonly.safetensors"
+        
+        print(f"Loading model from {self.model_path}...")
+        # Load the base pipeline
+        self.pipe = StableDiffusionPipeline.from_single_file(
+            self.model_path,
+            torch_dtype=torch.float16,
+            use_safetensors=True
+        ).to("cuda")
+        
+        # We can reuse components for other pipeline types
+        self.img_pipe = StableDiffusionImg2ImgPipeline(**self.pipe.components)
+        self.inpaint_pipe = StableDiffusionInpaintPipeline(**self.pipe.components)
+        
+        # Set schedulers
+        self.pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(self.pipe.scheduler.config)
+        self.img_pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(self.img_pipe.scheduler.config)
+        self.inpaint_pipe.scheduler = DDIMScheduler.from_config(self.pipe.scheduler.config)
 
     @lockout
     def run_txt(self, save_name, models, prompt, negative_prompt, width, height, steps, scale, seed):
@@ -90,20 +81,10 @@ class Pipeline():
         file_path = f'../data/{save_name}/{run_id}'
 
         actual_seed = random_seed() if seed is None else seed
-        generator = torch.cuda.manual_seed(actual_seed)
-
-        pipe = StableDiffusionPipeline(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet.load(models),
-            scheduler=self.eulerScheduler,
-            safety_checker=None,
-            feature_extractor=None
-        ).to("cuda")
+        generator = torch.Generator("cuda").manual_seed(actual_seed)
 
         with torch.autocast("cuda"):
-            image = pipe(
+            image = self.pipe(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
                 width=width,
@@ -140,26 +121,15 @@ class Pipeline():
         init_path = f'../data/{save_name}/{init_run_id}.png'
 
         actual_seed = random_seed() if seed is None else seed
-        generator = torch.cuda.manual_seed(actual_seed)
+        generator = torch.Generator("cuda").manual_seed(actual_seed)
 
-        init_pil = Image.open(init_path)
-        init_image = preprocess(init_pil)
-
-        pipe = StableDiffusionImg2ImgPipeline(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet.load(models),
-            scheduler=self.eulerScheduler,
-            safety_checker=None,
-            feature_extractor=None
-        ).to("cuda")  
+        init_pil = Image.open(init_path).convert("RGB")
 
         with torch.autocast("cuda"):
-            image = pipe(
+            image = self.img_pipe(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
-                init_image=init_image,
+                image=init_pil,
                 strength=strength,
                 num_inference_steps=steps,
                 guidance_scale=scale,
@@ -188,67 +158,6 @@ class Pipeline():
             'run_id': run_id
         }
 
-    @lockout
-    def run_cycle(self, save_name, init_run_id, models, source_prompt, prompt, negative_prompt, steps, scale, seed, strength, color_correction_id):
-        if not os.path.exists(f"../data/{save_name}"):
-            os.mkdir(f"../data/{save_name}")
-
-        run_id = str(uuid.uuid4())
-        file_path = f'../data/{save_name}/{run_id}'
-        init_path = f'../data/{save_name}/{init_run_id}.png'
-
-        actual_seed = random_seed() if seed is None else seed
-        generator = torch.cuda.manual_seed(actual_seed)
-
-        init_pil = Image.open(init_path)
-        init_image = preprocess(init_pil)
-
-        pipe = CycleDiffusionPipeline(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet.load(models),
-            scheduler=self.ddimScheduler,
-            safety_checker=None,
-            feature_extractor=None
-        ).to("cuda")
-
-        with torch.autocast("cuda"):
-            image = pipe(
-                prompt=prompt,
-                source_prompt=source_prompt,
-                init_image=init_image,
-                strength=strength,
-                num_inference_steps=steps,
-                guidance_scale=scale,
-                source_guidance_scale=1,
-                eta=0.1,
-                generator=generator
-            ).images[0]
-
-        if color_correction_id is not None:
-            reference_path = f'../data/{save_name}/{color_correction_id}.png'
-            reference_image = Image.open(reference_path)
-            image = apply_color_correction(image, [reference_image])
-
-        image.save(f'{file_path}.png')
-        thumb = thumbnail(image)
-        thumb.save(f'{file_path}_thumbnail.jpg')
-
-        return {
-            'init_run_id': init_run_id,
-            'models': models,
-            'source_prompt': source_prompt,
-            'prompt': prompt,
-            'negative_prompt': negative_prompt,
-            'steps': steps,
-            'scale': scale,
-            'seed': seed,
-            'actual_seed': actual_seed,
-            'strength': strength,
-            'run_id': run_id
-        }
-    
     @lockout
     def run_inpaint(self, save_name, init_run_id, mask_run_id, models, prompt, negative_prompt, steps, scale, seed, strength, color_correction_id):
         if not os.path.exists(f"../data/{save_name}"):
@@ -260,11 +169,12 @@ class Pipeline():
         mask_path = f'../data/{save_name}/{mask_run_id}.png'
 
         actual_seed = random_seed() if seed is None else seed
-        generator = torch.cuda.manual_seed(actual_seed)
+        generator = torch.Generator("cuda").manual_seed(actual_seed)
 
-        init_pil = Image.open(init_path)
-
+        init_pil = Image.open(init_path).convert("RGB")
         mask_pil = Image.open(mask_path).convert("RGB")
+        
+        # Basic mask preprocessing (keeping original logic style but simplified)
         blur_radius = min(mask_pil.size)/200
         for _ in range(5):
             blurred = mask_pil.filter(ImageFilter.GaussianBlur(blur_radius))
@@ -273,21 +183,11 @@ class Pipeline():
         mask_pil = mask_pil.filter(ImageFilter.GaussianBlur(blur_radius))
         mask_pil = ImageOps.invert(mask_pil)
 
-        pipe = StableDiffusionInpaintPipelineLegacy(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet.load(models),
-            scheduler=self.ddimScheduler,
-            safety_checker=None,
-            feature_extractor=None
-        ).to("cuda")
-
         with torch.autocast("cuda"):
-            image = pipe(
+            image = self.inpaint_pipe(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
-                init_image=init_pil,
+                image=init_pil,
                 mask_image=mask_pil,
                 strength=strength,
                 num_inference_steps=steps,
@@ -348,4 +248,4 @@ class Pipeline():
         }
 
     def models(self):
-        return [f.name for f in os.scandir(self.model_folder) if f.is_dir()]
+        return ["v1-5-pruned-emaonly"]
