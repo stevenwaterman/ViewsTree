@@ -1,24 +1,12 @@
-GPU limiter
 screen split vertical etc
 preview settings by hovering
 max resolution
 delete files from data folder
 undo delete
-upscaling
 generation setting overrides
 cancel requests under deleted nodes
-different kinds of color correction
 magnifier margin
 custom server url
 Allow changing height/width in the image cropper
-disable / fix SVG upload
-fix imgimg resolution not being recorded properly
-interrogation
-gif
-save config
-save mixed model
-phrase list / templating in prompts
-do annealing to prompt & scale too
-longer prompts
-don't break when the prompt is too long
-be more likely to accept worse
+Lock aspect ratio
+Blurry mask
