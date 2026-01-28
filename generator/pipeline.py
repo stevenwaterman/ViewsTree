@@ -53,7 +53,7 @@ def lockout(func):
 class Pipeline():
     def __init__(self):
         self.busy = False
-        self.model_path = "./models/v1-5-pruned-emaonly.safetensors"
+        self.model_path = os.path.abspath("./models/checkpoints/v1-5-pruned-emaonly.safetensors")
         
         print(f"Loading model from {self.model_path}...")
         # Load the base pipeline

@@ -3,12 +3,16 @@ from pipeline import Pipeline
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from PIL import Image
-from modelMergePredictor import ModelMergeNetwork
 
 if not os.path.exists("../data"):
     os.mkdir("../data")
 
 pipe = Pipeline()
+
+if os.environ.get("TEST_STARTUP"):
+    print("Startup successful, exiting...")
+    os._exit(0)
+
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "../data"
 CORS(app)
@@ -74,43 +78,6 @@ def imgimg(save_name, init_run_id):
     return "busy", 429
 
   print("Refined", config)
-  return config
-  
-@app.route("/<string:save_name>/imgcycle/<uuid:init_run_id>", methods=["POST"])
-def imgcycle(save_name, init_run_id):
-  json = request.get_json(force=True)
-
-  models = json.get("models", None)
-  if models is None:
-    raise "Models are required"
-
-  source_prompt = json.get("sourcePrompt", None)
-  if source_prompt is None:
-    raise "Source Prompt is required"
-
-  prompt = json.get("prompt", None)
-  if prompt is None:
-    raise "Prompt is required"
-
-  config = pipe.run_cycle(
-    save_name = save_name,
-    init_run_id = init_run_id,
-    models = models,
-    source_prompt = source_prompt,
-    prompt = prompt,
-
-    negative_prompt = json.get("negativePrompt", None),
-    steps = json.get("steps", 50),
-    scale = json.get("scale", 8), 
-    seed = json.get("seed", None),
-    strength = json.get("strength", 0.4),
-    color_correction_id = json.get("colorCorrectionId", None)
-  )
-
-  if config is None:
-    return "busy", 429
-
-  print("Cycled", config)
   return config
 
 @app.route("/<string:save_name>/inpaint/<uuid:init_run_id>/<uuid:mask_run_id>", methods=["POST"])
@@ -183,56 +150,3 @@ def thumb(save_name, run_id):
 @app.route("/models", methods=["GET"])
 def models():
   return pipe.models()
-
-mergeNetwork = None
-@app.route("/prior", methods=["PUT"])
-def prior():
-  json = request.get_json(force=True)
-  models = json.get("models", None)
-
-  if models is None:
-    return "Missing `models`", 400
-
-  global mergeNetwork
-  mergeNetwork = ModelMergeNetwork(models)
-
-  print("created prior")
-  return "success"
-
-
-@app.route("/prior/scores", methods=["POST"])
-def prior_scores():
-  json = request.get_json(force=True)
-
-  current = json.get("current", None)
-  if current is None:
-    return "Missing `current`", 400
-
-  global mergeNetwork
-  scores = mergeNetwork.mutationScores(current)
-
-  print("inferred prior")
-  return scores
-
-
-@app.route("/prior/train", methods=["POST"])
-def prior_train():
-  json = request.get_json(force=True)
-
-  current = json.get("current", None)
-  if current is None:
-    return "Missing `current`", 400
-
-  mutation = json.get("mutation", None)
-  if mutation is None:
-    return "Missing `mutation`", 400
-
-  score = json.get("score", None)
-  if score is None:
-    return "Missing `score`", 400
-
-  global mergeNetwork
-  mergeNetwork.train(current, mutation, score)
-
-  print("trained prior")
-  return "success"
