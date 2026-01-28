@@ -173,7 +173,7 @@
       on:keydown|stopPropagation
       step="16"
     />
-    <span>x</span>
+    <span class="size-separator">x</span>
     <input 
       type="number" 
       value={$generationSettingsStore.height} 
@@ -313,6 +313,11 @@
 
   .size-row input {
     width: 5em;
+  }
+
+  .size-separator {
+    cursor: default;
+    user-select: none;
   }
 
   .lora-name {
