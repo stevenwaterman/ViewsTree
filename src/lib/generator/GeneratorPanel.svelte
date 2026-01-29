@@ -71,10 +71,15 @@
     const select = e.currentTarget as HTMLSelectElement;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 1 : -1;
-    const newIndex = Math.max(0, Math.min(select.options.length - 1, select.selectedIndex + delta));
-    if (newIndex !== select.selectedIndex) {
-        select.selectedIndex = newIndex;
-        select.dispatchEvent(new Event('change'));
+    let newIndex = select.selectedIndex + delta;
+
+    while (newIndex >= 0 && newIndex < select.options.length && select.options[newIndex].disabled) {
+      newIndex += delta;
+    }
+
+    if (newIndex >= 0 && newIndex < select.options.length && newIndex !== select.selectedIndex) {
+      select.selectedIndex = newIndex;
+      select.dispatchEvent(new Event("change"));
     }
   }
 
@@ -205,26 +210,27 @@
   {#each $generationSettingsStore.loras as lora, i (lora.name)}
     {#if i > 0}<div />{/if}
     <span class="lora-name-inline" title={lora.name}>{stripExtension(lora.name)}</span>
-      <div class="value-row">
-        <input 
-            class="lora-strength"
-            type="number" 
-            step="0.1" 
-            min="0" 
-            max="2" 
-            title="LoRA Strength"
-            value={formatLoraStrength(lora.strength)} 
-            on:input={(e) => handleLoraStrengthInput(e, lora.name)}
-            on:wheel={(e) => handleWheelLoraStrength(e, lora.name)}
-            on:keydown|stopPropagation 
-        />
-        <button class="small-btn" on:click={() => generationSettingsStore.removeLora(lora.name)} title="Remove LoRA">X</button>
-      </div>  {/each}
+    <div class="value-row">
+      <input 
+          class="lora-strength"
+          type="number" 
+          step="0.1" 
+          min="0" 
+          max="2" 
+          title="LoRA Strength"
+          value={formatLoraStrength(lora.strength)} 
+          on:input={(e) => handleLoraStrengthInput(e, lora.name)}
+          on:wheel={(e) => handleWheelLoraStrength(e, lora.name)}
+          on:keydown|stopPropagation 
+      />
+      <button class="small-btn" on:click={() => generationSettingsStore.removeLora(lora.name)} title="Remove LoRA">X</button>
+    </div>
+  {/each}
   
   {#if $generationSettingsStore.loras.length > 0}<div />{/if}
   <select class="skinny_select" on:change={handleLoraSelect} on:keydown|stopPropagation>
       {#if filteredLoras.length > 0}
-          <option value="">Add LoRA...</option>
+          <option value="" disabled selected>Add LoRA...</option>
           {#each filteredLoras as lora}
               <option value={lora}>{stripExtension(lora)}</option>
           {/each}
@@ -233,6 +239,8 @@
       {/if}
   </select>
   <div />
+
+  <hr class="span-3" />
 
   <label for="prompt">Prompt</label>
   <textarea
@@ -362,7 +370,7 @@
   />
   <div class="value-row">
     <button class="small-btn" on:click={randomizeSeed} title="Hardcode random seed">↻</button>
-    <button class="small-btn" on:click={() => {$generationSettingsStore.seed = undefined}} disabled={$generationSettingsStore.seed === undefined} title="Clear to random">X</button>
+    <button class="small-btn" on:click={() => { $generationSettingsStore.seed = undefined; }} disabled={$generationSettingsStore.seed === undefined} title="Clear to random">X</button>
   </div>
 </div>
 
@@ -421,12 +429,20 @@
     min-height: 3em;
   }
 
+  hr {
+    grid-column: span 3;
+    border: none;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    margin: 0.5em 0;
+  }
+
   .small-btn {
     width: 2em;
     height: 2em;
     flex-shrink: 0;
     cursor: pointer;
-    background: var(--bgDark);
+    background: var(--buttonBg);
     color: var(--text);
     border: 1px solid var(--border);
     display: flex;
@@ -435,8 +451,13 @@
   }
 
   .small-btn:disabled {
-    opacity: 0.3;
+    background: var(--buttonBgDisabled);
+    opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .small-btn:active:not(:disabled) {
+    background: var(--buttonBgDisabled);
   }
 
   .size-row {

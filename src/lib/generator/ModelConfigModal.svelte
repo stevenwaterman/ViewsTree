@@ -51,6 +51,30 @@
         e.stopPropagation();
     }
   }
+
+  function handleWheelSelect(e: WheelEvent) {
+    const select = e.currentTarget as HTMLSelectElement;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 1 : -1;
+    let newIndex = select.selectedIndex + delta;
+
+    while (newIndex >= 0 && newIndex < select.options.length && select.options[newIndex].disabled) {
+      newIndex += delta;
+    }
+
+    if (newIndex >= 0 && newIndex < select.options.length && newIndex !== select.selectedIndex) {
+      select.selectedIndex = newIndex;
+      select.dispatchEvent(new Event("change"));
+    }
+  }
+
+  function handleWheelNumber(e: WheelEvent, key: 'defaultSteps') {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -1 : 1;
+    if (key === 'defaultSteps') {
+        defaultSteps = Math.max(1, Math.min(100, defaultSteps + delta));
+    }
+  }
 </script>
 
 <div class="modal-content">
@@ -75,7 +99,7 @@
 
   <div class="field">
     <label for="diffusion_model">Diffusion Model</label>
-    <select id="diffusion_model" bind:value={checkpoint} on:keydown={handleKeydown}>
+    <select id="diffusion_model" bind:value={checkpoint} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.diffusion_models as model}
         <option value={model}>{model}</option>
       {/each}
@@ -89,7 +113,7 @@
 
   <div class="field">
     <label for="unet_weight_dtype">UNET Weight Dtype</label>
-    <select id="unet_weight_dtype" bind:value={unet_weight_dtype} on:keydown={handleKeydown}>
+    <select id="unet_weight_dtype" bind:value={unet_weight_dtype} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.unet_weight_dtypes as dtype}
         <option value={dtype}>{dtype}</option>
       {/each}
@@ -98,7 +122,7 @@
 
   <div class="field">
     <label for="vae">VAE</label>
-    <select id="vae" bind:value={vae} on:keydown={handleKeydown}>
+    <select id="vae" bind:value={vae} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.vaes as v}
         <option value={v}>{v}</option>
       {/each}
@@ -107,7 +131,7 @@
 
   <div class="field">
     <label for="clip">Text Encoder</label>
-    <select id="clip" bind:value={clip} on:keydown={handleKeydown}>
+    <select id="clip" bind:value={clip} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.clips as c}
         <option value={c}>{c}</option>
       {/each}
@@ -116,7 +140,7 @@
 
   <div class="field">
     <label for="clip_type">Text Encoder Type</label>
-    <select id="clip_type" bind:value={clip_type} on:keydown={handleKeydown}>
+    <select id="clip_type" bind:value={clip_type} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.clip_types as type}
         <option value={type}>{type}</option>
       {/each}
@@ -132,12 +156,12 @@
 
   <div class="field">
     <label for="default_steps">Default Steps</label>
-    <input id="default_steps" type="number" bind:value={defaultSteps} on:keydown={handleKeydown} />
+    <input id="default_steps" type="number" min="1" max="100" bind:value={defaultSteps} on:keydown={handleKeydown} on:wheel={(e) => handleWheelNumber(e, 'defaultSteps')} />
   </div>
 
   <div class="field">
     <label for="default_sampler">Default Sampler</label>
-    <select id="default_sampler" bind:value={defaultSampler} on:keydown={handleKeydown}>
+    <select id="default_sampler" bind:value={defaultSampler} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.samplers as sampler}
         <option value={sampler}>{sampler}</option>
       {/each}
@@ -146,7 +170,7 @@
 
   <div class="field">
     <label for="default_scheduler">Default Scheduler</label>
-    <select id="default_scheduler" bind:value={defaultScheduler} on:keydown={handleKeydown}>
+    <select id="default_scheduler" bind:value={defaultScheduler} on:keydown={handleKeydown} on:wheel={handleWheelSelect}>
       {#each $comfyStore.schedulers as scheduler}
         <option value={scheduler}>{scheduler}</option>
       {/each}
@@ -154,8 +178,7 @@
   </div>
 
   <div class="actions">
-    <button on:click={() => modalComponent.close()}>Cancel</button>
-    <button class="primary" on:click={save} disabled={!name || isDuplicate}>Save Config</button>
+    <button on:click={save} disabled={!name || isDuplicate}>Save Config</button>
   </div>
 </div>
 
@@ -164,21 +187,24 @@
     display: flex;
     flex-direction: column;
     gap: 1em;
-    min-width: 400px;
+    width: 80vw;
+    max-width: 600px;
+    min-width: 300px;
     padding: 2em;
     color: var(--text);
     background: var(--bgDark);
+    box-sizing: border-box;
   }
 
   h2 {
     margin-top: 0;
-    color: var(--textEmphasis);
+    color: var(--textDark);
   }
 
   .field {
     display: grid;
-    grid-template-columns: 1fr 2fr;
-    align-items: flex-start;
+    grid-template-columns: auto 1fr;
+    align-items: center;
     gap: 1em;
   }
 
@@ -190,7 +216,7 @@
 
   label {
     user-select: none;
-    margin-top: 6px;
+    min-width: 10em;
   }
 
   input, select {
@@ -198,6 +224,9 @@
     color: var(--text);
     border: 1px solid var(--border);
     padding: 6px;
+    width: 0;
+    min-width: 100%;
+    box-sizing: border-box;
   }
 
   input.error {
@@ -212,6 +241,7 @@
 
   input[type="checkbox"] {
     width: fit-content;
+    min-width: fit-content;
   }
 
   hr {
@@ -230,19 +260,19 @@
   button {
     padding: 0.5em 1.5em;
     cursor: pointer;
-    background: var(--bgLight);
+    background: var(--buttonBg);
     color: var(--text);
     border: 1px solid var(--border);
+    transition: background 0.1s;
   }
 
-  button.primary {
-    background: var(--accent);
-    color: white;
-    border: none;
-  }
-
-  button.primary:disabled {
+  button:disabled {
+    background: var(--buttonBgDisabled);
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  button:active:not(:disabled) {
+    background: var(--buttonBgDisabled);
   }
 </style>

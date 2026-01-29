@@ -92,7 +92,8 @@
 
 <Modal
   show={$modalComponent}
-  closeOnOuterClick={false}
+  closeOnOuterClick={true}
+  closeButton={false}
   styleWindow={{ width: "fit-content", height: "fit-content", background: "var(--bgDark)", padding: "0" }}
 >
   <div class="topGrid">

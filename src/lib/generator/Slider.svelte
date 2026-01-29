@@ -97,5 +97,68 @@
   input {
     outline: none;
     width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+  }
+
+  /* Webkit (Chrome, Safari, Edge, Opera) */
+  input::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  input::-webkit-slider-thumb {
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: var(--nodeInactive);
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -5px; /* Centers thumb on track */
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+    transition: transform 0.1s ease-in-out;
+  }
+
+  input:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+
+  /* Firefox */
+  input::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  input::-moz-range-thumb {
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: var(--nodeInactive);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+    transition: transform 0.1s ease-in-out;
+  }
+
+  input:active::-moz-range-thumb {
+    transform: scale(1.2);
+  }
+
+  :global(.small-btn) {
+    background: var(--buttonBg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  :global(.small-btn:disabled) {
+    background: var(--buttonBgDisabled);
+    opacity: 0.5;
   }
 </style>
