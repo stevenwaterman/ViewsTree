@@ -47,7 +47,7 @@
 
   function deleteConfig() {
     const currentId = $generationSettingsStore.modelConfigId;
-    if (currentId && confirm("Delete this model config?")) {
+    if (currentId && confirm("Delete this model?")) {
         modelConfigsStore.removeConfig(currentId);
         $generationSettingsStore.modelConfigId = undefined;
     }
@@ -76,11 +76,31 @@
     }
   }
 
-  let selectedLora = "";
-  function addLora() {
-    if (selectedLora) {
-        generationSettingsStore.addLora(selectedLora);
-        selectedLora = "";
+  function handleWheelLoraStrength(e: WheelEvent, loraName: string) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    generationSettingsStore.updateLoraStrength(
+        loraName, 
+        Math.max(0, Math.min(2, ($generationSettingsStore.loras.find(l => l.name === loraName)?.strength || 0) + delta))
+    );
+  }
+
+  function formatLoraStrength(val: number): string {
+    return val.toFixed(2);
+  }
+
+  function handleLoraStrengthInput(e: Event, loraName: string) {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    if (!isNaN(val)) {
+        generationSettingsStore.updateLoraStrength(loraName, val);
+    }
+  }
+
+  function handleLoraSelect(e: Event) {
+    const select = e.target as HTMLSelectElement;
+    if (select.value) {
+        generationSettingsStore.addLora(select.value);
+        select.value = "";
     }
   }
 
@@ -94,7 +114,7 @@
 </script>
 
 <div class="container">
-  <label for="model_config">Model Config</label>
+  <label for="model_config">Model</label>
   <div class="config-row">
     <select 
         class="skinny_select"
@@ -104,7 +124,7 @@
         on:keydown|stopPropagation
         on:wheel={handleWheelSelect}
     >
-        <option value="" disabled>Select a config...</option>
+        <option value="" disabled>Select model...</option>
         {#each $modelConfigsStore as config}
             <option value={config.id}>{config.name}</option>
         {/each}
@@ -113,11 +133,29 @@
     <button class="small-btn" on:click={deleteConfig} title="Delete selected" disabled={!$generationSettingsStore.modelConfigId}>🗑</button>
   </div>
 
-  <label for="lora_select">Add LoRA</label>
+  <label>LoRAs</label>
+  {#each $generationSettingsStore.loras as lora, i (lora.name)}
+    {#if i > 0}<div />{/if}
+    <div class="lora-row">
+        <span class="lora-name-inline" title={lora.name}>{stripExtension(lora.name)}</span>
+        <input 
+            type="number" 
+            step="0.05" 
+            min="0" 
+            max="2" 
+            value={formatLoraStrength(lora.strength)} 
+            on:input={(e) => handleLoraStrengthInput(e, lora.name)}
+            on:wheel={(e) => handleWheelLoraStrength(e, lora.name)}
+            on:keydown|stopPropagation 
+        />
+        <button class="small-btn" on:click={() => generationSettingsStore.removeLora(lora.name)}>🗑</button>
+    </div>
+  {/each}
+  {#if $generationSettingsStore.loras.length > 0}<div />{/if}
   <div class="config-row">
-    <select id="lora_select" class="skinny_select" bind:value={selectedLora} on:keydown|stopPropagation on:wheel={handleWheelSelect}>
+    <select class="skinny_select" on:change={handleLoraSelect} on:keydown|stopPropagation>
         {#if filteredLoras.length > 0}
-            <option value="">Select LoRA...</option>
+            <option value="">Add LoRA...</option>
             {#each filteredLoras as lora}
                 <option value={lora}>{stripExtension(lora)}</option>
             {/each}
@@ -125,22 +163,7 @@
             <option value="" disabled>All LoRAs added</option>
         {/if}
     </select>
-    <button class="small-btn" on:click={addLora} disabled={!selectedLora}>+</button>
   </div>
-
-  {#each $generationSettingsStore.loras as lora (lora.name)}
-    <span class="lora-name" title={lora.name}>{stripExtension(lora.name)}</span>
-    <Slider
-        label="Strength"
-        showLabel={false}
-        min={0}
-        max={2}
-        step={0.05}
-        bind:value={lora.strength}
-    >
-        <button slot="extra" class="small-btn" on:click={() => generationSettingsStore.removeLora(lora.name)}>🗑</button>
-    </Slider>
-  {/each}
 
   <div class="gap" />
 
@@ -153,7 +176,7 @@
   />
 
   {#if $generationSettingsStore.supportsCfg}
-    <label for="negativePrompt">Negative Prompt</label>
+    <label for="negativePrompt">Negative<br />Prompt</label>
     <textarea
         id="negativePrompt"
         bind:value={$generationSettingsStore.negativePrompt}
@@ -237,7 +260,7 @@
 <style>
   .container {
     display: grid;
-    grid-template-columns: 8em minmax(20em, 1fr);
+    grid-template-columns: auto 1fr;
     column-gap: 1em;
     row-gap: 0.5em;
     padding: 1em;
@@ -262,6 +285,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.5;
   }
 
   select, textarea, input[type="number"] {
@@ -276,6 +300,7 @@
 
   textarea {
     min-width: 100%;
+    min-height: 3em;
   }
 
   .config-row {
@@ -320,13 +345,25 @@
     user-select: none;
   }
 
-  .lora-name {
+  .lora-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+    min-width: 0;
+  }
+
+  .lora-row input[type="number"] {
+    width: 3.5em;
+  }
+
+  .lora-name-inline {
+    flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 100%;
-    align-self: center;
     color: var(--text);
     font-size: 0.9em;
+    width: 0;
   }
 </style>
