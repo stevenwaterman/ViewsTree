@@ -27,11 +27,11 @@
       removeNode($selectedStore);
     else if (event.key === "r" && !event.ctrlKey) {
       if ($selectedStore.type === "Mask") {
-        queueInpaint($saveStore, $generationSettingsStore, $selectedStore);
+        queueInpaint($saveStore, $generationSettingsStore, $selectedStore).catch(() => {});
       } else if ($selectedStore.isBranch) {
-        queueImgImg($saveStore, $generationSettingsStore, $selectedStore);
+        queueImgImg($saveStore, $generationSettingsStore, $selectedStore).catch(() => {});
       } else {
-        queueTxtImg($saveStore, $generationSettingsStore, $selectedStore);
+        queueTxtImg($saveStore, $generationSettingsStore, $selectedStore).catch(() => {});
       }
     }
     else if (event.key === "Backspace") cancelRequest($selectedStore);

@@ -1,4 +1,5 @@
 import type { Writable } from "svelte/store";
+import { PromptBuilder, CallWrapper } from "@saintno/comfyui-sdk";
 import { saveStore } from "../persistence/saves";
 import {
   createImgImgNode,
@@ -8,11 +9,7 @@ import {
   createInpaintNode,
   type InpaintResult,
 } from "../state/nodeTypes/inpaintNodes";
-import {
-  createMaskNode,
-  type MaskResult,
-  type MaskRequest,
-} from "../state/nodeTypes/maskNodes";
+import { createMaskNode, type MaskRequest } from "../state/nodeTypes/maskNodes";
 import {
   createUploadNode,
   type UploadRequest,
@@ -32,31 +29,59 @@ import { getComfyClient } from "./comfyClient";
 
 export type GenerationRequest = {
   modelsHash: string;
-  fire: () => Promise<void>;
+  promptId?: string;
   cancel: () => void;
 };
 
-function getComfyFilename(imageInfo: { filename: string; subfolder: string }): string {
-    return imageInfo.subfolder 
-        ? `${imageInfo.subfolder}/${imageInfo.filename}`
-        : imageInfo.filename;
+/**
+ * Common input keys for all generation workflows
+ */
+type CommonInputKeys =
+  | "checkpoint"
+  | "unet_weight_dtype"
+  | "clip"
+  | "clip_type"
+  | "vae"
+  | "width"
+  | "height"
+  | "seed"
+  | "steps"
+  | "cfg"
+  | "sampler"
+  | "scheduler"
+  | "prompt"
+  | "negative";
+
+function getComfyFilename(imageInfo: {
+  filename: string;
+  subfolder: string;
+}): string {
+  return imageInfo.subfolder
+    ? `${imageInfo.subfolder}/${imageInfo.filename}`
+    : imageInfo.filename;
 }
 
 /**
  * Returns a node definition for loading an image based on its type.
  */
-function getLoaderNode(imageInfo: { filename: string; subfolder: string; type: string }) {
-    if (imageInfo.type === 'output') {
-        return {
-            inputs: { image: `${getComfyFilename(imageInfo)} [output]` },
-            class_type: "LoadImageOutput"
-        };
-    } else {
-        return {
-            inputs: { image: imageInfo.filename, upload: "image" },
-            class_type: "LoadImage"
-        };
-    }
+function getLoaderNode(imageInfo: {
+  filename: string;
+  subfolder: string;
+  type: string;
+}) {
+  if (imageInfo.type === "output") {
+    return {
+      inputs: { image: `${getComfyFilename(imageInfo)} [output]` },
+      class_type: "LoadImageOutput",
+      _meta: { title: "Load Image" },
+    };
+  } else {
+    return {
+      inputs: { image: imageInfo.filename, upload: "image" },
+      class_type: "LoadImage",
+      _meta: { title: "Load Image" },
+    };
+  }
 }
 
 /**
@@ -64,58 +89,93 @@ function getLoaderNode(imageInfo: { filename: string; subfolder: string; type: s
  * Returns the IDs of the final model and clip outputs.
  */
 function addLorasToWorkflow(
-    workflow: any, 
-    loras: { name: string; strength: number }[], 
-    baseModelId: string, 
-    baseClipId: string
-): { model: [string, number], clip: [string, number] } {
-    let lastModelId = baseModelId;
-    let lastClipId = baseClipId;
-    let lastModelOut = 0;
-    let lastClipOut = 0;
+  workflow: any,
+  loras: { name: string; strength: number }[],
+  baseModelId: string,
+  baseClipId: string,
+): { model: [string, number]; clip: [string, number] } {
+  let lastModelId = baseModelId;
+  let lastClipId = baseClipId;
+  let lastModelOut = 0;
+  let lastClipOut = 0;
 
-    loras.forEach((lora, index) => {
-        const nodeId = `lora_${index}`;
-        workflow[nodeId] = {
-            inputs: {
-                lora_name: lora.name,
-                strength_model: lora.strength,
-                strength_clip: lora.strength,
-                model: [lastModelId, lastModelOut],
-                clip: [lastClipId, lastClipOut]
-            },
-            class_type: "LoraLoader"
-        };
-        lastModelId = nodeId;
-        lastClipId = nodeId;
-        lastModelOut = 0;
-        lastClipOut = 1;
-    });
-
-    return { 
-        model: [lastModelId, lastModelOut], 
-        clip: [lastClipId, lastClipOut] 
+  loras.forEach((lora, index) => {
+    const nodeId = `lora_${index}`;
+    workflow[nodeId] = {
+      inputs: {
+        lora_name: lora.name,
+        strength_model: lora.strength,
+        strength_clip: lora.strength,
+        model: [lastModelId, lastModelOut],
+        clip: [lastClipId, lastClipOut],
+      },
+      class_type: "LoraLoader",
+      _meta: { title: `LoRA ${index}` },
     };
+    lastModelId = nodeId;
+    lastClipId = nodeId;
+    lastModelOut = 0;
+    lastClipOut = 1;
+  });
+
+  return {
+    model: [lastModelId, lastModelOut],
+    clip: [lastClipId, lastClipOut],
+  };
 }
 
+/**
+ * Main generation runner using CallWrapper
+ */
 async function runGeneration<T extends BranchNode>(
   pendingRequests: Writable<{
     requests: GenerationRequest[];
     running: boolean;
   }>,
   modelsHashValue: string,
-  reqFn: (abortController: AbortController) => Promise<T>
+  builder: PromptBuilder<any, any, any>,
+  createNodeFn: (seed: number, imageInfo: any) => T,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const abortController = new AbortController();
+    const api = getComfyClient();
     let cancelled = false;
-    
+    let promptId: string | undefined;
+    let isRunning = false;
+
+    const performCancel = async () => {
+      if (!promptId) return;
+
+      // 1. Always try to delete from queue
+      await api.fetchApi("/queue", {
+        method: "POST",
+        body: JSON.stringify({ delete: [promptId] }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // 2. Check if it's currently running on the server.
+      // This handles the race condition where it started running but 'executing' 
+      // event hasn't reached the client yet.
+      try {
+        const queue = await api.getQueue();
+        const isRunningOnServer = queue.queue_running.some(
+          (item) => item[1] === promptId,
+        );
+
+        if (isRunningOnServer || isRunning) {
+          await api.interrupt();
+        }
+      } catch (e) {
+        // Fallback if queue check fails
+        if (isRunning) await api.interrupt();
+      }
+    };
+
     const generationRequest: GenerationRequest = {
       modelsHash: modelsHashValue,
-      fire: async () => {},
-      cancel: () => {
+      cancel: async () => {
         cancelled = true;
-        abortController.abort();
+        await performCancel();
+
         pendingRequests.update(({ requests, running }) => ({
           requests: requests.filter((req) => req !== generationRequest),
           running,
@@ -130,24 +190,61 @@ async function runGeneration<T extends BranchNode>(
     }));
 
     (async () => {
+      const cleanups: (() => void)[] = [];
       try {
-        const node = await reqFn(abortController);
-        if (!cancelled) {
+        const runner = new CallWrapper(api, builder);
+
+        runner.onPending((id) => {
+          promptId = id;
+          generationRequest.promptId = id;
+          // If we were cancelled before the ID was even returned from the server,
+          // we must delete it now.
+          if (cancelled) performCancel();
+        });
+
+        // The 'executing' event is the earliest indicator that our prompt is on the GPU
+        const offExecuting = api.on("executing", (ev) => {
+          if (ev.detail.prompt_id === promptId) {
+            isRunning = true;
+          }
+        });
+        cleanups.push(offExecuting);
+
+        // Backup: 'onStart' fires on the first progress event (usually sampling)
+        runner.onStart(() => {
+          isRunning = true;
+        });
+
+        const result = await runner.run();
+
+        if (cancelled) return;
+
+        if (result) {
+          const imageInfo = result.images.images[0];
+          const actualSeed = builder.workflow["3"].inputs.seed;
+          const node = createNodeFn(actualSeed, imageInfo);
+
           (node.parent.children as Writable<any[]>).update((children) => [
             ...children,
             node,
           ]);
           saveStore.save();
           resolve(node);
+        } else {
+          // If result is false but not cancelled, it was likely interrupted by another request
+          reject("Interrupted or Failed");
         }
       } catch (e) {
         if (!cancelled) {
-            console.error("Generation failed", e);
-            reject(e);
+          console.error("Generation failed", e);
+          reject(e);
         }
       } finally {
+        cleanups.forEach((c) => c());
         pendingRequests.update(({ requests }) => {
-          const newRequests = requests.filter((req) => req !== generationRequest);
+          const newRequests = requests.filter(
+            (req) => req !== generationRequest,
+          );
           return {
             requests: newRequests,
             running: newRequests.length > 0,
@@ -161,531 +258,506 @@ async function runGeneration<T extends BranchNode>(
 export async function queueTxtImg(
   _saveName: string,
   request: GenerationSettings,
-  parent: RootNode
+  parent: RootNode,
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
   const hash = modelsHash(clonedRequest);
-  
-  return runGeneration(parent.pendingRequests, hash, async (abortController) => {
-    const client = getComfyClient();
-    const seed = clonedRequest.seed ?? randomSeed();
-    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
-    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
+  const seed = clonedRequest.seed ?? randomSeed();
+  const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+  const negativePrompt =
+    clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
-    const workflow: any = {
-      "10": {
-        inputs: {
-          unet_name: clonedRequest.checkpoint,
-          weight_dtype: clonedRequest.unet_weight_dtype,
-        },
-        class_type: "UNETLoader",
-      },
-      "11": {
-        inputs: {
-          clip_name: clonedRequest.clip,
-          type: clonedRequest.clip_type,
-        },
-        class_type: "CLIPLoader",
-      },
-      "12": {
-        inputs: {
-          vae_name: clonedRequest.vae,
-        },
-        class_type: "VAELoader",
-      },
-      "5": {
-        inputs: {
-          width: clonedRequest.width,
-          height: clonedRequest.height,
-          batch_size: 1,
-        },
-        class_type: "EmptyLatentImage",
-      },
-      "8": {
-        inputs: {
-          samples: ["3", 0],
-          vae: ["12", 0],
-        },
-        class_type: "VAEDecode",
-      },
-      "9": {
-        inputs: {
-          filename_prefix: "ViewsTree",
-          images: ["8", 0],
-        },
-        class_type: "SaveImage",
-      },
-    };
-
-    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
-
-    workflow["6"] = {
+  const workflow: any = {
+    "10": {
       inputs: {
-        text: clonedRequest.prompt,
-        clip: clip,
+        unet_name: clonedRequest.checkpoint,
+        weight_dtype: clonedRequest.unet_weight_dtype,
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["7"] = {
+      class_type: "UNETLoader",
+      _meta: { title: "UNET" },
+    },
+    "11": {
+      inputs: { clip_name: clonedRequest.clip, type: clonedRequest.clip_type },
+      class_type: "CLIPLoader",
+      _meta: { title: "CLIP" },
+    },
+    "12": {
+      inputs: { vae_name: clonedRequest.vae },
+      class_type: "VAELoader",
+      _meta: { title: "VAE" },
+    },
+    "5": {
       inputs: {
-        text: negativePrompt,
-        clip: clip,
+        width: clonedRequest.width,
+        height: clonedRequest.height,
+        batch_size: 1,
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["3"] = {
-      inputs: {
-        seed: seed,
-        steps: clonedRequest.steps,
-        cfg: scale,
-        sampler_name: clonedRequest.sampler_name,
-        scheduler: clonedRequest.scheduler,
-        denoise: 1,
-        model: model,
-        positive: ["6", 0],
-        negative: ["7", 0],
-        latent_image: ["5", 0],
-      },
-      class_type: "KSampler",
-    };
+      class_type: "EmptyLatentImage",
+      _meta: { title: "Latent" },
+    },
+    "8": {
+      inputs: { samples: ["3", 0], vae: ["12", 0] },
+      class_type: "VAEDecode",
+      _meta: { title: "Decode" },
+    },
+    "9": {
+      inputs: { filename_prefix: "ViewsTree", images: ["8", 0] },
+      class_type: "SaveImage",
+      _meta: { title: "Save" },
+    },
+  };
 
-    const promptRes = await client.queuePrompt(null, workflow);
-    const output = await waitForNodeOutput(promptRes.prompt_id, "9", abortController);
-    const imageInfo = output.images[0];
+  const { model, clip } = addLorasToWorkflow(
+    workflow,
+    clonedRequest.loras,
+    "10",
+    "11",
+  );
 
-    return createTxtImgNode(
-      {
-        ...clonedRequest,
-        id: promptRes.prompt_id,
-        seed: {
-          random: clonedRequest.seed === undefined,
-          actual: seed,
+  workflow["6"] = {
+    inputs: { text: clonedRequest.prompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Pos" },
+  };
+  workflow["7"] = {
+    inputs: { text: negativePrompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Neg" },
+  };
+  workflow["3"] = {
+    inputs: {
+      seed: seed,
+      steps: clonedRequest.steps,
+      cfg: scale,
+      sampler_name: clonedRequest.sampler_name,
+      scheduler: clonedRequest.scheduler,
+      denoise: 1,
+      model: model,
+      positive: ["6", 0],
+      negative: ["7", 0],
+      latent_image: ["5", 0],
+    },
+    class_type: "KSampler",
+    _meta: { title: "Sampler" },
+  };
+
+  const builder = new PromptBuilder(workflow, [], ["images"]).setOutputNode(
+    "images",
+    "9",
+  );
+
+  return runGeneration(
+    parent.pendingRequests,
+    hash,
+    builder,
+    (actualSeed, imageInfo) =>
+      createTxtImgNode(
+        {
+          ...clonedRequest,
+          id: promptIdForNode(imageInfo),
+          seed: {
+            random: clonedRequest.seed === undefined,
+            actual: actualSeed,
+          },
+          comfyImage: imageInfo,
         },
-        comfyImage: imageInfo,
-      },
-      parent
-    );
-  });
+        parent,
+      ),
+  );
 }
 
 export async function queueImgImg(
   _saveName: string,
   request: GenerationSettings,
-  parent: BranchNode
+  parent: BranchNode,
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
   const hash = modelsHash(clonedRequest);
-  
-  return runGeneration(parent.pendingRequests, hash, async (abortController) => {
-    const client = getComfyClient();
-    const seed = clonedRequest.seed ?? randomSeed();
-    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
-    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
+  const seed = clonedRequest.seed ?? randomSeed();
+  const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+  const negativePrompt =
+    clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
-    if (!parent.comfyImage) {
-        throw new Error("Parent node has no image info for Img2Img");
-    }
+  if (!parent.comfyImage)
+    throw new Error("Parent node has no image info for Img2Img");
 
-    const workflow: any = {
-      "10": {
-        inputs: {
-          unet_name: clonedRequest.checkpoint,
-          weight_dtype: clonedRequest.unet_weight_dtype,
-        },
-        class_type: "UNETLoader",
-      },
-      "11": {
-        inputs: {
-          clip_name: clonedRequest.clip,
-          type: clonedRequest.clip_type,
-        },
-        class_type: "CLIPLoader",
-      },
-      "12": {
-        inputs: {
-          vae_name: clonedRequest.vae,
-        },
-        class_type: "VAELoader",
-      },
-      "13": getLoaderNode(parent.comfyImage),
-      "20": {
-        inputs: {
-            image: ["13", 0],
-            upscale_method: "lanczos",
-            width: clonedRequest.width,
-            height: clonedRequest.height,
-            crop: "disabled"
-        },
-        class_type: "ImageScale"
-      },
-      "14": {
-        inputs: {
-          pixels: ["20", 0],
-          vae: ["12", 0]
-        },
-        class_type: "VAEEncode"
-      },
-      "8": {
-        inputs: {
-          samples: ["3", 0],
-          vae: ["12", 0],
-        },
-        class_type: "VAEDecode",
-      },
-      "9": {
-        inputs: {
-          filename_prefix: "ViewsTree_Img2Img",
-          images: ["8", 0],
-        },
-        class_type: "SaveImage",
-      },
-    };
-
-    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
-
-    workflow["6"] = {
+  const workflow: any = {
+    "10": {
       inputs: {
-        text: clonedRequest.prompt,
-        clip: clip,
+        unet_name: clonedRequest.checkpoint,
+        weight_dtype: clonedRequest.unet_weight_dtype,
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["7"] = {
+      class_type: "UNETLoader",
+      _meta: { title: "UNET" },
+    },
+    "11": {
+      inputs: { clip_name: clonedRequest.clip, type: clonedRequest.clip_type },
+      class_type: "CLIPLoader",
+      _meta: { title: "CLIP" },
+    },
+    "12": {
+      inputs: { vae_name: clonedRequest.vae },
+      class_type: "VAELoader",
+      _meta: { title: "VAE" },
+    },
+    "13": getLoaderNode(parent.comfyImage),
+    "20": {
       inputs: {
-        text: negativePrompt,
-        clip: clip,
+        image: ["13", 0],
+        upscale_method: "lanczos",
+        width: clonedRequest.width,
+        height: clonedRequest.height,
+        crop: "disabled",
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["3"] = {
-      inputs: {
-        seed: seed,
-        steps: clonedRequest.steps,
-        cfg: scale,
-        sampler_name: clonedRequest.sampler_name,
-        scheduler: clonedRequest.scheduler,
-        denoise: clonedRequest.strength,
-        model: model,
-        positive: ["6", 0],
-        negative: ["7", 0],
-        latent_image: ["14", 0],
-      },
-      class_type: "KSampler",
-    };
+      class_type: "ImageScale",
+      _meta: { title: "Scale" },
+    },
+    "14": {
+      inputs: { pixels: ["20", 0], vae: ["12", 0] },
+      class_type: "VAEEncode",
+      _meta: { title: "Encode" },
+    },
+    "8": {
+      inputs: { samples: ["3", 0], vae: ["12", 0] },
+      class_type: "VAEDecode",
+      _meta: { title: "Decode" },
+    },
+    "9": {
+      inputs: { filename_prefix: "ViewsTree_Img2Img", images: ["8", 0] },
+      class_type: "SaveImage",
+      _meta: { title: "Save" },
+    },
+  };
 
-    const promptRes = await client.queuePrompt(null, workflow);
-    const output = await waitForNodeOutput(promptRes.prompt_id, "9", abortController);
-    const imageInfo = output.images[0];
+  const { model, clip } = addLorasToWorkflow(
+    workflow,
+    clonedRequest.loras,
+    "10",
+    "11",
+  );
 
-    return createImgImgNode(
-      {
-        ...clonedRequest,
-        id: promptRes.prompt_id,
-        seed: {
-          random: clonedRequest.seed === undefined,
-          actual: seed,
+  workflow["6"] = {
+    inputs: { text: clonedRequest.prompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Pos" },
+  };
+  workflow["7"] = {
+    inputs: { text: negativePrompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Neg" },
+  };
+  workflow["3"] = {
+    inputs: {
+      seed: seed,
+      steps: clonedRequest.steps,
+      cfg: scale,
+      sampler_name: clonedRequest.sampler_name,
+      scheduler: clonedRequest.scheduler,
+      denoise: clonedRequest.strength,
+      model: model,
+      positive: ["6", 0],
+      negative: ["7", 0],
+      latent_image: ["14", 0],
+    },
+    class_type: "KSampler",
+    _meta: { title: "Sampler" },
+  };
+
+  const builder = new PromptBuilder(workflow, [], ["images"]).setOutputNode(
+    "images",
+    "9",
+  );
+
+  return runGeneration(
+    parent.pendingRequests,
+    hash,
+    builder,
+    (actualSeed, imageInfo) =>
+      createImgImgNode(
+        {
+          ...clonedRequest,
+          id: promptIdForNode(imageInfo),
+          seed: {
+            random: clonedRequest.seed === undefined,
+            actual: actualSeed,
+          },
+          comfyImage: imageInfo,
         },
-        comfyImage: imageInfo,
-      },
-      parent
-    );
-  });
+        parent,
+      ),
+  );
 }
 
 export async function queueInpaint(
   _saveName: string,
   request: GenerationSettings,
-  parent: BranchNode
+  parent: BranchNode,
 ) {
   const clonedRequest = JSON.parse(JSON.stringify(request));
   const hash = modelsHash(clonedRequest);
-  
-  return runGeneration(parent.pendingRequests, hash, async (abortController) => {
-    const client = getComfyClient();
-    const seed = clonedRequest.seed ?? randomSeed();
-    const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
-    const negativePrompt = clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
+  const seed = clonedRequest.seed ?? randomSeed();
+  const scale = clonedRequest.supportsCfg === false ? 1 : clonedRequest.scale;
+  const negativePrompt =
+    clonedRequest.supportsCfg === false ? "" : clonedRequest.negativePrompt;
 
-    const maskNode = parent as any;
-    if (maskNode.type !== 'Mask') throw new Error("Parent of Inpaint must be a Mask node");
-    
-    const imageNode = maskNode.parent;
-    if (!imageNode.comfyImage) throw new Error("Grandparent node has no image info for Inpaint");
+  const maskNode = parent as any;
+  if (maskNode.type !== "Mask")
+    throw new Error("Parent of Inpaint must be a Mask node");
 
-    const workflow: any = {
-      "10": {
-        inputs: {
-          unet_name: clonedRequest.checkpoint,
-          weight_dtype: clonedRequest.unet_weight_dtype,
-        },
-        class_type: "UNETLoader",
-      },
-      "11": {
-        inputs: {
-          clip_name: clonedRequest.clip,
-          type: clonedRequest.clip_type,
-        },
-        class_type: "CLIPLoader",
-      },
-      "12": {
-        inputs: {
-          vae_name: clonedRequest.vae,
-        },
-        class_type: "VAELoader",
-      },
-      "13": getLoaderNode(imageNode.comfyImage),
-      "20": {
-        inputs: {
-            image: ["13", 0],
-            upscale_method: "lanczos",
-            width: clonedRequest.width,
-            height: clonedRequest.height,
-            crop: "disabled"
-        },
-        class_type: "ImageScale"
-      },
-      "16": {
-        inputs: {
-          image: maskNode.comfyImage.filename,
-          upload: "image"
-        },
-        class_type: "LoadImage"
-      },
-      "21": {
-        inputs: {
-            image: ["16", 0],
-            upscale_method: "lanczos",
-            width: clonedRequest.width,
-            height: clonedRequest.height,
-            crop: "disabled"
-        },
-        class_type: "ImageScale"
-      },
-      "22": {
-        inputs: {
-            image: ["21", 0],
-            channel: "red"
-        },
-        class_type: "ImageToMask"
-      },
-      "19": {
-        inputs: {
-            mask: ["22", 0]
-        },
-        class_type: "InvertMask"
-      },
-      "8": {
-        inputs: {
-          samples: ["3", 0],
-          vae: ["12", 0],
-        },
-        class_type: "VAEDecode",
-      },
-      "9": {
-        inputs: {
-          filename_prefix: "ViewsTree_Inpaint",
-          images: ["8", 0],
-        },
-        class_type: "SaveImage",
-      },
-    };
+  const imageNode = maskNode.parent;
+  if (!imageNode.comfyImage)
+    throw new Error("Grandparent node has no image info for Inpaint");
 
-    const { model, clip } = addLorasToWorkflow(workflow, clonedRequest.loras, "10", "11");
-
-    workflow["15"] = {
+  const workflow: any = {
+    "10": {
       inputs: {
-        model: model
+        unet_name: clonedRequest.checkpoint,
+        weight_dtype: clonedRequest.unet_weight_dtype,
       },
-      class_type: "DifferentialDiffusion"
-    };
-    workflow["6"] = {
+      class_type: "UNETLoader",
+      _meta: { title: "UNET" },
+    },
+    "11": {
+      inputs: { clip_name: clonedRequest.clip, type: clonedRequest.clip_type },
+      class_type: "CLIPLoader",
+      _meta: { title: "CLIP" },
+    },
+    "12": {
+      inputs: { vae_name: clonedRequest.vae },
+      class_type: "VAELoader",
+      _meta: { title: "VAE" },
+    },
+    "13": getLoaderNode(imageNode.comfyImage),
+    "20": {
       inputs: {
-        text: clonedRequest.prompt,
-        clip: clip,
+        image: ["13", 0],
+        upscale_method: "lanczos",
+        width: clonedRequest.width,
+        height: clonedRequest.height,
+        crop: "disabled",
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["7"] = {
+      class_type: "ImageScale",
+      _meta: { title: "Scale Image" },
+    },
+    "16": {
+      inputs: { image: maskNode.comfyImage.filename, upload: "image" },
+      class_type: "LoadImage",
+      _meta: { title: "Load Mask" },
+    },
+    "21": {
       inputs: {
-        text: negativePrompt,
-        clip: clip,
+        image: ["16", 0],
+        upscale_method: "lanczos",
+        width: clonedRequest.width,
+        height: clonedRequest.height,
+        crop: "disabled",
       },
-      class_type: "CLIPTextEncode",
-    };
-    workflow["18"] = {
-      inputs: {
-        positive: ["6", 0],
-        negative: ["7", 0],
-        vae: ["12", 0],
-        pixels: ["20", 0],
-        mask: ["19", 0],
-        noise_mask: true
-      },
-      class_type: "InpaintModelConditioning"
-    };
-    workflow["3"] = {
-      inputs: {
-        seed: seed,
-        steps: clonedRequest.steps,
-        cfg: scale,
-        sampler_name: clonedRequest.sampler_name,
-        scheduler: clonedRequest.scheduler,
-        denoise: clonedRequest.strength,
-        model: ["15", 0],
-        positive: ["18", 0],
-        negative: ["18", 1],
-        latent_image: ["18", 2],
-      },
-      class_type: "KSampler",
-    };
+      class_type: "ImageScale",
+      _meta: { title: "Scale Mask" },
+    },
+    "22": {
+      inputs: { image: ["21", 0], channel: "red" },
+      class_type: "ImageToMask",
+      _meta: { title: "Image2Mask" },
+    },
+    "19": {
+      inputs: { mask: ["22", 0] },
+      class_type: "InvertMask",
+      _meta: { title: "Invert" },
+    },
+    "8": {
+      inputs: { samples: ["3", 0], vae: ["12", 0] },
+      class_type: "VAEDecode",
+      _meta: { title: "Decode" },
+    },
+    "9": {
+      inputs: { filename_prefix: "ViewsTree_Inpaint", images: ["8", 0] },
+      class_type: "SaveImage",
+      _meta: { title: "Save" },
+    },
+  };
 
-    const promptRes = await client.queuePrompt(null, workflow);
-    const output = await waitForNodeOutput(promptRes.prompt_id, "9", abortController);
-    const imageInfo = output.images[0];
+  const { model, clip } = addLorasToWorkflow(
+    workflow,
+    clonedRequest.loras,
+    "10",
+    "11",
+  );
 
-    return createInpaintNode(
-      {
-        ...clonedRequest,
-        id: promptRes.prompt_id,
-        seed: {
-          random: clonedRequest.seed === undefined,
-          actual: seed,
+  workflow["15"] = {
+    inputs: { model: model },
+    class_type: "DifferentialDiffusion",
+    _meta: { title: "Diff" },
+  };
+  workflow["6"] = {
+    inputs: { text: clonedRequest.prompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Pos" },
+  };
+  workflow["7"] = {
+    inputs: { text: negativePrompt, clip: clip },
+    class_type: "CLIPTextEncode",
+    _meta: { title: "Neg" },
+  };
+  workflow["18"] = {
+    inputs: {
+      positive: ["6", 0],
+      negative: ["7", 0],
+      vae: ["12", 0],
+      pixels: ["20", 0],
+      mask: ["19", 0],
+      noise_mask: true,
+    },
+    class_type: "InpaintModelConditioning",
+    _meta: { title: "InpaintCond" },
+  };
+  workflow["3"] = {
+    inputs: {
+      seed: seed,
+      steps: clonedRequest.steps,
+      cfg: scale,
+      sampler_name: clonedRequest.sampler_name,
+      scheduler: clonedRequest.scheduler,
+      denoise: clonedRequest.strength,
+      model: ["15", 0],
+      positive: ["18", 0],
+      negative: ["18", 1],
+      latent_image: ["18", 2],
+    },
+    class_type: "KSampler",
+    _meta: { title: "Sampler" },
+  };
+
+  const builder = new PromptBuilder(workflow, [], ["images"]).setOutputNode(
+    "images",
+    "9",
+  );
+
+  return runGeneration(
+    parent.pendingRequests,
+    hash,
+    builder,
+    (actualSeed, imageInfo) =>
+      createInpaintNode(
+        {
+          ...clonedRequest,
+          id: promptIdForNode(imageInfo),
+          seed: {
+            random: clonedRequest.seed === undefined,
+            actual: actualSeed,
+          },
+          comfyImage: imageInfo,
         },
-        comfyImage: imageInfo,
-      },
-      parent
-    );
-  });
+        parent,
+      ),
+  );
+}
+
+/**
+ * Simple helper to generate a node ID based on filename
+ */
+function promptIdForNode(imageInfo: any): string {
+  return `${imageInfo.filename}_${Date.now()}`;
 }
 
 export async function sendMask(
   _saveName: string,
   request: MaskRequest,
-  parent: BranchNode
+  parent: BranchNode,
 ): Promise<void> {
-    const client = getComfyClient();
-    const response = await fetch(request.image);
-    const blob = await response.blob();
-    
-    const uploadRes = await client.uploadImage(blob, `mask_${Date.now()}.png`);
-    if (!uploadRes) throw new Error("Failed to upload mask");
+  const client = getComfyClient();
+  const response = await fetch(request.image);
+  const blob = await response.blob();
 
-    const maskNode = createMaskNode({
-        id: `mask_${uploadRes.info.filename}`,
-        width: request.width,
-        height: request.height,
-        comfyImage: uploadRes.info
-    }, parent);
+  const uploadRes = await client.uploadImage(blob, `mask_${Date.now()}.png`);
+  if (!uploadRes) throw new Error("Failed to upload mask");
 
-    parent.children.update(children => [...children, maskNode]);
-    saveStore.save();
+  const maskNode = createMaskNode(
+    {
+      id: `mask_${uploadRes.info.filename}`,
+      width: request.width,
+      height: request.height,
+      comfyImage: uploadRes.info,
+    },
+    parent,
+  );
+
+  parent.children.update((children) => [...children, maskNode]);
+  saveStore.save();
 }
 
 export async function sendUpload(
   _saveName: string,
   request: UploadRequest,
-  rootNode: RootNode
+  rootNode: RootNode,
 ): Promise<void> {
-    const client = getComfyClient();
-    const croppedBlob = await cropImage(request.image, request.crop, request.width, request.height);
-    
-    const uploadRes = await client.uploadImage(croppedBlob, `upload_${Date.now()}.png`);
-    if (!uploadRes) throw new Error("Failed to upload image");
+  const client = getComfyClient();
+  const croppedBlob = await cropImage(
+    request.image,
+    request.crop,
+    request.width,
+    request.height,
+  );
 
-    const uploadNode = createUploadNode({
-        id: `upload_${uploadRes.info.filename}`,
-        width: request.width,
-        height: request.height,
-        comfyImage: uploadRes.info
-    }, rootNode);
+  const uploadRes = await client.uploadImage(
+    croppedBlob,
+    `upload_${Date.now()}.png`,
+  );
+  if (!uploadRes) throw new Error("Failed to upload image");
 
-    rootNode.children.update(children => [...children, uploadNode]);
-    saveStore.save();
+  const uploadNode = createUploadNode(
+    {
+      id: `upload_${uploadRes.info.filename}`,
+      width: request.width,
+      height: request.height,
+      comfyImage: uploadRes.info,
+    },
+    rootNode,
+  );
+
+  rootNode.children.update((children) => [...children, uploadNode]);
+  saveStore.save();
 }
 
 async function cropImage(
-    dataUrl: string, 
-    crop: { top: number; right: number; bottom: number; left: number },
-    targetWidth: number,
-    targetHeight: number
+  dataUrl: string,
+  crop: { top: number; right: number; bottom: number; left: number },
+  targetWidth: number,
+  targetHeight: number,
 ): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                reject(new Error("Could not get canvas context"));
-                return;
-            }
-            const sourceX = crop.left;
-            const sourceY = crop.top;
-            const sourceWidth = crop.right - crop.left;
-            const sourceHeight = crop.bottom - crop.top;
-            ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
-            canvas.toBlob((blob) => {
-                if (blob) resolve(blob);
-                else reject(new Error("Canvas to blob failed"));
-            }, 'image/png');
-        };
-        img.onerror = () => reject(new Error("Failed to load image for cropping"));
-        img.src = dataUrl;
-    });
-}
-
-async function waitForNodeOutput(promptId: string, nodeId: string, abortController: AbortController): Promise<any> {
-  const client = getComfyClient();
-  
   return new Promise((resolve, reject) => {
-    const cleanups: Array<() => void> = [];
-    const cleanup = () => cleanups.forEach(c => c());
-
-    const onExecuted = (ev: any) => {
-      if (ev.detail.prompt_id === promptId && ev.detail.node === nodeId) {
-        cleanup();
-        resolve(ev.detail.output);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
       }
+      const sourceX = crop.left;
+      const sourceY = crop.top;
+      const sourceWidth = crop.right - crop.left;
+      const sourceHeight = crop.bottom - crop.top;
+      ctx.drawImage(
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        targetWidth,
+        targetHeight,
+      );
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Canvas to blob failed"));
+      }, "image/png");
     };
-
-    const onExecutionError = (ev: any) => {
-        if (ev.detail.prompt_id === promptId) {
-            cleanup();
-            reject(new Error(ev.detail.exception_message || "Execution Error"));
-        }
-    };
-
-    const onExecutionCached = (ev: any) => {
-        if (ev.detail.prompt_id === promptId && ev.detail.nodes.includes(nodeId)) {
-            cleanup();
-            client.getHistory(promptId).then(history => {
-                if (history && history.outputs[nodeId]) {
-                    resolve(history.outputs[nodeId]);
-                } else {
-                    reject(new Error("Cached but no history found"));
-                }
-            });
-        }
-    };
-
-    cleanups.push(client.on("executed", onExecuted));
-    cleanups.push(client.on("execution_error", onExecutionError));
-    cleanups.push(client.on("execution_cached", onExecutionCached));
-
-    abortController.signal.addEventListener("abort", () => {
-      cleanup();
-      reject(new Error("Cancelled"));
-    });
-
-    const timeout = setTimeout(async () => {
-        const history = await client.getHistory(promptId);
-        if (history && history.outputs[nodeId]) {
-            cleanup();
-            resolve(history.outputs[nodeId]);
-        }
-    }, 30000); 
-    cleanups.push(() => clearTimeout(timeout));
+    img.onerror = () => reject(new Error("Failed to load image for cropping"));
+    img.src = dataUrl;
   });
 }
 
@@ -709,11 +781,10 @@ export function cancelRequest(node: AnyNode): void {
 
   const lastReq = pendingRequests.requests[pendingRequests.requests.length - 1];
   lastReq.cancel();
-  getComfyClient().interrupt();
 }
 
 export function copyRequest<T extends Partial<GenerationSettings>>(
-  request: T
+  request: T,
 ): T {
   return JSON.parse(JSON.stringify(request));
 }
