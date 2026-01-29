@@ -12,11 +12,13 @@
     return Math.round(val / 16) * 16;
   }
 
+  const MAX_SIZE = 9984;
+
   function handleWidthChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const val = parseInt(target.value);
     if (!isNaN(val)) {
-      const rounded = Math.max(16, roundTo16(val));
+      const rounded = Math.min(MAX_SIZE, Math.max(16, roundTo16(val)));
       $generationSettingsStore.width = rounded;
       target.value = rounded.toString();
     }
@@ -26,7 +28,7 @@
     const target = e.target as HTMLInputElement;
     const val = parseInt(target.value);
     if (!isNaN(val)) {
-      const rounded = Math.max(16, roundTo16(val));
+      const rounded = Math.min(MAX_SIZE, Math.max(16, roundTo16(val)));
       $generationSettingsStore.height = rounded;
       target.value = rounded.toString();
     }
@@ -56,13 +58,13 @@
   function handleWheelWidth(e: WheelEvent) {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -16 : 16;
-    $generationSettingsStore.width = Math.max(16, $generationSettingsStore.width + delta);
+    $generationSettingsStore.width = Math.min(MAX_SIZE, Math.max(16, $generationSettingsStore.width + delta));
   }
 
   function handleWheelHeight(e: WheelEvent) {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -16 : 16;
-    $generationSettingsStore.height = Math.max(16, $generationSettingsStore.height + delta);
+    $generationSettingsStore.height = Math.min(MAX_SIZE, Math.max(16, $generationSettingsStore.height + delta));
   }
 
   function handleWheelSelect(e: WheelEvent) {
@@ -117,6 +119,61 @@
 
   function randomizeSeed() {
     $generationSettingsStore.seed = randomSeed();
+  }
+
+  let scaleFactor = 1.0;
+
+  function handleResize() {
+    const oldW = $generationSettingsStore.width;
+    const oldH = $generationSettingsStore.height;
+    const targetW = oldW * scaleFactor;
+    const targetH = oldH * scaleFactor;
+    const targetAspect = oldW / oldH;
+
+    const wOptions = Array.from(new Set([
+      Math.max(16, Math.min(MAX_SIZE, Math.floor(targetW / 16) * 16)),
+      Math.max(16, Math.min(MAX_SIZE, Math.ceil(targetW / 16) * 16))
+    ]));
+    const hOptions = Array.from(new Set([
+      Math.max(16, Math.min(MAX_SIZE, Math.floor(targetH / 16) * 16)),
+      Math.max(16, Math.min(MAX_SIZE, Math.ceil(targetH / 16) * 16))
+    ]));
+
+    let bestW = wOptions[0];
+    let bestH = hOptions[0];
+    let minError = Infinity;
+
+    for (const w of wOptions) {
+      for (const h of hOptions) {
+        const aspectError = Math.abs((w / h) - targetAspect);
+        if (aspectError < minError) {
+          minError = aspectError;
+          bestW = w;
+          bestH = h;
+        } else if (aspectError === minError) {
+          const dist = Math.abs(w - targetW) + Math.abs(h - targetH);
+          const bestDist = Math.abs(bestW - targetW) + Math.abs(bestH - targetH);
+          if (dist < bestDist) {
+            bestW = w;
+            bestH = h;
+          }
+        }
+      }
+    }
+
+    $generationSettingsStore.width = bestW;
+    $generationSettingsStore.height = bestH;
+  }
+
+  function handleWheelScale(e: WheelEvent) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    scaleFactor = Math.max(0.1, Math.min(5.0, scaleFactor + delta));
+  }
+
+  function handleScaleInput(e: Event) {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    if (!isNaN(val)) scaleFactor = val;
   }
 
   $: filteredLoras = $comfyStore.loras.filter(
@@ -207,6 +264,8 @@
       on:wheel={handleWheelWidth}
       on:keydown|stopPropagation
       step="16"
+      min="16"
+      max="9984"
     />
     <span class="size-separator">x</span>
     <input 
@@ -217,9 +276,26 @@
       on:wheel={handleWheelHeight}
       on:keydown|stopPropagation
       step="16"
+      min="16"
+      max="9984"
     />
+    <span class="size-unit">px</span>
   </div>
-  <div />
+  <div class="value-row">
+    <input 
+        class="lora-strength"
+        type="number" 
+        step="0.1" 
+        min="0.1" 
+        max="5.0" 
+        title="Scale Factor"
+        value={scaleFactor.toFixed(1)}
+        on:input={handleScaleInput}
+        on:wheel={handleWheelScale}
+        on:keydown|stopPropagation 
+    />
+    <button class="small-btn" on:click={handleResize} title="Resize Dimensions">⤢</button>
+  </div>
 
   <Slider
     label="Steps"
@@ -382,6 +458,12 @@
 
   .size-separator {
     cursor: default;
+    user-select: none;
+  }
+
+  .size-unit {
+    font-size: 0.8em;
+    color: var(--text);
     user-select: none;
   }
 

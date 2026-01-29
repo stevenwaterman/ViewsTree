@@ -82,12 +82,12 @@
     flex-direction: row;
     align-items: center;
     gap: 0.5em;
-    justify-content: flex-start;
-    justify-self: start;
+    justify-content: center;
+    justify-self: center;
   }
 
   span {
-    text-align: left;
+    text-align: center;
     user-select: none;
     font-variant-numeric: tabular-nums;
   }
