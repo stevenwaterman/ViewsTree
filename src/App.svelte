@@ -63,6 +63,10 @@
     else if (event.key === "Delete" && $selectedStore.isBranch)
       removeNode($selectedStore);
     else if (event.key === "r" && !event.ctrlKey) {
+      if (!$generationSettingsStore.modelConfigId) {
+        console.warn("Cannot generate: No model configuration selected.");
+        return;
+      }
       if ($selectedStore.type === "Mask") {
         queueInpaint($saveStore, $generationSettingsStore, $selectedStore).catch(() => {});
       } else if ($selectedStore.isBranch) {

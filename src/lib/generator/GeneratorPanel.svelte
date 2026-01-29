@@ -16,7 +16,7 @@
     const target = e.target as HTMLInputElement;
     const val = parseInt(target.value);
     if (!isNaN(val)) {
-      const rounded = roundTo16(val);
+      const rounded = Math.max(16, roundTo16(val));
       $generationSettingsStore.width = rounded;
       target.value = rounded.toString();
     }
@@ -26,7 +26,7 @@
     const target = e.target as HTMLInputElement;
     const val = parseInt(target.value);
     if (!isNaN(val)) {
-      const rounded = roundTo16(val);
+      const rounded = Math.max(16, roundTo16(val));
       $generationSettingsStore.height = rounded;
       target.value = rounded.toString();
     }
