@@ -9,6 +9,7 @@
   export let disabled: boolean = false;
   export let showLabel: boolean = true;
   export let integer: boolean = false;
+  export let decimals: number = 2;
 
   export let value: number;
 
@@ -45,7 +46,7 @@
   <label for={id} on:mouseenter={focus}>{label}</label>
 {/if}
 <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-<div class="row" on:mouseenter={focus} on:wheel={onWheel}>
+<div class="slider-contents" on:mouseenter={focus} on:wheel={onWheel}>
   <input
     {id}
     type="range"
@@ -59,7 +60,7 @@
     on:keydown|preventDefault
   />
   <div class="value-row" class:has-extra={hasExtra}>
-    <span>{integer ? value.toFixed(0) : value.toFixed(2)}</span>
+    <span>{integer ? value.toFixed(0) : value.toFixed(decimals)}</span>
     {#if hasExtra}
         <slot name="extra" />
     {/if}
@@ -69,13 +70,11 @@
 <style>
   label {
     user-select: none;
+    align-self: center;
   }
 
-  .row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 0.5em;
+  .slider-contents {
+    display: contents;
   }
 
   .value-row {
@@ -83,17 +82,18 @@
     flex-direction: row;
     align-items: center;
     gap: 0.5em;
-    min-width: 3.5em;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    justify-self: start;
   }
 
   span {
-    text-align: right;
+    text-align: left;
     user-select: none;
     font-variant-numeric: tabular-nums;
   }
 
   input {
     outline: none;
+    width: 100%;
   }
 </style>
