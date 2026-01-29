@@ -107,11 +107,11 @@
   class="anchor"
   style={`top: ${placementHeight}px; left: ${
     placementWidth * offset
-  }px; transition-duration: ${placementTransitionMs}ms;`}
+  }px; transition-duration: ${placementTransitionMs}ms; transition-timing-function: ease-in-out;`}
 >
   <div
     class="placement"
-    style={`transition-duration: ${placementTransitionMs}ms;`}
+    style={`transition-duration: ${placementTransitionMs}ms; transition-timing-function: cubic-bezier(0.445, 0.05, 0.55, 0.95);`}
     on:mousedown={leftClick}
   >
     <!-- svelte-ignore a11y-missing-attribute -->
@@ -148,7 +148,7 @@
   class="line"
   width={lineWidth + 5}
   height={ch * 2 + 2}
-  style={`left: ${lineLeft}px; top: ${24}px; z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms;`}
+  style={`left: ${lineLeft}px; top: ${24}px; z-index: ${edgeZ}; transition-duration: ${placementTransitionMs}ms; transition-timing-function: cubic-bezier(0.445, 0.05, 0.55, 0.95);`}
 >
   {#if lineTopXTweened && lineBottomXTweened}
     <path
@@ -219,12 +219,12 @@
   .line {
     position: absolute;
 
-    transition-timing-function: ease-in-out;
+    transition-timing-function: cubic-bezier(0.445, 0.05, 0.55, 0.95);
     transition-property: width, left;
   }
 
   .path {
-    transition: 0.2s ease-in-out stroke;
+    transition: 0.2s cubic-bezier(0.445, 0.05, 0.55, 0.95) stroke;
   }
 
   .placement {
@@ -247,7 +247,7 @@
     transform-origin: center;
     transform: scale(1);
 
-    transition-timing-function: ease-in-out;
+    transition-timing-function: cubic-bezier(0.445, 0.05, 0.55, 0.95);
     transition-property: transform, background-color, opacity, left;
   }
 
