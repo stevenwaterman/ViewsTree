@@ -337,12 +337,14 @@
 
   {#if $selectedStore.type !== "Root"}
     <Slider
-      label="Strength"
+      label="Denoise"
       id="strength_slider"
-      min={0}
+      min={0.05}
       max={1}
       step={0.05}
-      decimals={1}
+      decimals={0}
+      displayMultiplier={100}
+      suffix="%"
       bind:value={$generationSettingsStore.strength}
     />
   {/if}

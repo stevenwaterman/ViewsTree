@@ -171,6 +171,8 @@
 
     max-height: 100%;
     max-width: 100%;
+    min-height: 0;
+    min-width: 0;
     border-radius: 20%;
 
     transition-property: box-shadow, border;

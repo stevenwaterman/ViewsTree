@@ -10,6 +10,8 @@
   export let showLabel: boolean = true;
   export let integer: boolean = false;
   export let decimals: number = 2;
+  export let suffix: string = "";
+  export let displayMultiplier: number = 1;
 
   export let value: number;
 
@@ -60,7 +62,7 @@
     on:keydown|preventDefault
   />
   <div class="value-row" class:has-extra={hasExtra}>
-    <span>{integer ? value.toFixed(0) : value.toFixed(decimals)}</span>
+    <span>{(integer ? (value * displayMultiplier).toFixed(0) : (value * displayMultiplier).toFixed(decimals))}{suffix}</span>
     {#if hasExtra}
         <slot name="extra" />
     {/if}
