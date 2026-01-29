@@ -18,6 +18,43 @@
   import { rootNodeStore } from "./lib/state/nodeTypes/rootNodes";
   import Painter from "./lib/paint/Painter.svelte";
 
+  let previewWidth = Number(localStorage.getItem("previewWidth") || 45); // vmin
+  let previewHeight = Number(localStorage.getItem("previewHeight") || 45); // vmin
+  let isResizing = false;
+
+  function startResizing(event: MouseEvent) {
+    event.preventDefault();
+    isResizing = true;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const vmin = Math.min(window.innerWidth, window.innerHeight);
+    const startWidthPx = (previewWidth * vmin) / 100;
+    const startHeightPx = (previewHeight * vmin) / 100;
+
+    function onMouseMove(moveEvent: MouseEvent) {
+      const deltaX = startX - moveEvent.clientX;
+      const deltaY = moveEvent.clientY - startY;
+      const newWidthPx = startWidthPx + deltaX;
+      const newHeightPx = startHeightPx + deltaY;
+      const currentVmin = Math.min(window.innerWidth, window.innerHeight);
+      
+      previewWidth = Math.max(10, Math.min(95, (newWidthPx / currentVmin) * 100));
+      previewHeight = Math.max(10, Math.min(95, (newHeightPx / currentVmin) * 100));
+      
+      localStorage.setItem("previewWidth", previewWidth.toString());
+      localStorage.setItem("previewHeight", previewHeight.toString());
+    }
+
+    function onMouseUp() {
+      isResizing = false;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }
+
   function onKeydown(event: KeyboardEvent) {
     if (event.key === "ArrowUp") selectedStore.selectParent();
     else if (event.key === "ArrowRight") selectedStore.selectNext();
@@ -61,8 +98,14 @@
       <GeneratorPanel />
     </div>
 
-    <div class="previewContainer">
+    <div 
+      class="previewContainer" 
+      class:resizing={isResizing}
+      style="width: {previewWidth}vmin; height: {previewHeight}vmin;"
+    >
       <ViewPanel />
+      <!-- Invisible resize trigger -->
+      <div class="resizeTrigger" on:mousedown={startResizing}></div>
     </div>
   </div>
 </Modal>
@@ -93,8 +136,6 @@
     position: fixed;
     top: 1em;
     right: 1em;
-    width: 45vmin;
-    height: 45vmin;
     z-index: 10;
     pointer-events: none;
     border: 1px solid var(--border);
@@ -104,5 +145,20 @@
 
   .previewContainer :global(.container) {
     pointer-events: auto;
+  }
+
+  .previewContainer.resizing :global(.container) {
+    pointer-events: none;
+  }
+
+  .resizeTrigger {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 30px;
+    height: 30px;
+    cursor: nesw-resize;
+    pointer-events: auto;
+    z-index: 20;
   }
 </style>
